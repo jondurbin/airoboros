@@ -623,7 +623,6 @@ class SelfInstructor:
                 logger.info(
                     f"Generated {len(self.machine_tasks)} of {self.instruction_count}, tokens used: {self.used_tokens}"
                 )
-                break
         logger.success(
             f"Finished generating {len(self.machine_tasks)} instructions and responses."
         )

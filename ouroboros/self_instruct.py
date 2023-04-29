@@ -9,8 +9,11 @@ import random
 import re
 import requests
 import string
+from multiprocessing import Pool
+from functools import partial
 from loguru import logger
 from typing import List, Dict, Any
+from rouge_score import rouge_scorer
 from .exceptions import (
     RateLimitError,
     TooManyRequestsError,
@@ -20,9 +23,9 @@ from .exceptions import (
 )
 
 # Defaults and constants.
-CLASSIFICATION_PROMPT_PREFIX = "Come up with a series of classification tasks, including the list of possible output labels."
-DEFAULT_PROMPT_PREFIX = "Come up with a series of tasks:"
-CONTEXTUAL_PROMPT_PREFIX = "Come up with a series of tasks, including a passage of text that could be used to respond to the task:"
+CLASSIFICATION_PROMPT_PREFIX = "Generate a set of classification tasks, including the list of possible output labels.  The tasks should be unique and similar in form but not content to the examples."
+DEFAULT_PROMPT_PREFIX = "Generate a unique series of tasks, similar in form but not content to the examples."
+CONTEXTUAL_PROMPT_PREFIX = "Generate a series of tasks, including a passage of text that could be used to respond to the task.  The tasks should be unique and similar in form but not content to the examples."
 SKIP_WORDS = ["image", "graph", "picture", "file", "map", "draw", "plot", "go to"]
 SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
 CONTEXT_RE = re.compile(r"[r\n\s]*(?:\d+\s*\.\s*)?(.*)[\r\n\s]passage:\s*(.*)", re.I)
@@ -570,9 +573,10 @@ class SelfInstructor:
             raise RuntimeError(
                 f"Output path: {self.output_path} already exists, overwrite false"
             )
+        scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
         with open(self.output_path, "w") as outfile:
             while len(self.machine_tasks) <= self.instruction_count:
-                futures = [self.generate_instruction_batch() for _ in range(10)]
+                futures = [self.generate_instruction_batch() for _ in range(20)]
                 results = None
                 try:
                     results = await asyncio.gather(*futures)
@@ -581,6 +585,32 @@ class SelfInstructor:
                     break
                 new_instructions = [inst for insts in results for inst in insts]
                 for inst in new_instructions:
+                    comparison_group = []
+                    if inst["instruction_type"] == "classification":
+                        comparison_group = (
+                            self.classification_seed_tasks
+                            + self.classification_machine_tasks
+                        )
+                    elif inst.get("context", "").strip():
+                        comparison_group = (
+                            self.contextual_seed_tasks + self.contextual_machine_tasks
+                        )
+                    else:
+                        comparison_group = (
+                            self.open_seed_tasks + self.open_machine_tasks
+                        )
+                    with Pool(4) as pool:
+                        scores = pool.map(
+                            partial(scorer.score, inst["instruction"]),
+                            [item["instruction"] for item in comparison_group],
+                        )
+                    scores = [score["rougeL"].fmeasure for score in scores]
+                    max_score = max(scores)
+                    if max_score > 0.75:
+                        logger.warning(
+                            f"Skipping instruction, too similar: {max_score}: {inst['instruction']}"
+                        )
+                        continue
                     self.machine_tasks.append(inst)
                     if inst["instruction_type"] == "classification":
                         self.classification_machine_tasks.append(inst)
@@ -593,6 +623,7 @@ class SelfInstructor:
                 logger.info(
                     f"Generated {len(self.machine_tasks)} of {self.instruction_count}, tokens used: {self.used_tokens}"
                 )
+                break
         logger.success(
             f"Finished generating {len(self.machine_tasks)} instructions and responses."
         )

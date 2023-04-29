@@ -588,7 +588,8 @@ class SelfInstructor:
                         self.contextual_machine_tasks.append(inst)
                     else:
                         self.open_machine_tasks.append(inst)
-                    outfile.write(json.dumps(inst))
+                    outfile.write(json.dumps(inst) + "\n")
+                outfile.flush()
                 logger.info(
                     f"Generated {len(self.machine_tasks)} of {self.instruction_count}, tokens used: {self.used_tokens}"
                 )

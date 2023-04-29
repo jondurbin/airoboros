@@ -337,7 +337,9 @@ class SelfInstructor:
         prompt.append(f"{len(instructions) + 1}.")
         return "\n".join(prompt)
 
-    def extract_instructions_from_response(self, response: Dict[str, Any], instruction_type: str) -> List[Dict[str, Any]]:
+    def extract_instructions_from_response(
+        self, response: Dict[str, Any], instruction_type: str
+    ) -> List[Dict[str, Any]]:
         """Extract the list of instructions from the OpenAI response.
 
         :param response: The response from the OpenAI request.
@@ -373,7 +375,9 @@ class SelfInstructor:
                 else:
                     continue
             else:
-                instruction = re.sub(r"^\s*\d+\s*\.\s*", "", self.clean_instruction_text(raw_instruction)).capitalize()
+                instruction = re.sub(
+                    r"^\s*\d+\s*\.\s*", "", self.clean_instruction_text(raw_instruction)
+                ).capitalize()
                 if raw_instruction.rstrip().endswith(":"):
                     instruction += ":"
             if not instruction:
@@ -393,7 +397,13 @@ class SelfInstructor:
                 or not instruction[0].isascii()
             ):
                 continue
-            instructions.append({"instruction": instruction, "context": context, "instruction_type": instruction_type})
+            instructions.append(
+                {
+                    "instruction": instruction,
+                    "context": context,
+                    "instruction_type": instruction_type,
+                }
+            )
         return instructions
 
     @backoff.on_exception(backoff.expo, (RateLimitError, TooManyRequestsError))
@@ -441,12 +451,14 @@ class SelfInstructor:
         except Exception as ex:
             logger.error(f"Error performing post: {ex}")
             import traceback
+
             print(traceback.format_exc())
         return None
 
-    async def _generate_instruction_batch(self, instruction_count: int) -> List[Dict[str, Any]]:
-        """Generate an set of instructions.  Wrapped by generate_instruction_batch.
-        """
+    async def _generate_instruction_batch(
+        self, instruction_count: int
+    ) -> List[Dict[str, Any]]:
+        """Generate an set of instructions.  Wrapped by generate_instruction_batch."""
         instruction_type = "open"
         m_target_list = self.open_machine_tasks
         s_target_list = self.open_seed_tasks
@@ -463,7 +475,9 @@ class SelfInstructor:
         instructions = []
         if m_target_list:
             instructions = random.sample(m_target_list, min(2, len(m_target_list)))
-        instructions += random.sample(s_target_list, instruction_count - len(instructions))
+        instructions += random.sample(
+            s_target_list, instruction_count - len(instructions)
+        )
         random.shuffle(instructions)
         prompt = self.generate_prompt_from_instructions(instructions, instruction_type)
 
@@ -498,23 +512,41 @@ class SelfInstructor:
         instructions_with_responses = []
         for idx, result in enumerate(results):
             if not result:
-                logger.warning(f"Error generating response for machine generated instruction: {new_instructions[idx]}")
+                logger.warning(
+                    f"Error generating response for machine generated instruction: {new_instructions[idx]}"
+                )
                 continue
             try:
-                response = result["choices"][0]["text"] if self._completions else result["choices"][0]["message"]["content"]
+                response = (
+                    result["choices"][0]["text"]
+                    if self._completions
+                    else result["choices"][0]["message"]["content"]
+                )
                 if response.strip():
-                    logger.info("\n".join([
-                        f"Generated instruction [type={new_instructions[idx]['instruction_type']}]:",
-                        f"Prompt: {new_instructions[idx]['instruction']}",
-                    ] + ([f"Context: {new_instructions[idx]['context']}"] if new_instructions[idx]["context"] else []) + [
-                        f"Response: {response.strip()}"
-                    ]))
-                    instructions_with_responses.append({
-                        **new_instructions[idx],
-                        **{"response": response.strip()},
-                    })
+                    logger.debug(
+                        "\n".join(
+                            [
+                                f"Generated instruction [type={new_instructions[idx]['instruction_type']}]:",
+                                f"Prompt: {new_instructions[idx]['instruction']}",
+                            ]
+                            + (
+                                [f"Context: {new_instructions[idx]['context']}"]
+                                if new_instructions[idx]["context"]
+                                else []
+                            )
+                            + [f"Response: {response.strip()}"]
+                        )
+                    )
+                    instructions_with_responses.append(
+                        {
+                            **new_instructions[idx],
+                            **{"response": response.strip()},
+                        }
+                    )
             except Exception as exc:
-                logger.error(f"Error parsing response for machine-generated isntruction: {exc}")
+                logger.error(
+                    f"Error parsing response for machine-generated isntruction: {exc}"
+                )
         return instructions_with_responses
 
     async def generate_instruction_batch(self) -> List[Dict[str, Any]]:
@@ -529,34 +561,41 @@ class SelfInstructor:
                 return await self._generate_instruction_batch(current_count)
             except ContextLengthExceededError:
                 current_count -= 1
-        logger.error(f"Couldn't generate instruction batch due to context length error")
+        logger.error("Couldn't generate instruction batch due to context length error")
         return []
 
     async def run(self):
         """Run the self-instruct, instruction generation task to completion."""
-        batch = []
         if os.path.exists(self.output_path) and not self.overwrite:
-            raise RuntimeError(f"Output path: {self.output_path} already exists, overwrite false")
+            raise RuntimeError(
+                f"Output path: {self.output_path} already exists, overwrite false"
+            )
         with open(self.output_path, "w") as outfile:
-            while len(self.machine_tasks) <= 10: #self.instruction_count:
-                futures = [
-                    self.generate_instruction_batch()
-                    for _ in range(1)
-                ]
+            while len(self.machine_tasks) <= self.instruction_count:
+                futures = [self.generate_instruction_batch() for _ in range(10)]
                 results = None
                 try:
                     results = await asyncio.gather(*futures)
                 except TokensExhaustedError:
-                    logger.error(f"Max token usage reached.")
+                    logger.error("Max token usage reached.")
                     break
-                new_instructions = [
-                    inst
-                    for insts in results
-                    for inst in insts
-                ]
+                new_instructions = [inst for insts in results for inst in insts]
                 for inst in new_instructions:
+                    self.machine_tasks.append(inst)
+                    if inst["instruction_type"] == "classification":
+                        self.classification_machine_tasks.append(inst)
+                    elif inst.get("context", "").strip():
+                        self.contextual_machine_tasks.append(inst)
+                    else:
+                        self.open_machine_tasks.append(inst)
                     outfile.write(json.dumps(inst))
-                break
+                logger.info(
+                    f"Generated {len(self.machine_tasks)} of {self.instruction_count}, tokens used: {self.used_tokens}"
+                )
+        logger.success(
+            f"Finished generating {len(self.machine_tasks)} instructions and responses."
+        )
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -565,15 +604,6 @@ def main():
     instructor = SelfInstructor(**vars(parser.parse_args()))
     asyncio.run(instructor.run())
 
+
 if __name__ == "__main__":
     main()
-
-#            for inst, metadata in zip(instructions, all_metadata):
-#                with Pool(4) as p:
-#                    rouge_scores = p.map(
-#                        partial(scorer.score, inst),
-#                        seed_instructions + machine_instructions,
-#                    )
-#                rouge_scores = [score["rougeL"].fmeasure for score in rouge_scores]
-#                if max(rouge_scores) > 0.7:
-#                    continue

@@ -316,7 +316,9 @@ class SelfInstructor:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "topics.txt")
         if os.path.exists(path):
             with open(path, "r") as infile:
-                return [line.strip() for line in infile.readlines() if line.strip()]
+                self.random_topics = {line.strip() for line in infile.readlines() if line.strip()}
+                logger.info(f"Using {len(self.random_topics)} cached random topics")
+            return
         futures = [
             self._post_no_exc(
                 "/v1/completions",

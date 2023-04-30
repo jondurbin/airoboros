@@ -2,6 +2,7 @@ import asyncio
 import aiohttp
 import argparse
 import backoff
+import concurrent.futures
 import os
 import json
 import random
@@ -23,27 +24,27 @@ from .exceptions import (
 )
 
 # Defaults and constants.
-DEFAULT_PROMPT = """You are asked to generate a set of 8 diverse prompts.  These prompts will be given to a GPT model and we will evaluate the GPT model for completing the prompts.
+BATCH_SIZE = 13
+DEFAULT_PROMPT = f"""You are asked to generate a set of {BATCH_SIZE} diverse prompts.  These prompts will be given to a GPT model and we will evaluate the GPT model for completing the prompts.
 
 Here are the requirements:
  * Try not to repeat the verb for each __instruction__ to maximize diversity.
- * Generate a diverse set of random topics, including very obscure topics.  These topics should then be used as the inspiration for the prompts.
+ * Use a cryptographically secure random number generator to select the topics for the prompts.
  * Try to avoid prompts about popular books, movies, and television shows.
- * The __instruction__ should include a variety of types of tasks, such as open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.
+ * The __instruction__ should include a variety of types of prompts, such as open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.k
  * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The __instruction__ should be in English.
  * The __instruction__ should be 1 to 2 sentences long.
- * For tasks that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant information. __passage__ must not be simple placeholders or links to external resources.
- * Not all tasks require __passage__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __passage__. In this case, we simply put "__no_context__" in the __passage__ field.
+ * For prompts that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant information. __passage__ must not be simple placeholders or links to external resources.
+ * Not all prompts require __passage__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __passage__. In this case, we simply put "__no_context__" in the __passage__ field.
  * The __response__ should be an appropriate response to the __instruction__ and __passage__
  * If __response__ includes specific words, phrases, dates, etc., and __passage__ is provided, be sure to include those words/phrases/etc. in __passage__.
- * Be sure to include 8 tasks in the response.
+ * Be sure to include {BATCH_SIZE} propts in the response.
 
-List of 8 tasks:
+List of {BATCH_SIZE} prompts:
 """
 SKIP_WORDS = ["image", "graph", "picture", "file", "map", "draw", "plot", "go to"]
 SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
-CONTEXT_RE = re.compile(r"[r\n\s]*(?:\d+\s*\.\s*)?(.*)[\r\n\s]passage:\s*(.*)", re.I)
 CODE_GEN_RE = re.compile(
     r"^(?:write|generate|create)(?:a )?(?:\w+ )?(?:script|program|code)\W", re.I
 )
@@ -485,7 +486,7 @@ class SelfInstructor:
             "top_p": self.top_p,
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
-            "stop": ["9."],
+            "stop": [f"{BATCH_SIZE+1}."],
             "max_tokens": 4000 - estimated_tokens,
         }
         if self._completions:

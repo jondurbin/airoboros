@@ -2,12 +2,12 @@ import asyncio
 import aiohttp
 import argparse
 import backoff
-import copy
 import os
 import json
 import random
 import re
 import requests
+import secrets
 import string
 from multiprocessing import Pool
 from functools import partial
@@ -23,9 +23,21 @@ from .exceptions import (
 )
 
 # Defaults and constants.
-CLASSIFICATION_PROMPT_PREFIX = "Generate a set of classification tasks, including the list of possible output labels.  The tasks should be unique and similar in form but not content to the examples."
-DEFAULT_PROMPT_PREFIX = "Generate a unique series of tasks, similar in form but not content to the examples."
-CONTEXTUAL_PROMPT_PREFIX = "Generate a series of tasks, including a passage of text that could be used to respond to the task.  The tasks should be unique and similar in form but not content to the examples."
+DEFAULT_PROMPT = """You are asked to generate a set of 15 diverse task instructions. These task instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.
+
+Here are the requirements:
+ * Try not to repeat the verb for each __instruction__ to maximize diversity.
+ * The tasks should include a diverse range of types of tasks like open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.
+ * The tasks should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
+ * The tasks should be in English.
+ * The __instruction__ field in each task should be 1 to 2 sentences long.
+ * For tasks that require extracting information from __context__, e.g. question-answering, summarization, information extraction, etc., include several sentences in __context__.  __context__ should be realistic data, and should not contain simple placeholders or links to external resources.  __context__ should always include any and all information provided in __response__, but phrased differently.
+ * Not all tasks require __context__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __context__. In this case, we simply put "__no_context__" in the __context__ field.
+ * The __response__ should be an appropriate response to the __instruction__ and the __context__.
+ * Be sure to include 15 tasks in the response.
+
+List of 15 tasks:
+"""
 SKIP_WORDS = ["image", "graph", "picture", "file", "map", "draw", "plot", "go to"]
 SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
 CONTEXT_RE = re.compile(r"[r\n\s]*(?:\d+\s*\.\s*)?(.*)[\r\n\s]passage:\s*(.*)", re.I)
@@ -87,20 +99,14 @@ class SelfInstructor:
             "action": "store_true",
             "help": "overwrite output path if it exists",
         },
-        "--default-prompt-prefix": {
-            "type": str,
-            "default": DEFAULT_PROMPT_PREFIX,
-            "help": "prompt prefix to use for generating open, non-classification tasks",
+        "--append": {
+            "action": "store_true",
+            "help": "append to output path if it exists",
         },
-        "--classification-prompt-prefix": {
+        "--prompt": {
             "type": str,
-            "default": CLASSIFICATION_PROMPT_PREFIX,
-            "help": "prompt prefix to use for generating classification tasks",
-        },
-        "--contextual-prompt-prefix": {
-            "type": str,
-            "default": CONTEXTUAL_PROMPT_PREFIX,
-            "help": "prompt prefix to use for generating tasks with context, e.g. closed Q&A",
+            "default": DEFAULT_PROMPT,
+            "help": "prompt prefix to use for generating tasks",
         },
         "--skip-instruction-re": {
             "type": str,
@@ -112,6 +118,11 @@ class SelfInstructor:
             "default": CODE_GEN_RE.pattern,
             "help": "regular expression used to filter coding/programming tasks",
         },
+        "--samples-per-request": {
+            "type": str,
+            "default": 3,
+            "help": "number of random sample instructions to include in prompts",
+        },
         "--min-instruction-length": {
             "type": int,
             "default": 3,
@@ -121,11 +132,6 @@ class SelfInstructor:
             "type": int,
             "default": 150,
             "help": "maximum instruction length",
-        },
-        "--max-tokens": {
-            "type": int,
-            "default": 1024,
-            "help": "maximum number of tokens in an instruction",
         },
         "--temperature": {
             "type": float,
@@ -164,16 +170,14 @@ class SelfInstructor:
         seed_tasks_path: str = None,
         output_path: str = None,
         overwrite: bool = False,
+        append: bool = True,
         use_dolly_seed: bool = True,
-        classification_prompt_prefix: str = CLASSIFICATION_PROMPT_PREFIX,
-        default_prompt_prefix: str = DEFAULT_PROMPT_PREFIX,
-        contextual_prompt_prefix: str = CONTEXTUAL_PROMPT_PREFIX,
+        prompt: str = DEFAULT_PROMPT,
         skip_instruction_re: re.Pattern = SKIP_SEARCH_RE,
         code_gen_re: re.Pattern = CODE_GEN_RE,
         min_instruction_length: int = 3,
         max_instruction_length: int = 150,
-        instructions_per_request: int = 7,
-        max_tokens: int = 1024,
+        samples_per_request: int = 3,
         temperature: float = 0.7,
         top_p: float = 0.5,
         frequency_penalty: int = 0,
@@ -197,12 +201,11 @@ class SelfInstructor:
             )
         self.output_path = output_path
         self.overwrite = overwrite
+        self.append = append
         output_dir = os.path.dirname(os.path.abspath(output_path))
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        self.classification_prompt_prefix = classification_prompt_prefix
-        self.default_prompt_prefix = default_prompt_prefix
-        self.contextual_prompt_prefix = contextual_prompt_prefix
+        self.prompt = prompt
         self.skip_instruction_re = skip_instruction_re
         if isinstance(skip_instruction_re, str):
             self.skip_instruction_re = re.compile(skip_instruction_re, re.I)
@@ -211,34 +214,16 @@ class SelfInstructor:
             self.code_gen_re = re.compile(code_gen_re, re.I)
         self.min_instruction_length = min_instruction_length
         self.max_instruction_length = max_instruction_length
-        self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
         self.presence_penalty = presence_penalty
-        self.instructions_per_request = instructions_per_request
+        self.samples_per_request = samples_per_request
         self.max_usage_tokens = max_usage_tokens
         self._validate_model()
-        self._initialize_seed_tasks(seed_tasks, seed_tasks_path, use_dolly_seed)
-        self.classification_seed_tasks = []
-        self.contextual_seed_tasks = []
-        self.open_seed_tasks = []
         self.machine_tasks = []
-        self.classification_machine_tasks = []
-        self.contextual_machine_tasks = []
-        self.open_machine_tasks = []
+        self._initialize_seed_tasks(seed_tasks, seed_tasks_path, use_dolly_seed)
         self.used_tokens = 0
-        for task in self.seed_tasks:
-            if task["category"] == "classification":
-                self.classification_seed_tasks.append(task)
-            elif task.get("context", "").strip():
-                self.contextual_seed_tasks.append(task)
-            else:
-                self.open_seed_tasks.append(task)
-        self.classification_ratio = len(self.classification_seed_tasks) / len(
-            self.seed_tasks
-        )
-        self.contextual_ratio = len(self.contextual_seed_tasks) / len(self.seed_tasks)
 
     def _initialize_seed_tasks(
         self,
@@ -268,7 +253,22 @@ class SelfInstructor:
             with open(dolly_seed_path, "r") as infile:
                 seed_tasks = [json.loads(line) for line in infile.readlines()]
             self.seed_tasks = seed_tasks
-        logger.info(f"Found {len(self.seed_tasks)} seed tasks to use...")
+        logger.info(f"Found {len(self.seed_tasks)} human seed tasks to use...")
+        if os.path.exists(self.output_path):
+            if self.overwrite:
+                os.remove(self.output_path)
+            elif self.append:
+                with open(self.output_path, "r") as infile:
+                    self.machine_tasks = [
+                        json.loads(line) for line in infile.readlines()
+                    ]
+                logger.info(
+                    f"Found {len(self.machine_tasks)} pre-existing machine seed tasks to use..."
+                )
+            else:
+                raise RuntimeError(
+                    f"{self.output_path} already exists, but overwrite and append are false!"
+                )
 
     def _validate_model(self):
         """Ensure the specified model is available, and configure the endpoint
@@ -309,47 +309,36 @@ class SelfInstructor:
         )
 
     def generate_prompt_from_instructions(
-        self, instructions: List[Dict[str, any]], instruction_type: str
+        self, instructions: List[Dict[str, any]]
     ) -> str:
         """Generate a single prompt string with multiple instructions.
 
         :param instructions: A list of instructions to encode.
         :type instructions: List[str]
 
-        :param instruction_type: The type of instruction (classification, open, contextual)
-        :type: instruction_type: str
-
         :return: The encoded prompt.
         :rtype: str
         """
-        prompt = []
-        if instruction_type == "classification":
-            prompt.append(self.classification_prompt_prefix)
-        elif instruction_type == "contextual":
-            prompt.append(self.contextual_prompt_prefix)
-        else:
-            prompt.append(self.default_prompt_prefix)
-        prompt.append("\n")
+        prompt = [self.prompt]
         for idx, instruction in enumerate(instructions):
             text = self.clean_instruction_text(instruction["instruction"])
-            if instruction.get("context", "").strip():
-                text += (
-                    f"\nPassage: {self.clean_instruction_text(instruction['context'])}"
-                )
-            prompt.append(f"{idx+1}. {text}\n" + "=" * 8)
-        prompt.append(f"{len(instructions) + 1}.")
+            prompt.append(f"{idx + 1}. __instruction__: {text}")
+            context = (
+                "__no_context__"
+                if not instruction["context"].strip()
+                else instruction["context"].strip()
+            )
+            prompt.append(f"{idx + 1}. __context__: {context}")
+            prompt.append(f"{idx + 1}. __response__: {instruction['response']}")
         return "\n".join(prompt)
 
     def extract_instructions_from_response(
-        self, response: Dict[str, Any], instruction_type: str
+        self, response: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Extract the list of instructions from the OpenAI response.
 
         :param response: The response from the OpenAI request.
         :type re: Dict[str, Any]
-
-        :param instruction_type: The type of instruction we are expecting.
-        :type instruction_type: str
 
         :return: List of instructions.
         :rtype: List[str]
@@ -366,48 +355,67 @@ class SelfInstructor:
             text = response["choices"][0]["text"]
         else:
             text = response["choices"][0]["message"]["content"]
-        raw_instructions = text.split("=" * 8)
-        instructions = []
-        for raw_instruction in raw_instructions:
-            context = ""
-            instruction = raw_instruction
-            if instruction_type == "contextual":
-                if match := CONTEXT_RE.search(raw_instruction):
-                    context = match.group(2)
-                    instruction = match.group(1)
-                else:
-                    continue
-            else:
-                instruction = re.sub(
-                    r"^\s*\d+\s*\.\s*", "", self.clean_instruction_text(raw_instruction)
-                ).capitalize()
-                if raw_instruction.rstrip().endswith(":"):
-                    instruction += ":"
-            if not instruction:
+
+        tasks = []
+        for instruction in re.findall(
+            r"(\d+\s*\.\s*__instruction__:[\s\r\n]*.*)(?!\d+\s*\.\s*__)", text
+        ):
+            idx = instruction.split(".")[0].strip()
+            instruction_text = instruction.split("__instruction__:")[-1].strip()
+            if not instruction_text:
                 continue
             if (
                 not self.min_instruction_length
-                < len(instruction.split())
+                < len(instruction_text.split())
                 < self.max_instruction_length
             ):
-                continue
+                logger.warning(
+                    f"Skipping instruction: {instruction_text} [instruction length]"
+                )
             # Skip various prompts that have been deemed unsuitable for language models
             # by the self-instruct team.
             if (
-                self.skip_instruction_re.search(instruction)
-                or self.code_gen_re.search(instruction)
-                or instruction[0] in string.punctuation
-                or not instruction[0].isascii()
+                self.skip_instruction_re.search(instruction_text)
+                or self.code_gen_re.search(instruction_text)
+                or instruction_text[0] in string.punctuation
+                or not instruction_text[0].isascii()
             ):
+                logger.warning(
+                    f"Skipping instruction: {instruction_text} [code, ascii, other unsuitable]"
+                )
                 continue
-            instructions.append(
+            context = re.search(
+                f"(?<!\\d){idx}\\s*\\.\\s*__context__:[\\r\\n\\s]*(.*)(?!\\d+\\s*\\.\\s*__)",
+                text,
+            )
+            if not context:
+                logger.warning(
+                    f"Skipping instruction: {instruction_text} [context not provided]"
+                )
+                continue
+            context = context.group(1).strip()
+            if context == "__no_context__":
+                context = ""
+            response = re.search(
+                f"(?<!\\d){idx}\\s*\\.\\s*__response__:[\\r\\n\\s]*(.*)(?!\\d+\\s*\\.\\s*__)",
+                text,
+            )
+            if not response or not response.group(1).strip():
+                logger.warning(
+                    f"Skipping instruction: {instruction_text} [response not provided]"
+                )
+                continue
+            tasks.append(
                 {
-                    "instruction": instruction,
+                    "instruction": instruction_text,
                     "context": context,
-                    "instruction_type": instruction_type,
+                    "response": response.group(1).strip(),
                 }
             )
-        return instructions
+            logger.info(
+                f"Generated new task [has context: {context != ''}]: {instruction_text}"
+            )
+        return tasks
 
     @backoff.on_exception(backoff.expo, (RateLimitError, TooManyRequestsError))
     async def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -453,41 +461,20 @@ class SelfInstructor:
             return await self._post(*a, **k)
         except Exception as ex:
             logger.error(f"Error performing post: {ex}")
-            import traceback
-
-            print(traceback.format_exc())
         return None
 
-    async def _generate_instruction_batch(
-        self, instruction_count: int
-    ) -> List[Dict[str, Any]]:
-        """Generate an set of instructions.  Wrapped by generate_instruction_batch."""
-        instruction_type = "open"
-        m_target_list = self.open_machine_tasks
-        s_target_list = self.open_seed_tasks
-        rand = random.random()
-        if rand <= self.classification_ratio:
-            instruction_type = "classification"
-            m_target_list = self.classification_machine_tasks
-            s_target_list = self.classification_seed_tasks
-        elif rand <= self.classification_ratio + self.contextual_ratio:
-            instruction_type = "contextual"
-            m_target_list = self.contextual_machine_tasks
-            s_target_list = self.contextual_seed_tasks
+    async def generate_instruction_batch(self):
+        """Generate an set of instructions.
 
-        instructions = []
-        if m_target_list:
-            instructions = random.sample(m_target_list, min(2, len(m_target_list)))
-        instructions += random.sample(
-            s_target_list, instruction_count - len(instructions)
-        )
-        random.shuffle(instructions)
-        prompt = self.generate_prompt_from_instructions(instructions, instruction_type)
+        :return: List of machine-generated instructions, contexts, and responses.
+        :rtype: List[Dict[str, Any]]
+        """
+        instructions = random.sample(self.seed_tasks, self.samples_per_request)
+        prompt = self.generate_prompt_from_instructions(instructions)
 
         path = "/v1/completions" if self._completions else "/v1/chat/completions"
         payload = {
             "model": self.model,
-            "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "frequency_penalty": self.frequency_penalty,
@@ -497,86 +484,20 @@ class SelfInstructor:
             payload["prompt"] = prompt
         else:
             payload["messages"] = [{"role": "user", "content": prompt}]
-        new_instructions = self.extract_instructions_from_response(
-            await self._post(path, payload), instruction_type
-        )
-        futures = []
-        for instruction in new_instructions:
-            get_response_prompt = instruction["instruction"]
-            if instruction.get("context", "").strip():
-                get_response_prompt += "\n" + instruction["context"]
-            new_payload = copy.deepcopy(payload)
-            if self._completions:
-                new_payload["prompt"] = get_response_prompt
-            else:
-                new_payload["messages"][0]["content"] = get_response_prompt
-            futures.append(self._post_no_exc(path, new_payload))
-        results = await asyncio.gather(*futures)
-        instructions_with_responses = []
-        for idx, result in enumerate(results):
-            if not result:
-                logger.warning(
-                    f"Error generating response for machine generated instruction: {new_instructions[idx]}"
-                )
-                continue
-            try:
-                response = (
-                    result["choices"][0]["text"]
-                    if self._completions
-                    else result["choices"][0]["message"]["content"]
-                )
-                if response.strip():
-                    logger.debug(
-                        "\n".join(
-                            [
-                                f"Generated instruction [type={new_instructions[idx]['instruction_type']}]:",
-                                f"Prompt: {new_instructions[idx]['instruction']}",
-                            ]
-                            + (
-                                [f"Context: {new_instructions[idx]['context']}"]
-                                if new_instructions[idx]["context"]
-                                else []
-                            )
-                            + [f"Response: {response.strip()}"]
-                        )
-                    )
-                    instructions_with_responses.append(
-                        {
-                            **new_instructions[idx],
-                            **{"response": response.strip()},
-                        }
-                    )
-            except Exception as exc:
-                logger.error(
-                    f"Error parsing response for machine-generated isntruction: {exc}"
-                )
-        return instructions_with_responses
-
-    async def generate_instruction_batch(self) -> List[Dict[str, Any]]:
-        """Generate a batch of instructions.
-
-        :return: List of machine-generated instructions with responses.
-        :rtype: List[Dict[str, Any]]
-        """
-        current_count = self.instructions_per_request
-        while current_count > 3:
-            try:
-                return await self._generate_instruction_batch(current_count)
-            except ContextLengthExceededError:
-                current_count -= 1
-        logger.error("Couldn't generate instruction batch due to context length error")
+        try:
+            return self.extract_instructions_from_response(
+                await self._post(path, payload)
+            )
+        except ContextLengthExceededError:
+            ...
         return []
 
     async def run(self):
         """Run the self-instruct, instruction generation task to completion."""
-        if os.path.exists(self.output_path) and not self.overwrite:
-            raise RuntimeError(
-                f"Output path: {self.output_path} already exists, overwrite false"
-            )
         scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
-        with open(self.output_path, "w") as outfile:
+        with open(self.output_path, "a+") as outfile:
             while len(self.machine_tasks) <= self.instruction_count:
-                futures = [self.generate_instruction_batch() for _ in range(20)]
+                futures = [self.generate_instruction_batch() for _ in range(1)]
                 results = None
                 try:
                     results = await asyncio.gather(*futures)
@@ -585,24 +506,13 @@ class SelfInstructor:
                     break
                 new_instructions = [inst for insts in results for inst in insts]
                 for inst in new_instructions:
-                    comparison_group = []
-                    if inst["instruction_type"] == "classification":
-                        comparison_group = (
-                            self.classification_seed_tasks
-                            + self.classification_machine_tasks
-                        )
-                    elif inst.get("context", "").strip():
-                        comparison_group = (
-                            self.contextual_seed_tasks + self.contextual_machine_tasks
-                        )
-                    else:
-                        comparison_group = (
-                            self.open_seed_tasks + self.open_machine_tasks
-                        )
-                    with Pool(4) as pool:
+                    with Pool(16) as pool:
                         scores = pool.map(
                             partial(scorer.score, inst["instruction"]),
-                            [item["instruction"] for item in comparison_group],
+                            [
+                                item["instruction"]
+                                for item in self.seed_tasks + self.machine_tasks
+                            ],
                         )
                     scores = [score["rougeL"].fmeasure for score in scores]
                     max_score = max(scores)
@@ -612,23 +522,19 @@ class SelfInstructor:
                         )
                         continue
                     self.machine_tasks.append(inst)
-                    if inst["instruction_type"] == "classification":
-                        self.classification_machine_tasks.append(inst)
-                    elif inst.get("context", "").strip():
-                        self.contextual_machine_tasks.append(inst)
-                    else:
-                        self.open_machine_tasks.append(inst)
                     outfile.write(json.dumps(inst) + "\n")
                 outfile.flush()
                 logger.info(
                     f"Generated {len(self.machine_tasks)} of {self.instruction_count}, tokens used: {self.used_tokens}"
                 )
+                break
         logger.success(
             f"Finished generating {len(self.machine_tasks)} instructions and responses."
         )
 
 
 def main():
+    random.seed(secrets.randbelow(1000000000))
     parser = argparse.ArgumentParser()
     for arg, kwargs in SelfInstructor.CLI_ARGS.items():
         parser.add_argument(arg, **kwargs)

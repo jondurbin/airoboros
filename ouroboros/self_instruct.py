@@ -23,20 +23,23 @@ from .exceptions import (
 )
 
 # Defaults and constants.
-DEFAULT_PROMPT = """You are asked to generate a set of 15 diverse task instructions. These task instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.
+DEFAULT_PROMPT = """You are asked to generate a set of 8 diverse prompts.  These prompts will be given to a GPT model and we will evaluate the GPT model for completing the prompts.
 
 Here are the requirements:
  * Try not to repeat the verb for each __instruction__ to maximize diversity.
- * The tasks should include a diverse range of types of tasks like open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.
- * The tasks should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
- * The tasks should be in English.
- * The __instruction__ field in each task should be 1 to 2 sentences long.
- * For tasks that require extracting information from __context__, e.g. question-answering, summarization, information extraction, etc., include 1-8 detailed, informational sentences in __context__.  __context__ must not be simple placeholders or links to external resources.
- * Not all tasks require __context__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __context__. In this case, we simply put "__no_context__" in the __context__ field.
- * The __response__ should be an appropriate response to the __instruction__ and the __context__, and should not contain information not provided by __context__.
- * Be sure to include 15 tasks in the response.
+ * Generate a diverse set of random topics, including very obscure topics.  These topics should then be used as the inspiration for the prompts.
+ * Try to avoid prompts about popular books, movies, and television shows.
+ * The __instruction__ should include a variety of types of tasks, such as open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.
+ * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
+ * The __instruction__ should be in English.
+ * The __instruction__ should be 1 to 2 sentences long.
+ * For tasks that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant information. __passage__ must not be simple placeholders or links to external resources.
+ * Not all tasks require __passage__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __passage__. In this case, we simply put "__no_context__" in the __passage__ field.
+ * The __response__ should be an appropriate response to the __instruction__ and __passage__
+ * If __response__ includes specific words, phrases, dates, etc., and __passage__ is provided, be sure to include those words/phrases/etc. in __passage__.
+ * Be sure to include 8 tasks in the response.
 
-List of 15 tasks:
+List of 8 tasks:
 """
 SKIP_WORDS = ["image", "graph", "picture", "file", "map", "draw", "plot", "go to"]
 SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
@@ -328,7 +331,7 @@ class SelfInstructor:
                 if not instruction["context"].strip()
                 else instruction["context"].strip()
             )
-            prompt.append(f"{idx + 1}. __context__: {context}")
+            prompt.append(f"{idx + 1}. __passage__: {context}")
             prompt.append(f"{idx + 1}. __response__: {instruction['response']}")
         return "\n".join(prompt)
 
@@ -385,7 +388,7 @@ class SelfInstructor:
                 )
                 continue
             context = re.search(
-                f"(?<!\\d){idx}\\s*\\.\\s*__context__:[\\r\\n\\s]*(.*)(?!\\d+\\s*\\.\\s*__)",
+                f"(?<!\\d){idx}\\s*\\.\\s*__passage__:[\\r\\n\\s]*(.*)(?!\\d+\\s*\\.\\s*__)",
                 text,
             )
             if not context:
@@ -472,8 +475,9 @@ class SelfInstructor:
         instructions = random.sample(self.seed_tasks, self.samples_per_request)
         prompt = self.generate_prompt_from_instructions(instructions)
         estimated_tokens = int(len(prompt) / 4)
-        if estimated_tokens > 2000:
+        if estimated_tokens > 2500:
             logger.warning("Skipping prompt, too long")
+            return []
         path = "/v1/completions" if self._completions else "/v1/chat/completions"
         payload = {
             "model": self.model,
@@ -481,8 +485,8 @@ class SelfInstructor:
             "top_p": self.top_p,
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
-            "stop": ["16."],
-            "max_tokens": 3800 - estimated_tokens,
+            "stop": ["9."],
+            "max_tokens": 4000 - estimated_tokens,
         }
         if self._completions:
             payload["prompt"] = prompt
@@ -501,7 +505,7 @@ class SelfInstructor:
         scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
         with open(self.output_path, "a+") as outfile:
             while len(self.machine_tasks) <= self.instruction_count:
-                futures = [self.generate_instruction_batch() for _ in range(15)]
+                futures = [self.generate_instruction_batch() for _ in range(10)]
                 results = None
                 try:
                     results = await asyncio.gather(*futures)

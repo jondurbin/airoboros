@@ -316,7 +316,9 @@ class SelfInstructor:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "topics.txt")
         if os.path.exists(path):
             with open(path, "r") as infile:
-                self.random_topics = {line.strip() for line in infile.readlines() if line.strip()}
+                self.random_topics = {
+                    line.strip() for line in infile.readlines() if line.strip()
+                }
                 logger.info(f"Using {len(self.random_topics)} cached random topics")
             return
         futures = [
@@ -398,7 +400,9 @@ class SelfInstructor:
 
         tasks = []
         for instruction in re.findall(
-            r"(\d+\s*\.\s*__instruction__:[\s\r\n]*.*)(?!\d+\s*\.\s*__)", text
+            r"(\d+\s*\.\s*__instruction__:[\s\r\n]*.*?)(?=\d+\s*\.\s*__|$)",
+            text,
+            re.DOTALL,
         ):
             idx = instruction.split(".")[0].strip()
             instruction_text = instruction.split("__instruction__:")[-1].strip()
@@ -425,8 +429,9 @@ class SelfInstructor:
                 )
                 continue
             context = re.search(
-                f"(?<!\\d){idx}\\s*\\.\\s*__passage__:[\\r\\n\\s]*(.*)(?!\\d+\\s*\\.\\s*__)",
+                f"(?<!\\d){idx}\\s*\\.\\s*__passage__:[\\r\\n\\s]*(.*?)(?=\\d+\\s*\\.\\s*__|$)",
                 text,
+                re.DOTALL,
             )
             if not context:
                 logger.warning(
@@ -437,8 +442,9 @@ class SelfInstructor:
             if context == "__no_context__":
                 context = ""
             response = re.search(
-                f"(?<!\\d){idx}\\s*\\.\\s*__response__:[\\r\\n\\s]*(.*)(?!\\d+\\s*\\.\\s*__)",
+                f"(?<!\\d){idx}\\s*\\.\\s*__response__:[\\r\\n\\s]*(.*?)(?=\\d+\\s*\\.\\s*__|$)",
                 text,
+                re.DOTALL,
             )
             if not response or not response.group(1).strip():
                 logger.warning(

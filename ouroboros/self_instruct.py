@@ -431,11 +431,16 @@ class SelfInstructor:
                     f"Skipping instruction: {instruction_text} [response not provided]"
                 )
                 continue
+            response = response.group(1).strip()
+            scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
+            if scorer.score(context, response)["rougeL"].fmeasure >= 0.8:
+                logger.warning(f"Ignore context, too similar to response.")
+                context = ""
             tasks.append(
                 {
                     "instruction": instruction_text,
                     "context": context,
-                    "response": response.group(1).strip(),
+                    "response": response,
                 }
             )
             logger.info(

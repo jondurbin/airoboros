@@ -18,6 +18,7 @@ from .exceptions import (
     RateLimitError,
     TooManyRequestsError,
     TokensExhaustedError,
+    ServerOverloadedError,
     ContextLengthExceededError,
     BadResponseError,
 )
@@ -28,15 +29,14 @@ DEFAULT_PROMPT = f"""You are asked to generate a set of {BATCH_SIZE} diverse pro
 
 Here are the requirements:
  * Try not to repeat the verb for each __instruction__ to maximize diversity.
- * Try to avoid constroversial subjects.
+ * Try to avoid constroversial and politically charged subjects.
  * The __instruction__ should include a variety of types of prompts, such as open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.k
  * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The __instruction__ should be in English.
  * The __instruction__ should be 1 to 2 sentences long.
- * For prompts that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant information. __passage__ must not be simple placeholders or links to external resources.
+ * For prompts that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant data, including more information than necessary to generate __response__. __passage__ must not be simple placeholders or links to external resources.  Be sure to include all words, phrases, dates, or lists of items in __passage__ if those are part of __response__.
  * Not all prompts require __passage__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __passage__. In this case, we simply put "__no_context__" in the __passage__ field.
  * The __response__ should be an appropriate response to the __instruction__ and __passage__
- * If __response__ includes specific words, phrases, dates, etc., and __passage__ is provided, be sure to include those words/phrases/etc. in __passage__.
  * Be sure to include {BATCH_SIZE} propts in the response.
 REPLACE_TOPICS
 
@@ -227,6 +227,7 @@ class SelfInstructor:
         self.machine_tasks = []
         self._initialize_seed_tasks(seed_tasks, seed_tasks_path, use_dolly_seed)
         self.used_tokens = 0
+        self.random_topics = set([])
 
     def _initialize_seed_tasks(
         self,
@@ -311,6 +312,35 @@ class SelfInstructor:
             r"\s+", " ", " ".join(instruction.splitlines()).strip().rstrip(":")
         )
 
+    async def initialize_random_topics(self):
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "topics.txt")
+        if os.path.exists(path):
+            with open(path, "r") as infile:
+                return [line.strip() for line in infile.readlines() if line.strip()]
+        futures = [
+            self._post_no_exc(
+                "/v1/completions",
+                {
+                    "model": "text-davinci-003",
+                    "prompt": ["Give me a list of 100 completely random topics."] * 20,
+                    "temperature": 1.0,
+                    "max_tokens": 500,
+                },
+            )
+            for _ in range(20)
+        ]
+        responses = await asyncio.gather(*futures)
+        with open(path, "w") as outfile:
+            for response in responses:
+                if not response:
+                    continue
+                for choice in response["choices"]:
+                    for line in choice["text"].splitlines():
+                        if match := re.search(r"\s*\d+\s*\.\s*(.+)", line):
+                            self.random_topics.add(match.group(1))
+                            outfile.write(match.group(1) + "\n")
+        logger.info(f"Initialized {len(self.random_topics)} random topics for prompts")
+
     async def generate_prompt_from_instructions(
         self, instructions: List[Dict[str, any]]
     ) -> str:
@@ -322,29 +352,11 @@ class SelfInstructor:
         :return: The encoded prompt.
         :rtype: str
         """
-        # First, let's get some random topics to choose from.
-        topics = await self._post_no_exc(
-            "/v1/completions",
-            {
-                "model": "text-davinci-003",
-                "prompt": "Give me a list of 10 completely random topics.",
-                "temperature": 1.0,
-                "max_tokens": 400,
-            },
+        topic_prompt = (
+            "* Each __instruction__ must be related to one of the following topics: "
         )
-        topic_prompt = ""
-        try:
-            if topics:
-                topic_prompt = "* Each __instruction__ must be related to one of the following topics: "
-                topic_texts = []
-                for line in topics["choices"][0]["text"].splitlines():
-                    if match := re.search(r"\s*\d+\s*\.\s*(.+)", line):
-                        topic_texts.append(match.group(1))
-                topic_prompt += ", ".join(topic_texts)
-                if not topic_texts:
-                    topic_prompt = ""
-        except Exception:
-            topic_prompt = ""
+        topic_texts = random.sample(list(self.random_topics), min(BATCH_SIZE, 5))
+        topic_prompt += ", ".join(topic_texts)
         prompt = [self.prompt.replace("REPLACE_TOPICS", topic_prompt)]
         for idx, instruction in enumerate(instructions):
             text = self.clean_instruction_text(instruction["instruction"])
@@ -432,10 +444,14 @@ class SelfInstructor:
                 )
                 continue
             response = response.group(1).strip()
-            scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
-            if scorer.score(context, response)["rougeL"].fmeasure >= 0.8:
-                logger.warning(f"Ignore context, too similar to response.")
+            if len(response) > len(context):
+                logger.warning("Ignoring context, shorter than response.")
                 context = ""
+            else:
+                scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
+                if scorer.score(context, response)["rougeL"].fmeasure >= 0.7:
+                    logger.warning("Ignoring context, too similar to response.")
+                    context = ""
             tasks.append(
                 {
                     "instruction": instruction_text,
@@ -448,7 +464,9 @@ class SelfInstructor:
             )
         return tasks
 
-    @backoff.on_exception(backoff.expo, (RateLimitError, TooManyRequestsError))
+    @backoff.on_exception(
+        backoff.expo, (RateLimitError, TooManyRequestsError, ServerOverloadedError)
+    )
     async def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Perform a post request to OpenAI API.
 
@@ -476,6 +494,8 @@ class SelfInstructor:
                     raise RateLimitError(text)
                 elif "context_length_exceeded" in text.lower():
                     raise ContextLengthExceededError(text)
+                elif "server_error" in text and "overloaded" in text.lower():
+                    raise ServerOverloadedError(text)
                 else:
                     raise BadResponseError(text)
             result = await result.json()
@@ -503,7 +523,7 @@ class SelfInstructor:
         instructions = random.sample(self.seed_tasks, self.samples_per_request)
         prompt = await self.generate_prompt_from_instructions(instructions)
         estimated_tokens = int(len(prompt) / 4)
-        if estimated_tokens > 2500:
+        if estimated_tokens > 2700:
             logger.warning("Skipping prompt, too long")
             return []
         path = "/v1/completions" if self._completions else "/v1/chat/completions"
@@ -514,7 +534,7 @@ class SelfInstructor:
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
             "stop": [f"{BATCH_SIZE+1}."],
-            "max_tokens": 4000 - estimated_tokens,
+            "max_tokens": 4000 - estimated_tokens if self._completions else None,
         }
         if self._completions:
             payload["prompt"] = prompt
@@ -531,6 +551,7 @@ class SelfInstructor:
     async def run(self):
         """Run the self-instruct, instruction generation task to completion."""
         scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
+        await self.initialize_random_topics()
         with open(self.output_path, "a+") as outfile:
             while len(self.machine_tasks) <= self.instruction_count:
                 futures = [self.generate_instruction_batch() for _ in range(10)]

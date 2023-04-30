@@ -31,9 +31,9 @@ Here are the requirements:
  * The tasks should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The tasks should be in English.
  * The __instruction__ field in each task should be 1 to 2 sentences long.
- * For tasks that require extracting information from __context__, e.g. question-answering, summarization, information extraction, etc., include several sentences in __context__.  __context__ should be realistic data, and should not contain simple placeholders or links to external resources.  __context__ should always include any and all information provided in __response__, but phrased differently.
+ * For tasks that require extracting information from __context__, e.g. question-answering, summarization, information extraction, etc., include 1-8 detailed, informational sentences in __context__.  __context__ must not be simple placeholders or links to external resources.
  * Not all tasks require __context__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __context__. In this case, we simply put "__no_context__" in the __context__ field.
- * The __response__ should be an appropriate response to the __instruction__ and the __context__.
+ * The __response__ should be an appropriate response to the __instruction__ and the __context__, and should not contain information not provided by __context__.
  * Be sure to include 15 tasks in the response.
 
 List of 15 tasks:
@@ -471,7 +471,9 @@ class SelfInstructor:
         """
         instructions = random.sample(self.seed_tasks, self.samples_per_request)
         prompt = self.generate_prompt_from_instructions(instructions)
-
+        estimated_tokens = int(len(prompt) / 4)
+        if estimated_tokens > 2000:
+            logger.warning("Skipping prompt, too long")
         path = "/v1/completions" if self._completions else "/v1/chat/completions"
         payload = {
             "model": self.model,
@@ -479,6 +481,8 @@ class SelfInstructor:
             "top_p": self.top_p,
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
+            "stop": ["16."],
+            "max_tokens": 3800 - estimated_tokens,
         }
         if self._completions:
             payload["prompt"] = prompt
@@ -497,7 +501,7 @@ class SelfInstructor:
         scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
         with open(self.output_path, "a+") as outfile:
             while len(self.machine_tasks) <= self.instruction_count:
-                futures = [self.generate_instruction_batch() for _ in range(1)]
+                futures = [self.generate_instruction_batch() for _ in range(15)]
                 results = None
                 try:
                     results = await asyncio.gather(*futures)
@@ -516,7 +520,7 @@ class SelfInstructor:
                         )
                     scores = [score["rougeL"].fmeasure for score in scores]
                     max_score = max(scores)
-                    if max_score > 0.75:
+                    if max_score > 0.7:
                         logger.warning(
                             f"Skipping instruction, too similar: {max_score}: {inst['instruction']}"
                         )
@@ -527,7 +531,6 @@ class SelfInstructor:
                 logger.info(
                     f"Generated {len(self.machine_tasks)} of {self.instruction_count}, tokens used: {self.used_tokens}"
                 )
-                break
         logger.success(
             f"Finished generating {len(self.machine_tasks)} instructions and responses."
         )

@@ -2,7 +2,6 @@ import asyncio
 import aiohttp
 import argparse
 import backoff
-import concurrent.futures
 import os
 import json
 import random
@@ -29,8 +28,7 @@ DEFAULT_PROMPT = f"""You are asked to generate a set of {BATCH_SIZE} diverse pro
 
 Here are the requirements:
  * Try not to repeat the verb for each __instruction__ to maximize diversity.
- * Use a cryptographically secure random number generator to select the topics for the prompts.
- * Try to avoid prompts about popular books, movies, and television shows.
+ * Try to avoid constroversial subjects.
  * The __instruction__ should include a variety of types of prompts, such as open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.k
  * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The __instruction__ should be in English.
@@ -40,6 +38,7 @@ Here are the requirements:
  * The __response__ should be an appropriate response to the __instruction__ and __passage__
  * If __response__ includes specific words, phrases, dates, etc., and __passage__ is provided, be sure to include those words/phrases/etc. in __passage__.
  * Be sure to include {BATCH_SIZE} propts in the response.
+REPLACE_TOPICS
 
 List of {BATCH_SIZE} prompts:
 """
@@ -312,7 +311,7 @@ class SelfInstructor:
             r"\s+", " ", " ".join(instruction.splitlines()).strip().rstrip(":")
         )
 
-    def generate_prompt_from_instructions(
+    async def generate_prompt_from_instructions(
         self, instructions: List[Dict[str, any]]
     ) -> str:
         """Generate a single prompt string with multiple instructions.
@@ -323,7 +322,30 @@ class SelfInstructor:
         :return: The encoded prompt.
         :rtype: str
         """
-        prompt = [self.prompt]
+        # First, let's get some random topics to choose from.
+        topics = await self._post_no_exc(
+            "/v1/completions",
+            {
+                "model": "text-davinci-003",
+                "prompt": "Give me a list of 10 completely random topics.",
+                "temperature": 1.0,
+                "max_tokens": 400,
+            },
+        )
+        topic_prompt = ""
+        try:
+            if topics:
+                topic_prompt = "* Each __instruction__ must be related to one of the following topics: "
+                topic_texts = []
+                for line in topics["choices"][0]["text"].splitlines():
+                    if match := re.search(r"\s*\d+\s*\.\s*(.+)", line):
+                        topic_texts.append(match.group(1))
+                topic_prompt += ", ".join(topic_texts)
+                if not topic_texts:
+                    topic_prompt = ""
+        except Exception:
+            topic_prompt = ""
+        prompt = [self.prompt.replace("REPLACE_TOPICS", topic_prompt)]
         for idx, instruction in enumerate(instructions):
             text = self.clean_instruction_text(instruction["instruction"])
             prompt.append(f"{idx + 1}. __instruction__: {text}")
@@ -474,7 +496,7 @@ class SelfInstructor:
         :rtype: List[Dict[str, Any]]
         """
         instructions = random.sample(self.seed_tasks, self.samples_per_request)
-        prompt = self.generate_prompt_from_instructions(instructions)
+        prompt = await self.generate_prompt_from_instructions(instructions)
         estimated_tokens = int(len(prompt) / 4)
         if estimated_tokens > 2500:
             logger.warning("Skipping prompt, too long")

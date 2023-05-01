@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="airoboros",
-    version="0.0.1",
+    version="0.0.2",
     description="Re-implementation of the self-instruct paper, with updated prompts, models, etc.",
     url="https://github.com/jondurbin/airoboros",
     author="Jon Durbin",

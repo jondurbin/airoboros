@@ -33,7 +33,7 @@ Here are the requirements:
  * The __instruction__ should include a variety of types of prompts, such as open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.k
  * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The __instruction__ should be in English.
- * The __instruction__ should be 1 to 2 sentences long.
+ * The __instruction__ should be between 1 and 3 sentences long.
  * For prompts that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant data, including more information than necessary to generate __response__. __passage__ must not be simple placeholders or links to external resources.  Be sure to include all words, phrases, dates, or lists of items in __passage__ if those are part of __response__.
  * Not all prompts require __passage__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __passage__. In this case, we simply put "__no_context__" in the __passage__ field.
  * The __response__ should be an appropriate response to the __instruction__ and __passage__
@@ -128,7 +128,7 @@ class SelfInstructor:
         },
         "--min-instruction-length": {
             "type": int,
-            "default": 3,
+            "default": 2,
             "help": "minimum instruction length",
         },
         "--max-instruction-length": {
@@ -321,7 +321,7 @@ class SelfInstructor:
         if os.path.exists(path):
             with open(path, "r") as infile:
                 self.random_topics = {
-                    line.strip() for line in infile.readlines() if line.strip()
+                    line.strip().lower() for line in infile.readlines() if line.strip()
                 }
                 logger.info(f"Using {len(self.random_topics)} cached random topics...")
             return
@@ -331,12 +331,12 @@ class SelfInstructor:
                 "/v1/completions",
                 {
                     "model": "text-davinci-003",
-                    "prompt": ["Give me a list of 100 completely random topics."] * 25,
+                    "prompt": ["Give me a list of 200 completely random topics."] * 20,
                     "temperature": 1.0,
-                    "max_tokens": 500,
+                    "max_tokens": 800,
                 },
             )
-            for _ in range(25)
+            for _ in range(20)
         ]
         responses = await asyncio.gather(*futures)
         with open(path, "w") as outfile:
@@ -346,8 +346,9 @@ class SelfInstructor:
                 for choice in response["choices"]:
                     for line in choice["text"].splitlines():
                         if match := re.search(r"\s*\d+\s*\.\s*(.+)", line):
-                            self.random_topics.add(match.group(1))
-                            outfile.write(match.group(1) + "\n")
+                            topic = match.group(1).lower()
+                            self.random_topics.add(topic)
+                            outfile.write(topic + "\n")
         logger.success(
             f"Successfully generated {len(self.random_topics)} random topics..."
         )
@@ -364,9 +365,9 @@ class SelfInstructor:
         :rtype: str
         """
         topic_prompt = (
-            "* Each __instruction__ must be related to one of the following topics: "
+            "* Ensure each generated prompt is related to one of the following topics: "
         )
-        topic_texts = random.sample(list(self.random_topics), min(BATCH_SIZE, 5))
+        topic_texts = random.sample(list(self.random_topics), min(BATCH_SIZE, 6))
         topic_prompt += ", ".join(topic_texts)
         prompt = [self.prompt.replace("REPLACE_TOPICS", topic_prompt)]
         for idx, instruction in enumerate(instructions):
@@ -578,7 +579,7 @@ class SelfInstructor:
                     break
                 new_instructions = [inst for insts in results for inst in insts]
                 for inst in new_instructions:
-                    with Pool(16) as pool:
+                    with Pool(21) as pool:
                         scores = pool.map(
                             partial(scorer.score, inst["instruction"]),
                             [

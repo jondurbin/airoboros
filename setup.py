@@ -1,13 +1,13 @@
 from setuptools import setup
 
 setup(
-    name="ouroboros",
+    name="airoboros",
     version="0.0.1",
     description="Re-implementation of the self-instruct paper, with updated prompts, models, etc.",
-    url="https://github.com/jondurbin/ouroboros",
+    url="https://github.com/jondurbin/airoboros",
     author="Jon Durbin",
     license="Apache 2.0",
-    packages=["ouroboros"],
+    packages=["airoboros"],
     install_requires=[
         "rouge-score>=0.1.2",
         "aiohttp>=3.8",
@@ -30,7 +30,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "ouroboros = ouroboros.entrypoint:run"
+            "airoboros = airoboros.entrypoint:run"
         ]
     },
 )

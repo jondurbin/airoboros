@@ -7,7 +7,7 @@ This repository is my own take on implementing the [Self-Instruct paper](https:/
 
 See available options via:
 ```
-python -m ouroboros.self_instruct --help
+airoboros generate-instructions --help
 ```
 
 Example output:

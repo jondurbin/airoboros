@@ -1,7 +1,8 @@
-# Ouroboros: Aligning large language models with self (openai) generated instructions.
+# AIroboros: Using large language models to fine-tune large language models.
 
-This repository is my own take on implementing the [Self-Instruct paper](https://arxiv.org/abs/2212.10560).  The approach is quite heavily modified, and uses the seeds provided by [Databricks Dolly Project](https://huggingface.co/datasets/databricks/databricks-dolly-15k)
+This is my take on implementing the [Self-Instruct paper](https://arxiv.org/abs/2212.10560).  The approach is quite heavily modified, and uses the human generated seeds provided by [Databricks Dolly Project](https://huggingface.co/datasets/databricks/databricks-dolly-15k)
 
+This updated implementation supports either the /v1/completions endpoint or /v1/chat/completions, which is particularly useful in that it supports gpt-4 and gpt-3.5-turbo (which is 1/10 the cost of text-davinci-003).
 
 ## Generating instructions
 
@@ -82,3 +83,7 @@ options:
                         Maximum token usage, calculated as sum of total_tokens
                         from responses
 ```
+
+## Coming soon
+
+Scripts for fine-tuning various models using the self-instruct (and human-generated) prompts.

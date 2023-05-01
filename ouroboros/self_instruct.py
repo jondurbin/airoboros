@@ -313,25 +313,28 @@ class SelfInstructor:
         )
 
     async def initialize_random_topics(self):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "topics.txt")
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), ".seed", "topics.txt"
+        )
         if os.path.exists(path):
             with open(path, "r") as infile:
                 self.random_topics = {
                     line.strip() for line in infile.readlines() if line.strip()
                 }
-                logger.info(f"Using {len(self.random_topics)} cached random topics")
+                logger.info(f"Using {len(self.random_topics)} cached random topics...")
             return
+        logger.info("Generating random topics to use in prompts...")
         futures = [
             self._post_no_exc(
                 "/v1/completions",
                 {
                     "model": "text-davinci-003",
-                    "prompt": ["Give me a list of 100 completely random topics."] * 20,
+                    "prompt": ["Give me a list of 100 completely random topics."] * 25,
                     "temperature": 1.0,
                     "max_tokens": 500,
                 },
             )
-            for _ in range(20)
+            for _ in range(25)
         ]
         responses = await asyncio.gather(*futures)
         with open(path, "w") as outfile:
@@ -343,7 +346,9 @@ class SelfInstructor:
                         if match := re.search(r"\s*\d+\s*\.\s*(.+)", line):
                             self.random_topics.add(match.group(1))
                             outfile.write(match.group(1) + "\n")
-        logger.info(f"Initialized {len(self.random_topics)} random topics for prompts")
+        logger.success(
+            f"Successfully generated {len(self.random_topics)} random topics..."
+        )
 
     async def generate_prompt_from_instructions(
         self, instructions: List[Dict[str, any]]

@@ -250,6 +250,8 @@ class SelfInstructor:
             dolly_seed_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), ".seed", "dolly_seeds.jsonl"
             )
+            if not os.path.exists(os.path.dirname(dolly_seed_path)):
+                os.mkdir(os.path.dirname(dolly_seed_path))
             if not os.path.isfile(dolly_seed_path):
                 result = requests.get(DOLLY_SEED_URL)
                 with open(dolly_seed_path, "w") as outfile:

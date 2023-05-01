@@ -1,3 +1,6 @@
+build/
+*.egg-info
+venv/
 *.pyc
 __pycache__
 .seed

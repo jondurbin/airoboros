@@ -9,6 +9,7 @@ import re
 import requests
 import secrets
 import string
+import sys
 from multiprocessing import Pool
 from functools import partial
 from loguru import logger
@@ -605,14 +606,14 @@ class SelfInstructor:
         )
 
 
-def main():
+def main(args):
     random.seed(secrets.randbelow(1000000000))
     parser = argparse.ArgumentParser()
     for arg, kwargs in SelfInstructor.CLI_ARGS.items():
         parser.add_argument(arg, **kwargs)
-    instructor = SelfInstructor(**vars(parser.parse_args()))
+    instructor = SelfInstructor(**vars(parser.parse_args(args)))
     asyncio.run(instructor.run())
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

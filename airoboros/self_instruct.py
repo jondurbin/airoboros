@@ -11,13 +11,12 @@ import string
 import sys
 import threading
 import concurrent.futures
-from multiprocessing import Pool
 from functools import partial
 from loguru import logger
 from queue import Queue
+from rouge_score import rouge_scorer
 from typing import List, Dict, Any
 from uuid import uuid4
-from rouge_score import rouge_scorer
 from .exceptions import (
     RateLimitError,
     TooManyRequestsError,
@@ -27,6 +26,8 @@ from .exceptions import (
     ContextLengthExceededError,
     BadResponseError,
 )
+from langchain.vectorstores import Chroma
+from langchain.embeddings import HuggingFaceEmbeddings
 
 # Defaults and constants.
 BATCH_SIZE = 13
@@ -71,7 +72,6 @@ MODEL_ENDPOINTS = {
         "gpt-3.5-turbo-0301",
     ],
 }
-SCORER = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
 
 
 class SelfInstructor:
@@ -166,6 +166,16 @@ class SelfInstructor:
             "type": int,
             "help": "Maximum token usage, calculated as sum of total_tokens from responses",
         },
+        "--prompt-generation-concurrency": {
+            "type": int,
+            "help": "Number of concurrent prompt generation threads/requests to use",
+            "default": 50,
+        },
+        "--min-docsearch-score": {
+            "type": float,
+            "help": "Minimum similarity score when querying vector DB to consider a prompt unique",
+            "default": "0.35",
+        },
     }
 
     def __init__(
@@ -192,6 +202,8 @@ class SelfInstructor:
         frequency_penalty: int = 0,
         presence_penalty: int = 2,
         max_usage_tokens: int | None = None,
+        prompt_generation_concurrency: int = 50,
+        min_docsearch_score: float = 0.35,
     ):
         """Constructor."""
         self.model = model
@@ -235,6 +247,19 @@ class SelfInstructor:
         self.used_tokens = 0
         self.random_topics = set([])
         self.stop_producing = False
+        self.prompt_generation_concurrency = prompt_generation_concurrency
+        self.min_docsearch_score = min_docsearch_score
+        self._initialize_docstore()
+
+    def _initialize_docstore(self):
+        """Initialize the in-memory vector database used to check prompt uniqueness."""
+        logger.info(
+            "Initializing in-memory document store for similarity comparison..."
+        )
+        texts = [
+            prompt["instruction"] for prompt in self.seed_tasks + self.machine_tasks
+        ]
+        self.docstore = Chroma.from_texts(texts, HuggingFaceEmbeddings())
 
     def _initialize_seed_tasks(
         self,
@@ -484,7 +509,7 @@ class SelfInstructor:
                 }
             )
             logger.info(
-                f"Generated new task [has context: {context != ''}]: {instruction_text}"
+                f"Generated candidate task [has context: {context != ''}]: {instruction_text}"
             )
         return tasks
 
@@ -616,35 +641,29 @@ class SelfInstructor:
         :type queue: Queue
         """
         with open(self.output_path, "a+") as outfile:
-            with Pool(60) as pool:
-                while (
-                    len(self.machine_tasks) < self.instruction_count
-                    or consume_remaining
-                ):
-                    instruction = queue.get()
-                    if not instruction:
-                        break
-                    scores = pool.map(
-                        partial(SCORER.score, instruction["instruction"]),
-                        [
-                            item["instruction"]
-                            for item in self.seed_tasks + self.machine_tasks
-                        ],
+            while len(self.machine_tasks) < self.instruction_count or consume_remaining:
+                instruction = queue.get()
+                if not instruction:
+                    break
+                similar = self.docstore.similarity_search_with_score(
+                    instruction["instruction"], k=1
+                )
+                similarity_score = 1.0
+                for _, score in similar:
+                    similarity_score = score
+                if similarity_score <= self.min_docsearch_score:
+                    logger.warning(
+                        f"Skipping instruction, too similar [{score}]: {instruction['instruction']}"
                     )
-                    scores = [score["rougeL"].fmeasure for score in scores]
-                    max_score = max(scores)
-                    if max_score > 0.7:
-                        logger.warning(
-                            f"Skipping instruction, too similar: {max_score}: {instruction['instruction']}"
-                        )
-                        continue
-                    outfile.write(json.dumps(instruction) + "\n")
-                    outfile.flush()
-                    self.machine_tasks.append(instruction)
-                    logger.success(
-                        f"Generated unique instruction {len(self.machine_tasks)} of {self.instruction_count}"
-                    )
-            self.stop_producing = True
+                    continue
+                outfile.write(json.dumps(instruction) + "\n")
+                outfile.flush()
+                self.machine_tasks.append(instruction)
+                self.docstore.add_texts([instruction["instruction"]])
+                logger.success(
+                    f"Generated unique [score={similarity_score}] instruction [total={len(self.machine_tasks)}]: {instruction['instruction']}"
+                )
+        self.stop_producing = True
 
     def run(self):
         """Run the self-instruct, instruction generation task to completion."""
@@ -657,7 +676,7 @@ class SelfInstructor:
         queue = Queue(maxsize=100)
         producers = [
             threading.Thread(target=self.generate_instruction_batches, args=(queue,))
-            for _ in range(50)
+            for _ in range(self.prompt_generation_concurrency)
         ]
         for producer in producers:
             producer.start()

@@ -1,3 +1,4 @@
+.chroma
 dist/
 build/
 *.egg-info

@@ -1,9 +1,15 @@
+import os
 from setuptools import setup
+
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md")) as infile:
+    long_description = infile.read()
 
 setup(
     name="airoboros",
-    version="0.0.3",
-    description="Re-implementation of the self-instruct paper, with updated prompts, models, etc.",
+    version="0.0.5",
+    description="Updated and improved implementation of the self-instruct system.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/jondurbin/airoboros",
     author="Jon Durbin",
     license="Apache 2.0",
@@ -14,6 +20,9 @@ setup(
         "backoff>=2.2",
         "requests>=2.28",
         "loguru>=0.7",
+        "chromadb>=0.3.21",
+        "langchain>=0.0.155",
+        "sentence-transformers>=2.2.2",
     ],
     extras_require={
         "dev": [

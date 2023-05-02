@@ -520,7 +520,7 @@ class SelfInstructor:
             f"{OPENAI_API_BASE_URL}{path}",
             headers=headers,
             json=payload,
-            timeout=120.0,
+            timeout=240.0,
         )
         if result.status_code != 200:
             text = result.text

@@ -23,8 +23,8 @@ Be sure to look over the openai terms of service before using the datasets, spec
 
 ### 100k synthetic instructions, gpt-3.5-turbo
 
-[instructions.jsonl](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/instructions.jsonl)
-[topics.txt](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/topics.txt)
+* [instructions.jsonl](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/instructions.jsonl)
+* [topics.txt](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/topics.txt)
 
 
 ## Generating instructions

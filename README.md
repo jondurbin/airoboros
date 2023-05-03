@@ -17,6 +17,16 @@ This updated implementation supports either the /v1/completions endpoint or /v1/
 * Generally speaking, this implementation tries to reduce some of the [noise](https://github.com/tloen/alpaca-lora/issues/65)
 
 
+## Initial datasets
+
+Be sure to look over the openai terms of service before using the datasets, specifically the section about using the outputs to generate competing models...
+
+### 100k synthetic instructions, gpt-3.5-turbo
+
+[instructions.jsonl](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/instructions.jsonl)
+[topics.txt](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/topics.txt)
+
+
 ## Generating instructions
 
 See available options via:

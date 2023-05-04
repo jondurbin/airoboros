@@ -53,7 +53,7 @@ SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
 CODE_GEN_RE = re.compile(
     r"^(?:write|generate|create)(?:a )?(?:\w+ )?(?:script|program|code)\W", re.I
 )
-DOLLY_SEED_URL = "https://raw.githubusercontent.com/databrickslabs/dolly/master/data/databricks-dolly-15k.jsonl"
+DOLLY_SEED_URL = "https://storage.googleapis.com/airoboros-dump/databricks-dolly-15k.jsonl"
 OPENAI_API_BASE_URL = "https://api.openai.com"
 MODEL_ENDPOINTS = {
     "completions": [

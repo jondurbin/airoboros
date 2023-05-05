@@ -27,6 +27,12 @@ Be sure to look over the openai terms of service before using the datasets, spec
 * [topics.txt](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/topics.txt)
 
 
+### 40k synthetic instructions, gpt-4
+
+* [instructions.json](https://storage.googleapis.com/airoboros-dump/gpt-4-40k/instructions.jsonl)
+* [topics.txt](https://storage.googleapis.com/airoboros-dump/gpt-4-40k/topics.txt)
+
+
 ## Generating instructions
 
 See available options via:

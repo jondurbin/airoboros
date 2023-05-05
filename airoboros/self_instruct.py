@@ -36,13 +36,13 @@ DEFAULT_PROMPT = f"""You are asked to generate a set of {BATCH_SIZE} diverse pro
 Here are the requirements:
  * Try not to repeat the verb for each __instruction__ to maximize diversity.
  * Try to avoid controversial and politically charged subjects.
- * The __instruction__ should include a variety of types of prompts, such as open-ended generation, brainstorming, classification, closed question-answering, summarization, editing, information extraction, etc.
+ * The __instruction__ should include a variety of types of prompts, such as open-ended text generation, creative writing, brainstorming, classification, contextual question-answering, summarization, editing, information extraction, logical reasoning, etc.
  * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The __instruction__ should be in English.
  * The __instruction__ should be between 1 and 3 sentences long.
  * For prompts that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant data, including more information than necessary to generate __response__. __passage__ must not be simple placeholders or links to external resources.  Be sure to include all words, phrases, dates, or lists of items in __passage__ if those are part of __response__.
  * Not all prompts require __passage__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __passage__. In this case, we simply put "__no_context__" in the __passage__ field.
- * The __response__ should be an appropriate response to the __instruction__ and __passage__
+ * Each generated __response__ should be an appropriate response to the __instruction__.
  * Be sure to include {BATCH_SIZE} prompts in the response.
 REPLACE_TOPICS
 
@@ -413,6 +413,7 @@ class SelfInstructor:
             )
             prompt.append(f"{idx + 1}. __passage__: {context}")
             prompt.append(f"{idx + 1}. __response__: {instruction['response']}")
+            prompt.append("\n")
         return "\n".join(prompt)
 
     def extract_instructions_from_response(
@@ -545,7 +546,7 @@ class SelfInstructor:
             f"{OPENAI_API_BASE_URL}{path}",
             headers=headers,
             json=payload,
-            timeout=240.0,
+            timeout=600.0,
         )
         if result.status_code != 200:
             text = result.text

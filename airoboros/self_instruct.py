@@ -31,22 +31,21 @@ from langchain.embeddings import HuggingFaceEmbeddings
 
 # Defaults and constants.
 BATCH_SIZE = 13
-DEFAULT_PROMPT = f"""You are asked to generate a set of {BATCH_SIZE} diverse prompts.  These prompts will be given to a GPT model and we will evaluate the GPT model for completing the prompts.
+DEFAULT_PROMPT = f"""You are asked to generate a set of {BATCH_SIZE} diverse instructions.  These instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.
 
 Here are the requirements:
  * Try not to repeat the verb for each __instruction__ to maximize diversity.
  * Try to avoid controversial and politically charged subjects.
- * The __instruction__ should include a variety of types of prompts, such as open-ended text generation, creative writing, brainstorming, classification, contextual question-answering, summarization, editing, information extraction, logical reasoning, etc.
+ * The __instruction__ should include a variety of types of instructions, such as open-ended text generation, creative writing, brainstorming, classification, contextual question-answering, summarization, editing, information extraction, logical reasoning, etc.
  * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The __instruction__ should be in English.
  * The __instruction__ should be between 1 and 3 sentences long.
- * For prompts that require extracting information from __passage__, e.g. question-answering, summarization, information extraction, etc., include a passage of text with 2-8 sentences in __passage__ providing all relevant data, including more information than necessary to generate __response__. __passage__ must not be simple placeholders or links to external resources.  Be sure to include all words, phrases, dates, or lists of items in __passage__ if those are part of __response__.
- * Not all prompts require __passage__. For example, when a task asks about some general information, e.g. "what is the highest peak in the world?", it is not necssary to provide a specific __passage__. In this case, we simply put "__no_context__" in the __passage__ field.
- * Each generated __response__ should be an appropriate response to the __instruction__.
- * Be sure to include {BATCH_SIZE} prompts in the response.
+ * Do not include simple placeholders or links in the instructions.
+ * Do not include a response to the instructions, only the instructions themselves.
+ * Be sure to include {BATCH_SIZE} instructions in the response.
 REPLACE_TOPICS
 
-List of {BATCH_SIZE} prompts:
+List of {BATCH_SIZE} instructions:
 """
 SKIP_WORDS = ["image", "graph", "picture", "file", "map", "draw", "plot", "go to"]
 SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
@@ -144,7 +143,7 @@ class SelfInstructor:
         },
         "--temperature": {
             "type": float,
-            "default": 0.7,
+            "default": 0.9,
             "help": "temperature parameter to use in OpenAI requests",
         },
         "--top-p": {
@@ -176,6 +175,11 @@ class SelfInstructor:
             "help": "Minimum similarity score when querying vector DB to consider a prompt unique",
             "default": "0.35",
         },
+        "--timeout": {
+            "type": float,
+            "help": "OpenAI request timeout",
+            "default": 120.0,
+        },
     }
 
     def __init__(
@@ -204,6 +208,7 @@ class SelfInstructor:
         max_usage_tokens: int | None = None,
         prompt_generation_concurrency: int = 50,
         min_docsearch_score: float = 0.35,
+        timeout: float = 120.0,
     ):
         """Constructor."""
         self.model = model
@@ -243,12 +248,15 @@ class SelfInstructor:
         self.max_usage_tokens = max_usage_tokens
         self._validate_model()
         self.machine_tasks = []
+        self.seed_with_context = []
+        self.seed_without_context = []
         self._initialize_seed_tasks(seed_tasks, seed_tasks_path, use_dolly_seed)
         self.used_tokens = 0
         self.random_topics = set([])
         self.stop_producing = False
         self.prompt_generation_concurrency = prompt_generation_concurrency
         self.min_docsearch_score = min_docsearch_score
+        self.timeout = timeout
         self._initialize_docstore()
 
     def _initialize_docstore(self):
@@ -256,9 +264,10 @@ class SelfInstructor:
         logger.info(
             "Initializing in-memory document store for similarity comparison..."
         )
-        texts = [
-            prompt["instruction"] for prompt in self.seed_tasks + self.machine_tasks
-        ]
+        #texts = [
+        #    prompt["instruction"] for prompt in self.seed_tasks + self.machine_tasks
+        #]
+        texts = ["foo"]
         self.docstore = Chroma.from_texts(texts, HuggingFaceEmbeddings())
 
     def _initialize_seed_tasks(
@@ -292,6 +301,11 @@ class SelfInstructor:
                 seed_tasks = [json.loads(line) for line in infile.readlines()]
             self.seed_tasks = seed_tasks
         logger.info(f"Found {len(self.seed_tasks)} human seed tasks to use...")
+        for task in self.seed_tasks:
+            if not task.get("context", ""):
+                self.seed_without_context.append(task["instruction"])
+            else:
+                self.seed_with_context.append(task["instruction"])
         if os.path.exists(self.output_path):
             if self.overwrite:
                 os.remove(self.output_path)
@@ -331,20 +345,6 @@ class SelfInstructor:
         if self.model not in available:
             raise ValueError(f"Model is not available to your API key: {self.model}")
         logger.success(f"Successfully validated model: {self.model}")
-
-    @staticmethod
-    def clean_instruction_text(instruction: str) -> str:
-        """Remove extra/trailing whitespace from instruction prompts.
-
-        :param instruction: The prompt text to clean.
-        :type instruction: str
-
-        :return: The cleaned prompt text.
-        :rtype: str
-        """
-        return re.sub(
-            r"\s+", " ", " ".join(instruction.splitlines()).strip().rstrip(":")
-        )
 
     def initialize_random_topics(self):
         path = os.path.join(
@@ -404,17 +404,78 @@ class SelfInstructor:
         topic_prompt += ", ".join(topic_texts)
         prompt = [self.prompt.replace("REPLACE_TOPICS", topic_prompt)]
         for idx, instruction in enumerate(instructions):
-            text = self.clean_instruction_text(instruction["instruction"])
+            text = instruction["instruction"].strip()
             prompt.append(f"{idx + 1}. __instruction__: {text}")
-            context = (
-                "__no_context__"
-                if not instruction["context"].strip()
-                else instruction["context"].strip()
-            )
-            prompt.append(f"{idx + 1}. __passage__: {context}")
-            prompt.append(f"{idx + 1}. __response__: {instruction['response']}")
-            prompt.append("\n")
         return "\n".join(prompt)
+
+    def generate_response(self, instruction: str) -> str:
+        """Given the instruction text, get a response to the instruction.
+
+        :param instruction: The synthetic instruction to get a response to.
+        :type instruction: str
+
+        :return: Response text.
+        :rtype: str
+        """
+        path = "/v1/completions" if self._completions else "/v1/chat/completions"
+        payload = {
+            "model": self.model,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "frequency_penalty": self.frequency_penalty,
+            "presence_penalty": self.presence_penalty,
+        }
+        if self._completions:
+            payload["prompt"] = instruction
+            payload["max_tokens"] = 2000
+        else:
+            payload["messages"] = [{"role": "user", "content": instruction}]
+        response = self._post_no_exc(path, payload)
+        if (
+                not response
+                or not response.get("choices")
+                or response["choices"][0]["finish_reason"] == "length"
+            ):
+            return None
+        text = None
+        if self._completions:
+            text = response["choices"][0]["text"]
+        else:
+            text = response["choices"][0]["message"]["content"]
+        return text
+
+    def inject_context(self, instructions: List[Dict[str, Any]]) -> None:
+        """First, classify whether or not each instruction needs context,
+        then, for each instruction that needs context, generate it.
+
+        :param instructions: Instructions to inject context into.
+        :type instructions: List[Dict[str, Any]]
+        """
+        examples = []
+        for example in random.sample(self.seed_without_context, self.samples_per_request):
+            instruction = " ".join(example.splitlines()).strip()
+            examples.append(f"Instruction: {instruction}" + "\nNeeds more info: no")
+        for example in random.sample(self.seed_with_context, self.samples_per_request):
+            instruction = " ".join(example.splitlines()).strip()
+            examples.append(f"Instruction: {instruction}" + "\nNeeds more info: yes")
+        random.shuffle(examples)
+        prompt = "Fill in the ___ with \"yes\" or \"no\".\n\nExamples:\n" + "\n".join(examples) + "\n\n"
+        for idx, instruction in enumerate(instructions):
+            prompt += f"{idx}. {' '.join(instruction['instruction'].splitlines()).strip()}" + "\nNeeds more info: ___\n\n"
+        prompt = prompt.strip()
+        print(prompt)
+        response = self._post_no_exc("/v1/chat/completions", {
+            "model": "gpt-3.5-turbo",
+            "messages": [{"role": "user", "content": prompt}],
+        })
+        if (
+                not response
+                or not response.get("choices")
+                or response["choices"][0]["finish_reason"] == "length"
+            ):
+            raise BadResponseError("Could not determine context for instruction batch!")
+        text = response["choices"][0]["message"]["content"]
+        print(f"CONTEXT RESPONSE: {text}")
 
     def extract_instructions_from_response(
         self, response: Dict[str, Any]
@@ -439,7 +500,6 @@ class SelfInstructor:
             text = response["choices"][0]["text"]
         else:
             text = response["choices"][0]["message"]["content"]
-
         tasks = []
         for instruction in re.findall(
             r"(\d+\s*\.\s*__instruction__:[\s\r\n]*.*?)(?=\d+\s*\.\s*__|$)",
@@ -470,48 +530,28 @@ class SelfInstructor:
                     f"Skipping instruction: {instruction_text} [code, ascii, other unsuitable]"
                 )
                 continue
-            context = re.search(
-                f"(?<!\\d){idx}\\s*\\.\\s*__passage__:[\\r\\n\\s]*(.*?)(?=\\d+\\s*\\.\\s*__|$)",
-                text,
-                re.DOTALL,
-            )
-            if not context:
-                logger.warning(
-                    f"Skipping instruction: {instruction_text} [context not provided]"
-                )
-                continue
-            context = context.group(1).strip()
-            if context == "__no_context__":
-                context = ""
-            response = re.search(
-                f"(?<!\\d){idx}\\s*\\.\\s*__response__:[\\r\\n\\s]*(.*?)(?=\\d+\\s*\\.\\s*__|$)",
-                text,
-                re.DOTALL,
-            )
-            if not response or not response.group(1).strip():
-                logger.warning(
-                    f"Skipping instruction: {instruction_text} [response not provided]"
-                )
-                continue
-            response = response.group(1).strip()
-            if len(response) > len(context):
-                logger.warning("Ignoring context, shorter than response.")
-                context = ""
-            else:
-                scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
-                if scorer.score(context, response)["rougeL"].fmeasure >= 0.7:
-                    logger.warning("Ignoring context, too similar to response.")
-                    context = ""
-            tasks.append(
-                {
-                    "instruction": instruction_text,
-                    "context": context,
-                    "response": response,
-                }
-            )
-            logger.info(
-                f"Generated candidate task [has context: {context != ''}]: {instruction_text}"
-            )
+            for _, score in self.docstore.similarity_search_with_score(instruction_text, k=1):
+                if score <= self.min_docsearch_score:
+                    logger.warning(
+                        f"Skipping instruction, too similar [{score}]: {instruction_text}"
+                    )
+                    continue
+
+            # Now, get the response.
+            #response = self.generate_response(instruction_text)
+            #if not response:
+            #    continue
+            task = {"instruction": instruction_text}
+            tasks.append(task)
+            logger.info(f"Generated candidate task: {task}")
+
+        # Add context to the prompts requiring it.
+        try:
+            self.inject_context(tasks)
+        except Exception as exc:
+            print(f"FAILED HERE: {exc}")
+            raise
+
         return tasks
 
     @backoff.on_exception(
@@ -546,7 +586,7 @@ class SelfInstructor:
             f"{OPENAI_API_BASE_URL}{path}",
             headers=headers,
             json=payload,
-            timeout=600.0,
+            timeout=self.timeout,
         )
         if result.status_code != 200:
             text = result.text
@@ -558,7 +598,7 @@ class SelfInstructor:
                 raise ContextLengthExceededError(text)
             elif "server_error" in text and "overloaded" in text.lower():
                 raise ServerOverloadedError(text)
-            elif "bad gateway" in text.lower() or "server_error" in text.lower():
+            elif "bad gateway" in text.lower() or "server_error" in text.lower() or "gateway timeout" in text.lower():
                 raise ServerError(text)
             else:
                 raise BadResponseError(text)
@@ -611,12 +651,18 @@ class SelfInstructor:
                 queue.put(new_instruction)
         except ContextLengthExceededError:
             ...
+        except Exception as exc:
+            print(f"QWERQWERQWER: {exc}")
+            raise
 
-    def generate_instruction_batches(self, queue: Queue) -> None:
+    def generate_instruction_batches(self, queue: Queue, thread_idx: int) -> None:
         """Generate batches of instructions, storing new instructions in queue.
 
         :param queue: Queue to store new instructions in for post-processing.
         :type queue: Queue
+
+        :param thread_idx: Thread index.
+        :type thread_idx: int
         """
         consecutive_errors = 0
         while not self.stop_producing:
@@ -632,6 +678,8 @@ class SelfInstructor:
                 if consecutive_errors > 3:
                     logger.error("Too many consecutive errors, shutting down!")
                     os.kill(os.getpid(), signal.SIGKILL)
+            break
+        logger.success(f"Producer [{thread_idx}] finished generating instructions.")
 
     def validate_and_store_results(
         self, queue: Queue, consume_remaining: bool = False
@@ -664,6 +712,8 @@ class SelfInstructor:
                 logger.success(
                     f"Generated unique [score={similarity_score}] instruction [total={len(self.machine_tasks)}]: {instruction['instruction']}"
                 )
+            if not consume_remaining:
+                logger.success(f"Reached instruction count [{self.instruction_count}], will consume remaining once producers finish...")
         self.stop_producing = True
 
     def run(self):
@@ -674,10 +724,10 @@ class SelfInstructor:
                 f"Already have {len(self.machine_tasks)} machine-generated tasks!"
             )
             return
-        queue = Queue(maxsize=100)
+        queue = Queue()
         producers = [
-            threading.Thread(target=self.generate_instruction_batches, args=(queue,))
-            for _ in range(self.prompt_generation_concurrency)
+            threading.Thread(target=self.generate_instruction_batches, args=(queue, i))
+            for i in range(self.prompt_generation_concurrency)
         ]
         for producer in producers:
             producer.start()
@@ -686,11 +736,13 @@ class SelfInstructor:
         )
         consumer.start()
         consumer.join()
-        for producer in producers:
+        for idx, producer in enumerate(producers):
             producer.join()
+            logger.info(f"Producer {idx} has finished...")
 
         # Consume any tasks generated after the consumer stopped.
         queue.put(None)
+        logger.info("Consuming results created after instruction limit reached...")
         self.validate_and_store_results(queue, consume_remaining=True)
 
         logger.success(

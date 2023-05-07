@@ -37,16 +37,44 @@ Here are the requirements:
  * Try not to repeat the verb for each __instruction__ to maximize diversity.
  * Try to avoid controversial and politically charged subjects.
  * The __instruction__ should include a variety of types of instructions, such as open-ended text generation, creative writing, brainstorming, classification, contextual question-answering, summarization, editing, information extraction, logical reasoning, etc.
- * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
+ * The __instruction__ should be something a large language model can complete with a text response, for example do not create a task asking to create or use visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * The __instruction__ should be in English.
- * The __instruction__ should be between 1 and 3 sentences long.
- * Do not include simple placeholders or links in the instructions.
+ * If __instruction__ relates to a list of items, be sure to include the list of items in the __instruction__.
  * Do not include a response to the instructions, only the instructions themselves.
  * Be sure to include {BATCH_SIZE} instructions in the response.
 REPLACE_TOPICS
 
 List of {BATCH_SIZE} instructions:
 """
+ENRICH_PROMPT = """You are a system designed to help users create fully encapsulated instructions to use in a one-shot, in-context learning GPT system.  The target GPT system cannot perform N-shot tasks and has no ability to ask for more information.
+
+Here are the rules:
+1. If the original user input would not require any additional information or context from the user, return the single word "sufficient"
+2. If a GPT system would be able to generate a response to the instruction from common knowledge, return the single word "sufficient":
+3. Return the single word "sufficient" for any inputs that are related to creative writing tasks, for example: writing a song, writing a story, writing a fictional review, brainstorming, imagination, etc.
+4. If none of the previous rules apply, update the original user input to include a few paragraphs of text that are a reasonable facsimile of what a GPT system would expect a user to provide, for example pasting the content of a news article, wikipedia post, blog post, social media thread, list of items to classify, etc.
+5. Do not generate a response to the original user input, only respond with either the single word "sufficient" or the updated prompt according to rule 4.
+
+Example 1:
+===
+Original user input: Write a poem about a Hippo named Billy.
+
+Response: sufficient
+
+Example 2:
+===
+Original user imput: Summarize the key points in the article about LinkedIn.
+
+Response: Summarize the key points from the following article regarding LinkedIn.
+
+LinkedIn (/lɪŋktˈɪn/) is a business and employment-focused social media platform that works through websites and mobile apps. It launched on May 5, 2003.[5] It is now owned by Microsoft. The platform is primarily used for professional networking and career development, and allows jobseekers to post their CVs and employers to post jobs. From 2015 most of the company's revenue came from selling access to information about its members to recruiters and sales professionals.[6] Since December 2016, it has been a wholly owned subsidiary of Microsoft. As of March 2023, LinkedIn has more than 900 million registered members from over 200 countries and territories.[5]
+
+LinkedIn allows members (both workers and employers) to create profiles and connect with each other in an online social network which may represent real-world professional relationships. Members can invite anyone (whether an existing member or not) to become a connection. LinkedIn can also be used to organize offline events, join groups, write articles, publish job postings, post photos and videos, and more.[7]
+
+
+Original user input: {instruction}
+
+Response:"""
 SKIP_WORDS = ["image", "graph", "picture", "file", "map", "draw", "plot", "go to"]
 SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
 CODE_GEN_RE = re.compile(
@@ -131,16 +159,6 @@ class SelfInstructor:
             "default": 3,
             "help": "number of random sample instructions to include in prompts",
         },
-        "--min-instruction-length": {
-            "type": int,
-            "default": 2,
-            "help": "minimum instruction length",
-        },
-        "--max-instruction-length": {
-            "type": int,
-            "default": 150,
-            "help": "maximum instruction length",
-        },
         "--temperature": {
             "type": float,
             "default": 0.9,
@@ -198,8 +216,6 @@ class SelfInstructor:
         prompt: str = DEFAULT_PROMPT,
         skip_instruction_re: re.Pattern = SKIP_SEARCH_RE,
         code_gen_re: re.Pattern = CODE_GEN_RE,
-        min_instruction_length: int = 3,
-        max_instruction_length: int = 150,
         samples_per_request: int = 3,
         temperature: float = 0.7,
         top_p: float = 0.5,
@@ -238,8 +254,6 @@ class SelfInstructor:
         self.code_gen_re = code_gen_re
         if isinstance(code_gen_re, str):
             self.code_gen_re = re.compile(code_gen_re, re.I)
-        self.min_instruction_length = min_instruction_length
-        self.max_instruction_length = max_instruction_length
         self.temperature = temperature
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
@@ -248,8 +262,7 @@ class SelfInstructor:
         self.max_usage_tokens = max_usage_tokens
         self._validate_model()
         self.machine_tasks = []
-        self.seed_with_context = []
-        self.seed_without_context = []
+        self.seed_categories = {}
         self._initialize_seed_tasks(seed_tasks, seed_tasks_path, use_dolly_seed)
         self.used_tokens = 0
         self.random_topics = set([])
@@ -302,10 +315,9 @@ class SelfInstructor:
             self.seed_tasks = seed_tasks
         logger.info(f"Found {len(self.seed_tasks)} human seed tasks to use...")
         for task in self.seed_tasks:
-            if not task.get("context", ""):
-                self.seed_without_context.append(task["instruction"])
-            else:
-                self.seed_with_context.append(task["instruction"])
+            if task["category"] not in self.seed_categories:
+                self.seed_categories[task["category"]] = []
+            self.seed_categories[task["category"]].append(task)
         if os.path.exists(self.output_path):
             if self.overwrite:
                 os.remove(self.output_path)
@@ -405,7 +417,9 @@ class SelfInstructor:
         prompt = [self.prompt.replace("REPLACE_TOPICS", topic_prompt)]
         for idx, instruction in enumerate(instructions):
             text = instruction["instruction"].strip()
-            prompt.append(f"{idx + 1}. __instruction__: {text}")
+            if instruction.get("context", "").strip():
+                text += f"\n{instruction['context']}"
+            prompt.append(f"\n{idx + 1}. __instruction__: {text}")
         return "\n".join(prompt)
 
     def generate_response(self, instruction: str) -> str:
@@ -444,38 +458,16 @@ class SelfInstructor:
             text = response["choices"][0]["message"]["content"]
         return text
 
-    def inject_context(self, instructions: List[Dict[str, Any]]) -> None:
-        """First, classify whether or not each instruction needs context,
-        then, for each instruction that needs context, generate it.
+    def enrich_instruction(self, instruction: str) -> str:
+        """Enrich a prompt with any missing context that a GPT system would need to respond.
 
-        :param instructions: Instructions to inject context into.
-        :type instructions: List[Dict[str, Any]]
+        :param instruction: The original input instruction.
+        :type instruction: str
         """
-        examples = []
-        for example in random.sample(self.seed_without_context, self.samples_per_request):
-            instruction = " ".join(example.splitlines()).strip()
-            examples.append(f"Instruction: {instruction}" + "\nNeeds more info: no")
-        for example in random.sample(self.seed_with_context, self.samples_per_request):
-            instruction = " ".join(example.splitlines()).strip()
-            examples.append(f"Instruction: {instruction}" + "\nNeeds more info: yes")
-        random.shuffle(examples)
-        prompt = "Fill in the ___ with \"yes\" or \"no\".\n\nExamples:\n" + "\n".join(examples) + "\n\n"
-        for idx, instruction in enumerate(instructions):
-            prompt += f"{idx}. {' '.join(instruction['instruction'].splitlines()).strip()}" + "\nNeeds more info: ___\n\n"
-        prompt = prompt.strip()
-        print(prompt)
-        response = self._post_no_exc("/v1/chat/completions", {
-            "model": "gpt-3.5-turbo",
-            "messages": [{"role": "user", "content": prompt}],
-        })
-        if (
-                not response
-                or not response.get("choices")
-                or response["choices"][0]["finish_reason"] == "length"
-            ):
-            raise BadResponseError("Could not determine context for instruction batch!")
-        text = response["choices"][0]["message"]["content"]
-        print(f"CONTEXT RESPONSE: {text}")
+        result = self.generate_response(ENRICH_PROMPT.format(instruction=instruction))
+        if result.strip().lower() == "sufficient":
+            return instruction
+        return result
 
     def extract_instructions_from_response(
         self, response: Dict[str, Any]
@@ -500,6 +492,8 @@ class SelfInstructor:
             text = response["choices"][0]["text"]
         else:
             text = response["choices"][0]["message"]["content"]
+        print(text)
+        print("*" * 80)
         tasks = []
         for instruction in re.findall(
             r"(\d+\s*\.\s*__instruction__:[\s\r\n]*.*?)(?=\d+\s*\.\s*__|$)",
@@ -510,14 +504,10 @@ class SelfInstructor:
             instruction_text = instruction.split("__instruction__:")[-1].strip()
             if not instruction_text:
                 continue
-            if (
-                not self.min_instruction_length
-                < len(instruction_text.split())
-                < self.max_instruction_length
-            ):
-                logger.warning(
-                    f"Skipping instruction: {instruction_text} [instruction length]"
-                )
+            # Skip instructions with placeholders or links.
+            if re.search(r"\[insert", instruction_text, re.I) or re.search("https?:/", instruction_text, re.I):
+                logger.warning(f"Skipping instruction: {instruction_text} [placeholder or URL]")
+                continue
             # Skip various prompts that have been deemed unsuitable for language models
             # by the self-instruct team.
             if (
@@ -538,20 +528,13 @@ class SelfInstructor:
                     continue
 
             # Now, get the response.
-            #response = self.generate_response(instruction_text)
-            #if not response:
-            #    continue
+            if enriched := self.enrich_instruction(instruction_text):
+                if enriched != instruction_text:
+                    logger.info(f"Enriched prompt: {enriched}")
+                    instruction_text = enriched
             task = {"instruction": instruction_text}
             tasks.append(task)
             logger.info(f"Generated candidate task: {task}")
-
-        # Add context to the prompts requiring it.
-        try:
-            self.inject_context(tasks)
-        except Exception as exc:
-            print(f"FAILED HERE: {exc}")
-            raise
-
         return tasks
 
     @backoff.on_exception(

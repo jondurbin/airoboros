@@ -14,7 +14,6 @@ import concurrent.futures
 from functools import partial
 from loguru import logger
 from queue import Queue
-from rouge_score import rouge_scorer
 from typing import List, Dict, Any
 from uuid import uuid4
 from .exceptions import (
@@ -31,7 +30,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 
 # Defaults and constants.
 BATCH_SIZE = 13
-CONTEXTUAL_PROMPT = f"""Create a few instructions that can be provided to a GPT system to create text and a task related to the text.  Use diverse verbs, subject matters, and writing styles.
+CONTEXTUAL_PROMPT = f"""Create a few instructions that can be provided to a GPT system to create text and a task related to the text.  Use diverse verbs, subject matters, and writing styles, and don't use any placeholders.
 
 Examples:
  * Generate a few paragraphs about the process of making damascus steel.
@@ -116,7 +115,7 @@ class SelfInstructor:
         "--topics-path": {
             "type": str,
             "help": "path to a newline separated list of topics",
-            "default": "topics.txt"
+            "default": "topics.txt",
         },
         "--overwrite": {
             "action": "store_true",
@@ -259,16 +258,20 @@ class SelfInstructor:
                         task = json.loads(line)
                         self.machine_task_count += 1
                         docs.append(task["instruction"])
-                logger.info(f"Found {self.machine_task_count} existing machine-generated instructions.")
+                logger.info(
+                    f"Found {self.machine_task_count} existing machine-generated instructions."
+                )
             else:
-                raise RuntimeError(f"{self.output_path} already exists, but overwrite and append are false!")
+                raise RuntimeError(
+                    f"{self.output_path} already exists, but overwrite and append are false!"
+                )
         logger.info(
             "Initializing in-memory document store for similarity comparison..."
         )
         if not docs:
             docs = ["__initialize__"]
         embeddings = HuggingFaceEmbeddings()
-        self.docstore = Chroma.from_texts(texts, embeddings)
+        self.docstore = Chroma.from_texts(docs, embeddings)
         self.pending_docstore = Chroma.from_texts(["__initialize__"], embeddings)
 
     def validate_model(self):
@@ -310,10 +313,12 @@ class SelfInstructor:
                 [
                     {
                         "model": "text-davinci-003",
-                        "prompt": ["Give me a numbered list of 200 completely random topics."]
+                        "prompt": [
+                            "Give me a numbered list of 200 completely random topics."
+                        ]
                         * 20,
                         "temperature": 1.0,
-                        "max_tokens": 800,
+                        "max_tokens": 3000,
                     }
                 ]
                 * 20,
@@ -325,7 +330,9 @@ class SelfInstructor:
                 for choice in response["choices"]:
                     for line in choice["text"].splitlines():
                         if match := re.search(r"\s*\d+\s*\.\s*(.+)", line):
-                            topic = match.group(1).lower()
+                            topic = match.group(1).lower().strip()
+                            if not topic:
+                                continue
                             self.random_topics.add(topic)
                             outfile.write(topic + "\n")
         logger.success(
@@ -341,10 +348,12 @@ class SelfInstructor:
         :return: The prompt, including a list of random topics.
         :rtype: str
         """
-        topics = "\n".join([
-            f" * {topic}"
-            for topic in random.sample(list(self.random_topics), min(BATCH_SIZE, 7))
-        ])
+        topics = "\n".join(
+            [
+                f" * {topic}"
+                for topic in random.sample(list(self.random_topics), min(BATCH_SIZE, 7))
+            ]
+        )
         return template.format(topics=topics)
 
     def is_too_similar(self, instruction, docstore) -> bool:
@@ -360,7 +369,7 @@ class SelfInstructor:
         :rtype: bool
         """
         for _, score in docstore.similarity_search_with_score(instruction, k=1):
-            if score < self.min_similarity_score:
+            if score < self.min_docsearch_score:
                 return True
         return False
 
@@ -389,12 +398,14 @@ class SelfInstructor:
                     f"Skipping instruction: {instruction} [code, ascii, other unsuitable]"
                 )
                 continue
-            if self.is_too_similar(self.docstore) or self.is_too_similar(self.pending_docstore):
-                logger.warning(f"Skipping instruction, too similar [{score}]: {instruction}")
+            if self.is_too_similar(instruction, self.docstore) or self.is_too_similar(
+                instruction, self.pending_docstore
+            ):
+                logger.warning(f"Skipping instruction, too similar: {instruction}")
             self.pending_docstore.add_texts([instruction])
             instructions.append(instruction)
             logger.info(f"Generated candidate task: {instruction}")
-        return instruction
+        return instructions
 
     @backoff.on_exception(
         backoff.expo,
@@ -484,16 +495,16 @@ class SelfInstructor:
             payload["messages"] = [{"role": "user", "content": instruction}]
         response = self._post_no_exc(path, payload)
         if (
-                not response
-                or not response.get("choices")
-                or response["choices"][0]["finish_reason"] == "length"
-            ):
+            not response
+            or not response.get("choices")
+            or response["choices"][0]["finish_reason"] == "length"
+        ):
             return None
         text = None
         if self._completions:
             text = response["choices"][0]["text"]
         else:
-             text = response["choices"][0]["message"]["content"]
+            text = response["choices"][0]["message"]["content"]
         return text
 
     def generate_instruction_batch(self, queue: Queue) -> None:
@@ -502,20 +513,27 @@ class SelfInstructor:
         :param queue: Queue to pass generated outputs to.
         :type queue: Queue
         """
-        contextual = random.random() <= self.contextual_prompt_ratio
-        prompt = self.generate_prompt(self.prompt)
+        contextual = random.random() <= self.contextual_prompt_ratio or True
+        prompt = self.generate_prompt(
+            self.prompt if not contextual else self.contextual_prompt
+        )
         for new_instruction in self.extract_instructions_from_response(
             self.generate_response(prompt)
         ):
             prompt = new_instruction
             if contextual:
-                prompt = self.generate_response("  ".join([new_instruction, CONTEXT_TASK_INJECTION]))
+                prompt = self.generate_response(
+                    "  ".join([new_instruction, CONTEXT_TASK_INJECTION])
+                )
+                prompt = re.sub(r"^(\w+\s?){1,3}:\s+", "", prompt)
             if prompt:
                 response = self.generate_response(prompt)
                 if response:
                     queue.put({"instruction": prompt, "response": response})
                 else:
-                    logger.error(f"Error generating response to: {prompt.splitlines()[0]}...")
+                    logger.error(
+                        f"Error generating response to: {prompt.splitlines()[0]}..."
+                    )
 
     def generate_instruction_batches(self, queue: Queue) -> None:
         """Generate batches of instructions, storing new instructions in queue.
@@ -575,7 +593,9 @@ class SelfInstructor:
         """Run the self-instruct, instruction generation task to completion."""
         self.initialize_random_topics()
         if self.machine_task_count >= self.instruction_count:
-            logger.error("Already have {self.machine_task_count} machine-generated tasks!")
+            logger.error(
+                "Already have {self.machine_task_count} machine-generated tasks!"
+            )
             return
         queue = Queue()
         producers = [

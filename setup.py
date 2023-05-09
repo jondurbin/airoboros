@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md"))
 
 setup(
     name="airoboros",
-    version="0.0.6",
+    version="0.0.7",
     description="Updated and improved implementation of the self-instruct system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -21,7 +21,7 @@ setup(
         "requests>=2.28",
         "loguru>=0.7",
         "chromadb>=0.3.21",
-        "langchain>=0.0.155",
+        "langchain>=0.0.162",
         "sentence-transformers>=2.2.2",
     ],
     extras_require={

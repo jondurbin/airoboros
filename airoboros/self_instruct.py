@@ -513,7 +513,7 @@ class SelfInstructor:
         :param queue: Queue to pass generated outputs to.
         :type queue: Queue
         """
-        contextual = random.random() <= self.contextual_prompt_ratio or True
+        contextual = random.random() <= self.contextual_prompt_ratio
         prompt = self.generate_prompt(
             self.prompt if not contextual else self.contextual_prompt
         )
@@ -525,7 +525,6 @@ class SelfInstructor:
                 prompt = self.generate_response(
                     "  ".join([new_instruction, CONTEXT_TASK_INJECTION])
                 )
-                prompt = re.sub(r"^(\w+\s?){1,3}:\s+", "", prompt)
             if prompt:
                 response = self.generate_response(prompt)
                 if response:

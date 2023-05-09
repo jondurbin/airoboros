@@ -29,7 +29,7 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 
 # Defaults and constants.
-BATCH_SIZE = 13
+BATCH_SIZE = 20
 CONTEXTUAL_PROMPT = f"""Create a few instructions that can be provided to a GPT system to create text and a task related to the text.  Use diverse verbs, subject matters, and writing styles, and don't use any placeholders.
 
 Examples:
@@ -43,7 +43,7 @@ Ensure each instruction is related to one of the following topics:
 
 Numbered list of {BATCH_SIZE} instructions:
 """
-CONTEXT_TASK_INJECTION = "At the beginning of the text, add an instruction that can make use the text to respond.  This instruction type can be closed-context question answering, summarization, information extraction, etc."
+CONTEXT_TASK_INJECTION = """After generating your response, add a line with "=:=:=", then generate a unique and interesting instruction or question that could make use of the generated text.  Examples include summarization, questions about specific details in the text, or information extraction."""
 DEFAULT_PROMPT = f"""Create a set of {BATCH_SIZE} diverse instructions.
 
 Requirements for the instructions:
@@ -351,7 +351,7 @@ class SelfInstructor:
         topics = "\n".join(
             [
                 f" * {topic}"
-                for topic in random.sample(list(self.random_topics), min(BATCH_SIZE, 7))
+                for topic in random.sample(list(self.random_topics), min(BATCH_SIZE, 15))
             ]
         )
         return template.format(topics=topics)
@@ -522,9 +522,22 @@ class SelfInstructor:
         ):
             prompt = new_instruction
             if contextual:
+                new_instruction += f"\n{CONTEXT_TASK_INJECTION}"
                 prompt = self.generate_response(
                     "  ".join([new_instruction, CONTEXT_TASK_INJECTION])
                 )
+                if not prompt or "=:=:=" not in prompt:
+                    logger.error(f"Error generating contextual prompt: {new_instruction}")
+                parts = [part.strip() for part in prompt.split("=:=:=")]
+                flip = random.random()
+                if flip <= 0.25:
+                    prompt = f"Using the provided text, respond to the instruction: {parts[1]}\n\n{parts[0]}"
+                elif flip <= 0.5:
+                    prompt = parts[0] + f"\n\nUsing the text above, respond to the instruction: {parts[1]}"
+                elif flip <= 0.75:
+                    prompt = parts[0] + f"\n\n{parts[1]}"
+                else:
+                    prompt = parts[1] + f"\n\nContext:\n\n{parts[0]}"
             if prompt:
                 response = self.generate_response(prompt)
                 if response:

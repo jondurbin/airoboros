@@ -43,7 +43,7 @@ Ensure each instruction is related to one of the following topics:
 
 Numbered list of {BATCH_SIZE} instructions:
 """
-CONTEXT_TASK_INJECTION = """After generating your response, add a line with "=:=:=", then generate a unique and interesting instruction or question that could make use of the generated text.  Examples include summarization, questions about specific details in the text, or information extraction."""
+CONTEXT_TASK_INJECTION = """After generating your response, add a line with "=:=:=", then generate a unique and interesting instruction or question that could be answered using only the generated text.  Examples include summarization, questions about specific details in the text, or information extraction."""
 DEFAULT_PROMPT = f"""Create a set of {BATCH_SIZE} diverse instructions.
 
 Requirements for the instructions:
@@ -137,7 +137,7 @@ class SelfInstructor:
         },
         "--contextual-prompt-ratio": {
             "type": float,
-            "default": 0.15,
+            "default": 0.1,
             "help": "ratio of prompts that should be contextual, e.g. summarization of an article",
         },
         "--skip-instruction-re": {
@@ -272,7 +272,6 @@ class SelfInstructor:
             docs = ["__initialize__"]
         embeddings = HuggingFaceEmbeddings()
         self.docstore = Chroma.from_texts(docs, embeddings)
-        self.pending_docstore = Chroma.from_texts(["__initialize__"], embeddings)
 
     def validate_model(self):
         """Ensure the specified model is available, and configure the endpoint
@@ -351,27 +350,12 @@ class SelfInstructor:
         topics = "\n".join(
             [
                 f" * {topic}"
-                for topic in random.sample(list(self.random_topics), min(BATCH_SIZE, 15))
+                for topic in random.sample(
+                    list(self.random_topics), min(BATCH_SIZE, 15)
+                )
             ]
         )
         return template.format(topics=topics)
-
-    def is_too_similar(self, instruction, docstore) -> bool:
-        """Check if the input instruction is too similar to an existing instruction.
-
-        :param instruction: The candidate instruction to check.
-        :type instruction: str
-
-        :param docstore: The docstore to perform similarity search against.
-        :type docstore: Chroma
-
-        :return: True if too similar, otherwise false.
-        :rtype: bool
-        """
-        for _, score in docstore.similarity_search_with_score(instruction, k=1):
-            if score < self.min_docsearch_score:
-                return True
-        return False
 
     def extract_instructions_from_response(self, text: str) -> List[str]:
         """Extract the list of instructions from the OpenAI response.
@@ -398,11 +382,6 @@ class SelfInstructor:
                     f"Skipping instruction: {instruction} [code, ascii, other unsuitable]"
                 )
                 continue
-            if self.is_too_similar(instruction, self.docstore) or self.is_too_similar(
-                instruction, self.pending_docstore
-            ):
-                logger.warning(f"Skipping instruction, too similar: {instruction}")
-            self.pending_docstore.add_texts([instruction])
             instructions.append(instruction)
             logger.info(f"Generated candidate task: {instruction}")
         return instructions
@@ -527,25 +506,21 @@ class SelfInstructor:
                     "  ".join([new_instruction, CONTEXT_TASK_INJECTION])
                 )
                 if not prompt or "=:=:=" not in prompt:
-                    logger.error(f"Error generating contextual prompt: {new_instruction}")
+                    logger.error(
+                        f"Error generating contextual prompt: {new_instruction}"
+                    )
                 parts = [part.strip() for part in prompt.split("=:=:=")]
                 flip = random.random()
-                if flip <= 0.25:
+                if flip <= 0.7:
                     prompt = f"Using the provided text, respond to the instruction: {parts[1]}\n\n{parts[0]}"
-                elif flip <= 0.5:
-                    prompt = parts[0] + f"\n\nUsing the text above, respond to the instruction: {parts[1]}"
-                elif flip <= 0.75:
-                    prompt = parts[0] + f"\n\n{parts[1]}"
+                elif flip <= 0.85:
+                    prompt = (
+                        parts[0]
+                        + f"\n\nUsing the text above, respond to the instruction: {parts[1]}"
+                    )
                 else:
                     prompt = parts[1] + f"\n\nContext:\n\n{parts[0]}"
-            if prompt:
-                response = self.generate_response(prompt)
-                if response:
-                    queue.put({"instruction": prompt, "response": response})
-                else:
-                    logger.error(
-                        f"Error generating response to: {prompt.splitlines()[0]}..."
-                    )
+            queue.put({"instruction": prompt})
 
     def generate_instruction_batches(self, queue: Queue) -> None:
         """Generate batches of instructions, storing new instructions in queue.
@@ -568,16 +543,14 @@ class SelfInstructor:
                     logger.error("Too many consecutive errors, shutting down!")
                     os.kill(os.getpid(), signal.SIGKILL)
 
-    def validate_and_store_results(
-        self, queue: Queue, consume_remaining: bool = False
-    ) -> None:
+    def validate_and_store_results(self, queue: Queue) -> None:
         """Dedupe based on rouge score for each new instruction and save results.
 
         :param queue: Queue to consume messages from.
         :type queue: Queue
         """
         with open(self.output_path, "a+") as outfile:
-            while self.machine_task_count < self.instruction_count or consume_remaining:
+            while True:
                 instruction = queue.get()
                 if not instruction:
                     break
@@ -595,21 +568,31 @@ class SelfInstructor:
                 outfile.write(json.dumps(instruction) + "\n")
                 outfile.flush()
                 self.machine_task_count += 1
+                if self.machine_task_count >= self.instruction_count:
+                    self.stop_producing = True
                 self.docstore.add_texts([instruction["instruction"]])
                 logger.success(
                     f"Generated unique [score={similarity_score}] instruction [total={self.machine_task_count}]: {instruction['instruction']}"
                 )
-        self.stop_producing = True
 
-    def run(self):
-        """Run the self-instruct, instruction generation task to completion."""
+    def inject_response(self, instruction):
+        """Update the input instruction with the response from OpenAI."""
+        if instruction.get("response"):
+            return instruction
+        result = self.generate_response(instruction["instruction"])
+        if result:
+            return {"instruction": instruction["instruction"], "response": result}
+        return None
+
+    def run_prompt_generation_phase(self):
+        """Run the self-instruct, instruction generation (without responses)."""
         self.initialize_random_topics()
         if self.machine_task_count >= self.instruction_count:
-            logger.error(
-                "Already have {self.machine_task_count} machine-generated tasks!"
+            logger.warning(
+                f"Already have {self.machine_task_count} machine-generated tasks, skipping generation..."
             )
             return
-        queue = Queue()
+        queue = Queue(maxsize=self.prompt_generation_concurrency * BATCH_SIZE)
         producers = [
             threading.Thread(target=self.generate_instruction_batches, args=(queue,))
             for _ in range(self.prompt_generation_concurrency)
@@ -620,15 +603,37 @@ class SelfInstructor:
             target=self.validate_and_store_results, args=(queue,)
         )
         consumer.start()
-        consumer.join()
         for producer in producers:
             producer.join()
-
-        # Consume any tasks generated after the consumer stopped.
         queue.put(None)
-        self.validate_and_store_results(queue, consume_remaining=True)
+        consumer.join()
+
+    def run_response_generation_phase(self):
+        """Generate the responses for each of the generated prompts."""
+        # Now, we need to generate the responses.
+        with open(self.output_path, "r") as infile:
+            instructions = (json.loads(line) for line in infile.readlines())
+            with concurrent.futures.ThreadPoolExecutor(
+                self.prompt_generation_concurrency
+            ) as pool:
+                results = pool.map(partial(self.inject_response), instructions)
+        tmp_path = f"{self.output_path}.tmp"
+        with open(tmp_path, "w") as outfile:
+            for item in results:
+                if not item:
+                    continue
+                outfile.write(json.dumps(item) + "\n")
+        os.rename(tmp_path, self.output_path)
+
+    def run(self):
+        """Run prompt generation and answer to completion."""
+        self.run_prompt_generation_phase()
         logger.success(
-            f"Finished generating {self.machine_task_count} instructions and responses."
+            f"Finished generating instructions [asked for {self.instruction_count}, created {self.machine_task_count}], generating responses..."
+        )
+        self.run_response_generation_phase()
+        logger.success(
+            f"Finished self-instruct task, total instructions: {self.machine_task_count}"
         )
 
 

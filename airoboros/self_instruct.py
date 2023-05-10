@@ -536,7 +536,7 @@ class SelfInstructor:
                         + f"\n\nUsing the text above, respond to the instruction: {parts[1]}"
                     )
                 else:
-                    prompt = parts[1] + f"\n\nContext:\n\n{parts[0]}"
+                    prompt = parts[1] + f"\n\nContext:\n{parts[0]}"
             queue.put({"instruction": prompt})
 
     def generate_instruction_batches(self, queue: Queue) -> None:

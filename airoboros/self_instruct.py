@@ -52,9 +52,9 @@ Requirements for the instructions:
  * Do not repeat the verb for each instruction to maximize diversity.
  * Try to avoid controversial and politically charged subjects.
  * The list of instructions should include a variety of types of prompts, such as open-ended text generation, creative writing, brainstorming, classification, editing, logical reasoning, etc.
- * Each instruction must be something a large language model can complete with a text response, for example do not create a task asking to create visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
+ * Each instruction must be something a large language model can complete with a text response, for example do not create a task asking to create or use visual/audio output, setting an alarm, scheduling something on the calendar, etc. because the language model cannot perform those tasks.
  * Each instruction should be in English, and be between 1 and 3 sentences long.
- * Do not include any prompts that would require additional information, for example instructions to summarize or extract information from a passage of text.
+ * Do not include any prompts that would require additional information, for example instructions to summarize or extract information from a passage of text or paragraph that is not provided.
  * Any instruction referencing a list of objects, such as classifying a list of items, should include the list of items.
 
 Ensure each instruction is related to one of the following topics:

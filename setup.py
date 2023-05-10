@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md"))
 
 setup(
     name="airoboros",
-    version="0.0.6",
+    version="0.1.0",
     description="Updated and improved implementation of the self-instruct system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -15,13 +15,12 @@ setup(
     license="Apache 2.0",
     packages=["airoboros"],
     install_requires=[
-        "rouge-score>=0.1.2",
         "aiohttp>=3.8",
         "backoff>=2.2",
         "requests>=2.28",
         "loguru>=0.7",
         "chromadb>=0.3.21",
-        "langchain>=0.0.155",
+        "langchain>=0.0.162",
         "sentence-transformers>=2.2.2",
     ],
     extras_require={
@@ -31,7 +30,7 @@ setup(
         ],
     },
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: POSIX :: Linux",

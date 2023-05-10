@@ -7,5 +7,5 @@ venv/
 __pycache__
 .seed
 output
-topics.txt
+topics*.txt
 *.jsonl

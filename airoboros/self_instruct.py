@@ -2,6 +2,7 @@ import argparse
 import backoff
 import os
 import json
+import hashlib
 import random
 import re
 import requests
@@ -13,7 +14,7 @@ import threading
 import concurrent.futures
 from functools import partial
 from loguru import logger
-from queue import Queue
+from queue import Queue, Empty
 from typing import List, Dict, Any
 from uuid import uuid4
 from .exceptions import (
@@ -30,7 +31,8 @@ from langchain.embeddings import HuggingFaceEmbeddings
 
 # Defaults and constants.
 BATCH_SIZE = 20
-CONTEXTUAL_PROMPT = f"""Create a few instructions that can be provided to a GPT system to create text and a task related to the text.  Use diverse verbs, subject matters, and writing styles, and don't use any placeholders.
+TOPIC_GENERATION_PROMPT = "Give me a list of 200 completely random topics."
+CONTEXTUAL_PROMPT = """Create a few instructions that can be provided to a GPT system to create text and a task related to the text.  Use diverse verbs, subject matters, and writing styles, and don't use any placeholders.
 
 Examples:
  * Generate a few paragraphs about the process of making damascus steel.
@@ -39,12 +41,12 @@ Examples:
  * Give me a detailed description of the Battle of Rennell Island during World War II, along with key dates, locations, and people involved.
 
 Ensure each instruction is related to one of the following topics:
-{{topics}}
+{topics}
 
-Numbered list of {BATCH_SIZE} instructions:
+Numbered list of {batch_size} instructions:
 """
-CONTEXT_TASK_INJECTION = """After generating your response, add a line with "=:=:=", then generate a unique and interesting instruction or question that could be answered using only the generated text.  Examples include summarization, questions about specific details in the text, or information extraction."""
-DEFAULT_PROMPT = f"""Create a set of {BATCH_SIZE} diverse instructions.
+CONTEXT_TASK_INJECTION = """After generating your response, add a line with "=:=:=", then generate a unique and interesting instruction or question that could be answered using only the generated text.  Examples include summarization, questions about specific details found within the text, or information extraction."""
+DEFAULT_PROMPT = """Create a set of {batch_size} diverse instructions.
 
 Requirements for the instructions:
  * Do not repeat the verb for each instruction to maximize diversity.
@@ -56,15 +58,12 @@ Requirements for the instructions:
  * Any instruction referencing a list of objects, such as classifying a list of items, should include the list of items.
 
 Ensure each instruction is related to one of the following topics:
-{{topics}}
+{topics}
 
-Numbered list of {BATCH_SIZE} prompts:
+Numbered list of {batch_size} prompts:
 """
 SKIP_WORDS = ["image", "graph", "picture", "file", "map", "draw", "plot", "go to"]
 SKIP_SEARCH_RE = re.compile(r"\b{'|'.join(SKIP_WORDS)}s?\b", re.I)
-CODE_GEN_RE = re.compile(
-    r"^(?:write|generate|create)(?:a )?(?:\w+ )?(?:script|program|code)\W", re.I
-)
 OPENAI_API_BASE_URL = "https://api.openai.com"
 MODEL_ENDPOINTS = {
     "completions": [
@@ -107,6 +106,11 @@ class SelfInstructor:
             "default": 100000,
             "help": "number of instructions to generate, not including the seed instructions",
         },
+        "--batch-size": {
+            "type": int,
+            "default": BATCH_SIZE,
+            "help": "number of candidate instructions to (attempt to) generate per request",
+        },
         "--output-path": {
             "type": str,
             "help": "path to store all generated instructions in",
@@ -115,7 +119,6 @@ class SelfInstructor:
         "--topics-path": {
             "type": str,
             "help": "path to a newline separated list of topics",
-            "default": "topics.txt",
         },
         "--overwrite": {
             "action": "store_true",
@@ -135,6 +138,16 @@ class SelfInstructor:
             "default": CONTEXTUAL_PROMPT,
             "help": "prompt to use for generating contextual prompts",
         },
+        "--topic-generation-prompt": {
+            "type": str,
+            "default": TOPIC_GENERATION_PROMPT,
+            "help": "prompt to use in generating random topics",
+        },
+        "--topic-request-count": {
+            "type": int,
+            "default": 4000,
+            "help": "number of requests to perform in random topic generation",
+        },
         "--contextual-prompt-ratio": {
             "type": float,
             "default": 0.1,
@@ -144,11 +157,6 @@ class SelfInstructor:
             "type": str,
             "default": SKIP_SEARCH_RE.pattern,
             "help": "regular expression used to filter low-quality/unusable instructions",
-        },
-        "--code-gen-re": {
-            "type": str,
-            "default": CODE_GEN_RE.pattern,
-            "help": "regular expression used to filter coding/programming tasks",
         },
         "--temperature": {
             "type": float,
@@ -174,9 +182,9 @@ class SelfInstructor:
             "type": int,
             "help": "Maximum token usage, calculated as sum of total_tokens from responses",
         },
-        "--prompt-generation-concurrency": {
+        "--concurrency": {
             "type": int,
-            "help": "Number of concurrent prompt generation threads/requests to use",
+            "help": "Number of concurrent threads/requests to use",
             "default": 50,
         },
         "--min-docsearch-score": {
@@ -193,21 +201,23 @@ class SelfInstructor:
         organization_id: str = None,
         openai_api_key: str = None,
         instruction_count: int = 100000,
+        batch_size: int = BATCH_SIZE,
         output_path: str = "instructions.jsonl",
-        topics_path: str = "topics.txt",
+        topics_path: str = None,
         overwrite: bool = False,
         append: bool = True,
         prompt: str = DEFAULT_PROMPT,
         contextual_prompt: str = CONTEXTUAL_PROMPT,
+        topic_generation_prompt: str = TOPIC_GENERATION_PROMPT,
+        topic_request_count: int = 4000,
         contextual_prompt_ratio: float = 0.15,
         skip_instruction_re: re.Pattern = SKIP_SEARCH_RE,
-        code_gen_re: re.Pattern = CODE_GEN_RE,
         temperature: float = 0.7,
         top_p: float = 0.5,
         frequency_penalty: int = 0,
         presence_penalty: int = 2,
         max_usage_tokens: int | None = None,
-        prompt_generation_concurrency: int = 50,
+        concurrency: int = 50,
         min_docsearch_score: float = 0.35,
     ):
         """Constructor."""
@@ -219,19 +229,19 @@ class SelfInstructor:
                 "OPENAI_API_KEY environment variable or openai_api_key must be provided"
             )
         self.instruction_count = instruction_count
+        self.batch_size = batch_size
         self.output_path = os.path.abspath(output_path)
-        self.topics_path = os.path.abspath(topics_path)
+        self.topics_path = topics_path
         self.overwrite = overwrite
         self.append = append
         self.prompt = prompt
         self.contextual_prompt = contextual_prompt
+        self.topic_generation_prompt = topic_generation_prompt
+        self.topic_request_count = topic_request_count
         self.contextual_prompt_ratio = contextual_prompt_ratio
         self.skip_instruction_re = skip_instruction_re
         if isinstance(skip_instruction_re, str):
             self.skip_instruction_re = re.compile(skip_instruction_re, re.I)
-        self.code_gen_re = code_gen_re
-        if isinstance(code_gen_re, str):
-            self.code_gen_re = re.compile(code_gen_re, re.I)
         self.temperature = temperature
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
@@ -239,9 +249,8 @@ class SelfInstructor:
         self.max_usage_tokens = max_usage_tokens
         self.validate_model()
         self.used_tokens = 0
-        self.random_topics = set([])
         self.stop_producing = False
-        self.prompt_generation_concurrency = prompt_generation_concurrency
+        self.concurrency = concurrency
         self.min_docsearch_score = min_docsearch_score
         self.initialize_docstores()
 
@@ -297,45 +306,56 @@ class SelfInstructor:
             raise ValueError(f"Model is not available to your API key: {self.model}")
         logger.success(f"Successfully validated model: {self.model}")
 
-    def initialize_random_topics(self):
+    def initialize_topics(self) -> None:
+        """Read existing cached topics, or generate a new list."""
+        if self.topics_path:
+            if not os.path.exists(self.topics_path):
+                raise ValueError(f"Topics file: {self.topics_path} does not exis!")
+        if not self.topics_path:
+            self.topics_path = f"topics-{hashlib.md5((self.topic_generation_prompt + str(self.topic_request_count)).encode()).hexdigest()}.txt"
         if os.path.exists(self.topics_path):
             with open(self.topics_path, "r") as infile:
-                self.random_topics = {
-                    line.strip().lower() for line in infile.readlines() if line.strip()
+                self.topics = {
+                    line.strip() for line in infile.readlines() if line.strip()
                 }
-                logger.info(f"Using {len(self.random_topics)} cached random topics...")
-            return
+                logger.info(
+                    f"Using {len(self.topics)} topics from {self.topics_path}..."
+                )
+                return
+        self.topics = set([])
         logger.info("Generating random topics to use in prompts...")
-        with concurrent.futures.ThreadPoolExecutor(20) as pool:
-            responses = pool.map(
-                partial(self._post_no_exc, "/v1/completions"),
-                [
+        topic_prompts = [
+            {
+                "model": "gpt-3.5-turbo",
+                "messages": [
                     {
-                        "model": "text-davinci-003",
-                        "prompt": [
-                            "Give me a numbered list of 200 completely random topics."
-                        ]
-                        * 20,
-                        "temperature": 1.0,
-                        "max_tokens": 3000,
+                        "role": "user",
+                        "content": self.topic_generation_prompt,
                     }
-                ]
-                * 20,
+                ],
+                "temperature": 1.0,
+            }
+            for _ in range(self.topic_request_count)
+        ]
+        with concurrent.futures.ThreadPoolExecutor(self.concurrency) as pool:
+            responses = pool.map(
+                partial(self._post_no_exc, "/v1/chat/completions"), topic_prompts
             )
+        seen = set([])
         with open(self.topics_path, "w") as outfile:
             for response in responses:
                 if not response:
                     continue
                 for choice in response["choices"]:
-                    for line in choice["text"].splitlines():
-                        if match := re.search(r"\s*\d+\s*\.\s*(.+)", line):
-                            topic = match.group(1).lower().strip()
-                            if not topic:
-                                continue
-                            self.random_topics.add(topic)
-                            outfile.write(topic + "\n")
+                    for line in choice["message"]["content"].splitlines():
+                        topic = re.sub(r"(\s*\d+\s*\.\s+)+", "", line).strip()
+                        if not topic or topic.lower() in seen:
+                            continue
+                        seen.add(topic.lower())
+                        self.topics.add(topic)
+                        outfile.write(topic + "\n")
         logger.success(
-            f"Successfully generated {len(self.random_topics)} random topics..."
+            f"Successfully generated {len(self.topics)} topics, stored in {self.topics_path}..."
         )
 
     def generate_prompt(self, template: str):
@@ -350,12 +370,10 @@ class SelfInstructor:
         topics = "\n".join(
             [
                 f" * {topic}"
-                for topic in random.sample(
-                    list(self.random_topics), min(BATCH_SIZE, 15)
-                )
+                for topic in random.sample(list(self.topics), min(self.batch_size, 10))
             ]
         )
-        return template.format(topics=topics)
+        return template.format(topics=topics, batch_size=self.batch_size)
 
     def extract_instructions_from_response(self, text: str) -> List[str]:
         """Extract the list of instructions from the OpenAI response.
@@ -374,12 +392,11 @@ class SelfInstructor:
             # by the self-instruct team.
             if (
                 self.skip_instruction_re.search(instruction)
-                or self.code_gen_re.search(instruction)
                 or instruction[0] in string.punctuation
                 or not instruction[0].isascii()
             ):
                 logger.warning(
-                    f"Skipping instruction: {instruction} [code, ascii, other unsuitable]"
+                    f"Skipping instruction: {instruction} [unsuitable prompt]"
                 )
                 continue
             instructions.append(instruction)
@@ -586,16 +603,16 @@ class SelfInstructor:
 
     def run_prompt_generation_phase(self):
         """Run the self-instruct, instruction generation (without responses)."""
-        self.initialize_random_topics()
+        self.initialize_topics()
         if self.machine_task_count >= self.instruction_count:
             logger.warning(
                 f"Already have {self.machine_task_count} machine-generated tasks, skipping generation..."
             )
             return
-        queue = Queue(maxsize=self.prompt_generation_concurrency * BATCH_SIZE)
+        queue = Queue(maxsize=self.concurrency * BATCH_SIZE)
         producers = [
             threading.Thread(target=self.generate_instruction_batches, args=(queue,))
-            for _ in range(self.prompt_generation_concurrency)
+            for _ in range(self.concurrency)
         ]
         for producer in producers:
             producer.start()
@@ -608,21 +625,96 @@ class SelfInstructor:
         queue.put(None)
         consumer.join()
 
+    def generate_responses(self, input_queue: Queue, output_queue: Queue):
+        """Generate responses to machine-generated prompts."""
+        while True:
+            try:
+                instruction = input_queue.get(block=True, timeout=10.0)
+                if instruction is None:
+                    output_queue.put(None)
+                    break
+            except Empty:
+                continue
+            if result := self.inject_response(instruction):
+                output_queue.put(result)
+
+    def store_completed_results(self, tmp_path: str, queue: Queue) -> None:
+        """Store all completed instructions."""
+        finished_count = 0
+        with open(tmp_path, "a+") as outfile:
+            while True:
+                try:
+                    instruction = queue.get(block=True, timeout=10.0)
+                except Empty:
+                    continue
+                if instruction is None:
+                    finished_count += 1
+                    if finished_count == self.concurrency:
+                        break
+                else:
+                    outfile.write(json.dumps(instruction) + "\n")
+                    logger.success(
+                        f"Generated response [{instruction['instruction'][0:100]}]\n{instruction['response']}"
+                    )
+
     def run_response_generation_phase(self):
         """Generate the responses for each of the generated prompts."""
-        # Now, we need to generate the responses.
+        input_queue = Queue(maxsize=self.concurrency * 4)
+        output_queue = Queue()
+        producers = [
+            threading.Thread(
+                target=self.generate_responses, args=(input_queue, output_queue)
+            )
+            for _ in range(self.concurrency)
+        ]
+        for producer in producers:
+            producer.start()
+
+        # Skip over any responses that have already been generated.
+        tmp_path = f"{self.output_path}.with_results.tmp"
+        already_responded = set([])
+        if os.path.exists(tmp_path):
+            with open(f"{tmp_path}.filtered", "w") as outfile:
+                with open(tmp_path, "r") as infile:
+                    for line in infile:
+                        instruction = json.loads(line)
+                        if "response" in instruction:
+                            already_responded.add(
+                                hashlib.md5(
+                                    instruction["instruction"].encode()
+                                ).hexdigest()
+                            )
+                            outfile.write(line)
+            os.rename(f"{tmp_path}.filtered", tmp_path)
+            logger.info(
+                f"Found {len(already_responded)} prompts that have already been responded to..."
+            )
+
+        # Start consumer.
+        consumer = threading.Thread(
+            target=self.store_completed_results, args=(tmp_path, output_queue)
+        )
+        consumer.start()
+
+        # Queue up the instructions to be answered.
         with open(self.output_path, "r") as infile:
-            instructions = (json.loads(line) for line in infile.readlines())
-            with concurrent.futures.ThreadPoolExecutor(
-                self.prompt_generation_concurrency
-            ) as pool:
-                results = pool.map(partial(self.inject_response), instructions)
-        tmp_path = f"{self.output_path}.tmp"
-        with open(tmp_path, "w") as outfile:
-            for item in results:
-                if not item:
+            for line in infile:
+                instruction = json.loads(line)
+                if (
+                    hashlib.md5(instruction["instruction"].encode()).hexdigest()
+                    in already_responded
+                ):
                     continue
-                outfile.write(json.dumps(item) + "\n")
+                input_queue.put(instruction)
+
+        # Send termination queue messages to each producer.
+        for _ in range(self.concurrency):
+            input_queue.put(None)
+
+        # Join all threads.
+        for producer in producers:
+            producer.join()
+        consumer.join()
         os.rename(tmp_path, self.output_path)
 
     def run(self):

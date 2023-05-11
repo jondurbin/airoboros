@@ -23,11 +23,14 @@ See available options via:
 airoboros generate-instructions --help
 ```
 
-Help as of 2023-05-10:
+Help as of 2023-05-11:
 ```
-usage: self_instruct.py [-h] [--model MODEL] [--organization-id ORGANIZATION_ID] [--openai-api-key OPENAI_API_KEY] [--instruction-count INSTRUCTION_COUNT] [--batch-size BATCH_SIZE] [--output-path OUTPUT_PATH] [--topics-path TOPICS_PATH] [--overwrite] [--append] [--prompt PROMPT] [--contextual-prompt CONTEXTUAL_PROMPT]
-                        [--topic-generation-prompt TOPIC_GENERATION_PROMPT] [--topic-request-count TOPIC_REQUEST_COUNT] [--contextual-prompt-ratio CONTEXTUAL_PROMPT_RATIO] [--skip-instruction-re SKIP_INSTRUCTION_RE] [--temperature TEMPERATURE] [--top-p TOP_P] [--frequency-penalty FREQUENCY_PENALTY] [--presence-penalty PRESENCE_PENALTY]
-                        [--max-usage-tokens MAX_USAGE_TOKENS] [--concurrency CONCURRENCY] [--min-docsearch-score MIN_DOCSEARCH_SCORE]
+usage: self_instruct.py [-h] [--model MODEL] [--organization-id ORGANIZATION_ID] [--openai-api-key OPENAI_API_KEY] [--instruction-count INSTRUCTION_COUNT]
+                        [--batch-size BATCH_SIZE] [--output-path OUTPUT_PATH] [--topics-path TOPICS_PATH] [--overwrite] [--append] [--uncensored] [--prompt PROMPT]
+                        [--contextual-prompt CONTEXTUAL_PROMPT] [--topic-generation-prompt TOPIC_GENERATION_PROMPT] [--topic-request-count TOPIC_REQUEST_COUNT]
+                        [--contextual-prompt-ratio CONTEXTUAL_PROMPT_RATIO] [--skip-instruction-re SKIP_INSTRUCTION_RE] [--temperature TEMPERATURE] [--top-p TOP_P]
+                        [--frequency-penalty FREQUENCY_PENALTY] [--presence-penalty PRESENCE_PENALTY] [--max-usage-tokens MAX_USAGE_TOKENS]
+                        [--concurrency CONCURRENCY] [--min-docsearch-score MIN_DOCSEARCH_SCORE]
 
 options:
   -h, --help            show this help message and exit
@@ -46,6 +49,7 @@ options:
                         path to a newline separated list of topics
   --overwrite           overwrite output path if it exists
   --append              append to output path if it exists
+  --uncensored          try to produce uncensored responses, via role-play prompt
   --prompt PROMPT       prompt prefix to use for generating non-contextual instructions
   --contextual-prompt CONTEXTUAL_PROMPT
                         prompt to use for generating contextual prompts

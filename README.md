@@ -23,12 +23,13 @@ See available options via:
 airoboros generate-instructions --help
 ```
 
-Help as of 2023-05-11:
+Help as of 2023-05-12:
 ```
 usage: self_instruct.py [-h] [--model MODEL] [--organization-id ORGANIZATION_ID] [--openai-api-key OPENAI_API_KEY] [--instruction-count INSTRUCTION_COUNT]
-                        [--batch-size BATCH_SIZE] [--output-path OUTPUT_PATH] [--topics-path TOPICS_PATH] [--overwrite] [--append] [--uncensored] [--prompt PROMPT]
-                        [--contextual-prompt CONTEXTUAL_PROMPT] [--topic-generation-prompt TOPIC_GENERATION_PROMPT] [--topic-request-count TOPIC_REQUEST_COUNT]
-                        [--contextual-prompt-ratio CONTEXTUAL_PROMPT_RATIO] [--skip-instruction-re SKIP_INSTRUCTION_RE] [--temperature TEMPERATURE] [--top-p TOP_P]
+                        [--batch-size BATCH_SIZE] [--output-path OUTPUT_PATH] [--topics-path TOPICS_PATH] [--overwrite] [--append] [--uncensored]
+                        [--bot-name BOT_NAME] [--prompt PROMPT] [--contextual-prompt CONTEXTUAL_PROMPT] [--topic-generation-prompt TOPIC_GENERATION_PROMPT]
+                        [--topic-request-count TOPIC_REQUEST_COUNT] [--contextual-prompt-ratio CONTEXTUAL_PROMPT_RATIO] [--skip-instruction-re SKIP_INSTRUCTION_RE]
+                        [--temperature TEMPERATURE] [--prompt-generation-temperature PROMPT_GENERATION_TEMPERATURE] [--top-p TOP_P]
                         [--frequency-penalty FREQUENCY_PENALTY] [--presence-penalty PRESENCE_PENALTY] [--max-usage-tokens MAX_USAGE_TOKENS]
                         [--concurrency CONCURRENCY] [--min-docsearch-score MIN_DOCSEARCH_SCORE]
 
@@ -50,6 +51,7 @@ options:
   --overwrite           overwrite output path if it exists
   --append              append to output path if it exists
   --uncensored          try to produce uncensored responses, via role-play prompt
+  --bot-name BOT_NAME   name of the bot, when using uncensored mode
   --prompt PROMPT       prompt prefix to use for generating non-contextual instructions
   --contextual-prompt CONTEXTUAL_PROMPT
                         prompt to use for generating contextual prompts
@@ -62,7 +64,9 @@ options:
   --skip-instruction-re SKIP_INSTRUCTION_RE
                         regular expression used to filter low-quality/unusable instructions
   --temperature TEMPERATURE
-                        temperature parameter to use in OpenAI requests
+                        temperature parameter to use in OpenAI requests to generate responses
+  --prompt-generation-temperature PROMPT_GENERATION_TEMPERATURE
+                        temperature parameter to use in OpenAI requests when generating synthetic instructions
   --top-p TOP_P         top-p parameter to use in OpenAI requests
   --frequency-penalty FREQUENCY_PENALTY
                         frequency penalty to use in OpenAI requests
@@ -73,7 +77,6 @@ options:
   --concurrency CONCURRENCY
                         Number of concurrent threads/requests to use
   --min-docsearch-score MIN_DOCSEARCH_SCORE
-                        Minimum similarity score when querying vector DB to consider a prompt unique
 ```
 
 ### Using custom topics:
@@ -90,6 +93,15 @@ If you want to use random topics, but want those topics to be somewhat related t
 
 Since the returned topics may include duplicates, it is not guaranteed that your topic list will contain 100 * 10 topics.
 
+
+## Models (research use only):
+
+* [airoboros-gpt-3.5-turbo-100k-7b](https://huggingface.co/jondurbin/airoboros-gpt-3.5-turbo-100k-7b)
+
+
+## Datasets (subject to OpenAI license):
+
+* [airoboros-gpt-3.5-turbo-100k](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/instructions.jsonl)
 
 ## Coming soon
 

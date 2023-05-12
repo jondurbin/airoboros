@@ -190,8 +190,13 @@ class SelfInstructor:
         },
         "--temperature": {
             "type": float,
-            "default": 0.9,
-            "help": "temperature parameter to use in OpenAI requests",
+            "default": 0.7,
+            "help": "temperature parameter to use in OpenAI requests to generate responses",
+        },
+        "--prompt-generation-temperature": {
+            "type": float,
+            "default": 1.0,
+            "help": "temperature parameter to use in OpenAI requests when generating synthetic instructions",
         },
         "--top-p": {
             "type": float,
@@ -246,6 +251,7 @@ class SelfInstructor:
         contextual_prompt_ratio: float = 0.15,
         skip_instruction_re: re.Pattern = SKIP_SEARCH_RE,
         temperature: float = 0.7,
+        prompt_generation_temperature: float = 1.0,
         top_p: float = 0.5,
         frequency_penalty: int = 0,
         presence_penalty: int = 2,
@@ -279,6 +285,7 @@ class SelfInstructor:
         if isinstance(skip_instruction_re, str):
             self.skip_instruction_re = re.compile(skip_instruction_re, re.I)
         self.temperature = temperature
+        self.prompt_generation_temperature = prompt_generation_temperature
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
         self.presence_penalty = presence_penalty
@@ -519,11 +526,16 @@ class SelfInstructor:
             logger.error(f"Error performing post: {ex}")
         return None
 
-    def generate_response(self, instruction: str, recurse=True) -> str:
+    def generate_response(
+        self, instruction: str, *, temperature=None, recurse=True
+    ) -> str:
         """Call OpenAI with the specified instruction and return the text response.
 
         :param instruction: The instruction to respond to.
         :type instruction: str
+
+        :param temperature: Temperature to use in API request.
+        :type temperature: float
 
         :param recurse: Allow recursive calls, e.g. to rephrase to remove AI refs.
         :type recurse: bool
@@ -534,7 +546,7 @@ class SelfInstructor:
         path = "/v1/completions" if self._completions else "/v1/chat/completions"
         payload = {
             "model": self.model,
-            "temperature": self.temperature,
+            "temperature": temperature or self.temperature,
             "top_p": self.top_p,
             "frequency_penalty": self.frequency_penalty,
             "presence_penalty": self.presence_penalty,
@@ -613,7 +625,9 @@ class SelfInstructor:
             self.prompt if not contextual else self.contextual_prompt
         )
         for new_instruction in self.extract_instructions_from_response(
-            self.generate_response(prompt)
+            self.generate_response(
+                prompt, temperature=self.prompt_generation_temperature
+            )
         ):
             prompt = new_instruction
             if contextual:

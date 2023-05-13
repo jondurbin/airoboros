@@ -409,9 +409,9 @@ class SelfInstructor:
                         if self.uncensored:
                             if line.startswith("REMINDER:") or self.bot_name in line:
                                 continue
-                        if " list of " in line:
+                        if " list of " in line or line.endswith(":"):
                             continue
-                        topic = re.sub(r"(\s*\d+\s*\.\s+)+", "", line).strip()
+                        topic = re.sub(r"^\s*\d+\W*", "", line).strip()
                         if not topic or topic.lower() in seen:
                             continue
                         seen.add(topic.lower())

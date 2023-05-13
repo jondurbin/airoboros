@@ -321,7 +321,6 @@ class SelfInstructor:
         )
         if not docs:
             docs = ["__initialize__"]
-        docs = ["__initialize__"]
         embeddings = HuggingFaceEmbeddings()
         self.docstore = Chroma.from_texts(docs, embeddings)
 
@@ -404,7 +403,7 @@ class SelfInstructor:
                         if self.uncensored:
                             if line.startswith("REMINDER:") or self.bot_name in line:
                                 continue
-                        if ' list of ' in line:
+                        if " list of " in line:
                             continue
                         topic = re.sub(r"(\s*\d+\s*\.\s+)+", "", line).strip()
                         if not topic or topic.lower() in seen:

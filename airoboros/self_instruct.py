@@ -438,7 +438,6 @@ class SelfInstructor:
         self.topic_lock.acquire()
         topics = []
         for _ in range(self.batch_size):
-            print(f"Adding {self.topic_index}")
             topics.append(self.topics[self.topic_index])
             self.topic_index += 1
             if self.topic_index >= len(self.topics):

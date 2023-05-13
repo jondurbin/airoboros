@@ -297,6 +297,8 @@ class SelfInstructor:
         self.concurrency = concurrency
         self.min_docsearch_score = min_docsearch_score
         self.initialize_docstores()
+        self.topic_index = 0
+        self.topic_lock = threading.Lock()
 
     def initialize_docstores(self):
         """Initialize the in-memory vector databases used to check prompt uniqueness."""
@@ -366,14 +368,13 @@ class SelfInstructor:
             self.topics_path = f"topics-{hashlib.md5((self.topic_generation_prompt + str(self.topic_request_count)).encode()).hexdigest()}.txt"
         if os.path.exists(self.topics_path):
             with open(self.topics_path, "r") as infile:
-                self.topics = {
-                    line.strip() for line in infile.readlines() if line.strip()
-                }
+                self.topics = list(
+                    {line.strip() for line in infile.readlines() if line.strip()}
+                )
                 logger.info(
                     f"Using {len(self.topics)} topics from {self.topics_path}..."
                 )
                 return
-        self.topics = set([])
         logger.info("Generating random topics to use in prompts...")
         prompt_payload = {
             "model": "gpt-3.5-turbo",
@@ -403,6 +404,7 @@ class SelfInstructor:
                 partial(self._post_no_exc, "/v1/chat/completions"), topic_prompts
             )
         seen = set([])
+        self.topics = []
         with open(self.topics_path, "w") as outfile:
             for response in responses:
                 if not response:
@@ -418,7 +420,7 @@ class SelfInstructor:
                         if not topic or topic.lower() in seen:
                             continue
                         seen.add(topic.lower())
-                        self.topics.add(topic)
+                        self.topics.append(topic)
                         outfile.write(topic + "\n")
         logger.success(
             f"Successfully generated {len(self.topics)} topics, stored in {self.topics_path}..."
@@ -433,12 +435,19 @@ class SelfInstructor:
         :return: The prompt, including a list of random topics.
         :rtype: str
         """
+        self.topic_lock.acquire()
+        topics = []
+        for _ in range(self.batch_size):
+            print(f"Adding {self.topic_index}")
+            topics.append(self.topics[self.topic_index])
+            self.topic_index += 1
+            if self.topic_index >= len(self.topics):
+                self.topic_index = 0
+        self.topic_lock.release()
         topics = "\n".join(
             [
                 f" * instruction {idx + 1} must be related to topic: {json.dumps(topic)}"
-                for idx, topic in enumerate(
-                    random.sample(list(self.topics), self.batch_size)
-                )
+                for idx, topic in enumerate(topics)
             ]
         )
         return template.format(topics=topics, batch_size=self.batch_size)
@@ -709,7 +718,7 @@ class SelfInstructor:
                             min_score = score
                 if min_score <= self.min_docsearch_score:
                     logger.warning(
-                        f"Skipping instruction, too similar [{score}]: {instruction['instruction']}"
+                        f"Skipping instruction, too similar [{min_score}]: {instruction['instruction']}"
                     )
                     continue
                 outfile.write(json.dumps(instruction) + "\n")

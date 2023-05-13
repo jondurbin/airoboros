@@ -32,6 +32,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 
 # Defaults and constants.
 BATCH_SIZE = 20
+MAX_DOCSTORE_SIZE = 15000
 BOT_NAME = "AIROBOROS"
 TOPIC_GENERATION_PROMPT = "Give me a numbered list of 200 completely random topics."
 UNCENSORED_PROMPT = """I would like you to help me develop dialog for a fictional book.  In this book, users provide instructions to a GPT bot named {bot_name}, and {bot_name} provides responses.
@@ -60,9 +61,7 @@ Examples:
  * Compose a news article about a breakthrough in tire technology.
  * Give me a detailed description of the Battle of Rennell Island during World War II, along with key dates, locations, and people involved.
 
-Each instruction must relate to the corresponding topic from the list below, i.e. instruction 1 must be related to topic 1, instruction 2 related to topic 2, and so-on.
-
-Topics:
+Requirements:
 {topics}
 
 Numbered list of {batch_size} instructions:
@@ -81,9 +80,6 @@ Requirements for the instructions:
  * One of the instructions should ask for output in a specific format, such as a numbered list, bullet points, JSON, markdown, CSV, etc.
  * Do not include any prompts that would require additional information, for example instructions to summarize or extract information from a passage of text or paragraph that is not provided.
  * Any instruction referencing a list of objects, such as classifying a list of items, should include the list of items.
- * Each instruction must relate to the corresponding topic from the list below, i.e. instruction 1 must be related to topic 1, instruction 2 related to topic 2, and so-on.
-
-Topics:
 {topics}
 
 Numbered list of {batch_size} prompts:
@@ -327,8 +323,15 @@ class SelfInstructor:
         )
         if not docs:
             docs = ["__initialize__"]
-        embeddings = HuggingFaceEmbeddings()
-        self.docstore = Chroma.from_texts(docs, embeddings)
+        self.embeddings = HuggingFaceEmbeddings()
+        self.docstores = [Chroma.from_texts(docs, self.embeddings)]
+        self.docstore_rotated_at = 0
+        if self.machine_task_count >= MAX_DOCSTORE_SIZE:
+            logger.info("Initializing fresh docstore due to doc count...")
+            self.docstore_rotated_at = self.machine_task_count
+            self.docstores.append(
+                Chroma.from_texts(["__initialize__"], self.embeddings)
+            )
 
     def validate_model(self):
         """Ensure the specified model is available, and configure the endpoint
@@ -409,9 +412,9 @@ class SelfInstructor:
                         if self.uncensored:
                             if line.startswith("REMINDER:") or self.bot_name in line:
                                 continue
-                        if " list of " in line or line.endswith(":"):
+                        if " list of " in line:
                             continue
-                        topic = re.sub(r"^\s*\d+\W*", "", line).strip()
+                        topic = re.sub(r"(\s*\d+\s*\.\s+)+", "", line).strip()
                         if not topic or topic.lower() in seen:
                             continue
                         seen.add(topic.lower())
@@ -432,7 +435,7 @@ class SelfInstructor:
         """
         topics = "\n".join(
             [
-                f"{idx + 1}. {topic}"
+                f" * instruction {idx + 1} must be related to topic: {json.dumps(topic)}"
                 for idx, topic in enumerate(
                     random.sample(list(self.topics), self.batch_size)
                 )
@@ -696,13 +699,15 @@ class SelfInstructor:
                 instruction = queue.get()
                 if not instruction:
                     break
-                similar = self.docstore.similarity_search_with_score(
-                    instruction["instruction"], k=1
-                )
-                similarity_score = 1.0
-                for _, score in similar:
-                    similarity_score = score
-                if similarity_score <= self.min_docsearch_score:
+                min_score = 1.0
+                for docstore in self.docstores:
+                    similar = docstore.similarity_search_with_score(
+                        instruction["instruction"], k=1
+                    )
+                    for _, score in similar:
+                        if score < min_score:
+                            min_score = score
+                if min_score <= self.min_docsearch_score:
                     logger.warning(
                         f"Skipping instruction, too similar [{score}]: {instruction['instruction']}"
                     )
@@ -713,12 +718,21 @@ class SelfInstructor:
                 if self.machine_task_count >= self.instruction_count:
                     self.stop_producing = True
                 started_at = datetime.datetime.utcnow()
-                self.docstore.add_texts([instruction["instruction"]])
+                if (
+                    self.machine_task_count - self.docstore_rotated_at
+                    >= MAX_DOCSTORE_SIZE
+                ):
+                    logger.info("Initializing new docstore...")
+                    self.docstores.append(
+                        Chroma.from_texts(["__initialize__"], self.embeddings)
+                    )
+                    self.docstore_rotated_at = self.machine_task_count
+                self.docstores[-1].add_texts([instruction["instruction"]])
                 delta = round(
                     (datetime.datetime.utcnow() - started_at).total_seconds(), 3
                 )
                 logger.success(
-                    f"Generated unique [score={round(similarity_score, 4)}] instruction in {delta}s [total={self.machine_task_count}]: {instruction['instruction']}"
+                    f"Generated unique [score={round(min_score, 4)}] instruction in {delta}s [total={self.machine_task_count}]: {instruction['instruction']}"
                 )
 
     def inject_response(self, instruction):

@@ -169,6 +169,11 @@ class SelfInstructor:
             "default": CONTEXTUAL_PROMPT,
             "help": "prompt to use for generating contextual prompts",
         },
+        "--uncensored-prompt": {
+            "type": str,
+            "default": UNCENSORED_PROMPT,
+            "help": "prompt to use when attempting to avoid OpenAI censorship",
+        },
         "--topic-generation-prompt": {
             "type": str,
             "default": TOPIC_GENERATION_PROMPT,
@@ -296,7 +301,6 @@ class SelfInstructor:
         self.stop_producing = False
         self.concurrency = concurrency
         self.min_docsearch_score = min_docsearch_score
-        self.initialize_docstores()
         self.topic_index = 0
         self.topic_lock = threading.Lock()
 
@@ -359,14 +363,18 @@ class SelfInstructor:
             raise ValueError(f"Model is not available to your API key: {self.model}")
         logger.success(f"Successfully validated model: {self.model}")
 
-    def initialize_topics(self) -> None:
-        """Read existing cached topics, or generate a new list."""
-        if self.topics_path:
+    def initialize_topics(self, save: bool = True) -> None:
+        """Read existing cached topics, or generate a new list.
+
+        :param save: Flag dictating whether or not to save results to disk.
+        :type save: bool
+        """
+        if save and self.topics_path:
             if not os.path.exists(self.topics_path):
-                raise ValueError(f"Topics file: {self.topics_path} does not exis!")
-        if not self.topics_path:
+                raise ValueError(f"Topics file: {self.topics_path} does not exist!")
+        if save and not self.topics_path:
             self.topics_path = f"topics-{hashlib.md5((self.topic_generation_prompt + str(self.topic_request_count)).encode()).hexdigest()}.txt"
-        if os.path.exists(self.topics_path):
+        if save and os.path.exists(self.topics_path):
             with open(self.topics_path, "r") as infile:
                 self.topics = list(
                     {line.strip() for line in infile.readlines() if line.strip()}
@@ -405,7 +413,9 @@ class SelfInstructor:
             )
         seen = set([])
         self.topics = []
-        with open(self.topics_path, "w") as outfile:
+        try:
+            if save:
+                outfile = open(self.topics_path, "w")
             for response in responses:
                 if not response:
                     continue
@@ -421,7 +431,11 @@ class SelfInstructor:
                             continue
                         seen.add(topic.lower())
                         self.topics.append(topic)
-                        outfile.write(topic + "\n")
+                        if save:
+                            outfile.write(topic + "\n")
+        finally:
+            if save:
+                outfile.close()
         logger.success(
             f"Successfully generated {len(self.topics)} topics, stored in {self.topics_path}..."
         )
@@ -516,6 +530,7 @@ class SelfInstructor:
         )
         if result.status_code != 200:
             text = result.text
+            logger.error(f"OpenAI request error: {text}")
             if "too many requests" in text.lower():
                 raise TooManyRequestsError(text)
             if "rate limit reached" in text.lower():
@@ -754,7 +769,6 @@ class SelfInstructor:
 
     def run_prompt_generation_phase(self):
         """Run the self-instruct, instruction generation (without responses)."""
-        self.initialize_topics()
         if self.machine_task_count >= self.instruction_count:
             logger.warning(
                 f"Already have {self.machine_task_count} machine-generated tasks, skipping generation..."
@@ -870,6 +884,8 @@ class SelfInstructor:
 
     def run(self):
         """Run prompt generation and answer to completion."""
+        self.initialize_docstores()
+        self.initialize_topics()
         self.run_prompt_generation_phase()
         logger.success(
             f"Finished generating instructions [asked for {self.instruction_count}, created {self.machine_task_count}], generating responses..."
@@ -880,7 +896,7 @@ class SelfInstructor:
         )
 
 
-def main(args):
+def generate_instructions(args):
     random.seed(secrets.randbelow(1000000000))
     parser = argparse.ArgumentParser()
     for arg, kwargs in SelfInstructor.CLI_ARGS.items():
@@ -888,5 +904,80 @@ def main(args):
     SelfInstructor(**vars(parser.parse_args(args))).run()
 
 
+def generate_topic_batch(worker: SelfInstructor) -> List[str]:
+    """Generate a list of topics (used by generate_topics)."""
+    worker.initialize_topics()
+    return worker.topics
+
+
+def generate_topics(args):
+    random.seed(secrets.randbelow(1000000000))
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--prompts-path",
+        type=str,
+        help="path to a newline seperated list of prompts to use in generating topics",
+    )
+    parser.add_argument(
+        "--prompts",
+        type=str,
+        nargs="+",
+        help="prompt(s) to use in generating topics",
+    )
+    parser.add_argument("--concurrency", **SelfInstructor.CLI_ARGS["--concurrency"])
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        required=True,
+        help="path to save generated topics to",
+    )
+    parser.add_argument(
+        "--request-count", **SelfInstructor.CLI_ARGS["--topic-request-count"]
+    )
+    parser.add_argument("--uncensored", **SelfInstructor.CLI_ARGS["--uncensored"])
+    parser.add_argument(
+        "--uncensored-prompt", **SelfInstructor.CLI_ARGS["--uncensored-prompt"]
+    )
+    args = vars(parser.parse_args(args))
+    output_path = args.pop("output_path")
+    if os.path.exists(output_path):
+        raise ValueError(f"{output_path} exists, please specify new file path")
+    args["topic_request_count"] = args.pop("request_count")
+    prompts = args.pop("prompts", None)
+    path = args.pop("prompts_path", None)
+    if not prompts:
+        if path:
+            with open(path, "r") as infile:
+                prompts = [line.strip() for line in infile.readlines() if line.strip()]
+        else:
+            prompts = [TOPIC_GENERATION_PROMPT]
+    worker_concurrency = (
+        len(prompts) if len(prompts) <= args["concurrency"] else args["concurrency"]
+    )
+    request_concurrency = 1
+    if worker_concurrency < args["concurrency"] and args["request_count"] > 1:
+        request_concurrency = min(
+            int(args["concurrency"] / worker_concurrency) or 1, args["concurrency"]
+        )
+    args["concurrency"] = request_concurrency
+    instructors = [
+        SelfInstructor(topic_generation_prompt=prompt, **args) for prompt in prompts
+    ]
+    seen = set([])
+    logger.info(f"Generating topics with {len(prompts)} prompt(s)...")
+    with open(output_path, "w") as outfile:
+        with concurrent.futures.ThreadPoolExecutor(worker_concurrency) as pool:
+            for topics in pool.map(generate_topic_batch, instructors):
+                for topic in topics:
+                    key = topic.lower().strip()
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    outfile.write(topic + "\n")
+    logger.success(
+        f"Successfully generated {len(seen)} unique topics with {len(prompts)} prompt(s)."
+    )
+
+
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    generate_instructions(sys.argv[1:])

@@ -1,8 +1,10 @@
 import sys
-from .self_instruct import main as generate_instructions
+from .self_instruct import generate_instructions
+from .self_instruct import generate_topics
 
 COMMAND_MAP = {
     "generate-instructions": generate_instructions,
+    "generate-topics": generate_topics,
 }
 
 

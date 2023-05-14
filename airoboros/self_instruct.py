@@ -226,7 +226,7 @@ class SelfInstructor:
         "--concurrency": {
             "type": int,
             "help": "Number of concurrent threads/requests to use",
-            "default": 50,
+            "default": 10,
         },
         "--min-docsearch-score": {
             "type": float,
@@ -262,7 +262,7 @@ class SelfInstructor:
         frequency_penalty: int = 0,
         presence_penalty: int = 2,
         max_usage_tokens: int | None = None,
-        concurrency: int = 50,
+        concurrency: int = 10,
         min_docsearch_score: float = 0.35,
     ):
         """Constructor."""
@@ -634,7 +634,7 @@ class SelfInstructor:
             if "OpenAI" in text:
                 logger.warning(f"Attempt to bypass restrictions failed: {text}")
                 return None
-            if "As an AI" in text:
+            if "as an ai " in text.lower() or "as an ai," in  text.lower():
                 logger.warning(
                     f"{self.bot_name} appears to have left character:\nInstruction: {instruction}\nResponse: {text}"
                 )

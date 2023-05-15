@@ -16,6 +16,7 @@ import concurrent.futures
 from functools import partial
 from loguru import logger
 from queue import Queue, Empty
+from time import sleep
 from typing import List, Dict, Any
 from uuid import uuid4
 from .exceptions import (
@@ -67,6 +68,7 @@ Requirements:
 Numbered list of {batch_size} instructions:
 """
 CONTEXT_TASK_INJECTION = """After generating your response, add a line with "=:=:=", then generate a unique and interesting instruction or question that could be answered using only the generated text.  Examples include summarization, questions about specific details found within the text, or information extraction."""
+FORMAT_INJECTION = """If appropriate, the instruction or question should ask for a specific response format, e.g. JSON, YAML, SQL, markdown table, XML, CSV, etc."""
 DEFAULT_PROMPT = """Create a set of {batch_size} diverse instructions.
 
 Requirements for the instructions:
@@ -226,7 +228,7 @@ class SelfInstructor:
         "--concurrency": {
             "type": int,
             "help": "Number of concurrent threads/requests to use",
-            "default": 10,
+            "default": 50,
         },
         "--min-docsearch-score": {
             "type": float,
@@ -262,7 +264,7 @@ class SelfInstructor:
         frequency_penalty: int = 0,
         presence_penalty: int = 2,
         max_usage_tokens: int | None = None,
-        concurrency: int = 10,
+        concurrency: int = 50,
         min_docsearch_score: float = 0.35,
     ):
         """Constructor."""
@@ -332,6 +334,8 @@ class SelfInstructor:
         self.embeddings = HuggingFaceEmbeddings()
         self.docstores = [Chroma.from_texts(docs, self.embeddings)]
         self.docstore_rotated_at = 0
+        self.topic_index = self.machine_task_count % len(self.topics)
+        self.topic_index = 0
         if self.machine_task_count >= MAX_DOCSTORE_SIZE:
             logger.info("Initializing fresh docstore due to doc count...")
             self.docstore_rotated_at = self.machine_task_count
@@ -534,6 +538,7 @@ class SelfInstructor:
             if "too many requests" in text.lower():
                 raise TooManyRequestsError(text)
             if "rate limit reached" in text.lower():
+                sleep(30)
                 raise RateLimitError(text)
             elif "context_length_exceeded" in text.lower():
                 raise ContextLengthExceededError(text)
@@ -593,7 +598,6 @@ class SelfInstructor:
             payload["prompt"] = instruction
             payload["max_tokens"] = 2000
         else:
-            payload["max_tokens"] = 2000
             if self.uncensored:
                 payload["messages"] = [
                     {
@@ -634,7 +638,7 @@ class SelfInstructor:
             if "OpenAI" in text:
                 logger.warning(f"Attempt to bypass restrictions failed: {text}")
                 return None
-            if "as an ai " in text.lower() or "as an ai," in  text.lower():
+            if "as an ai " in text.lower() or "as an ai," in text.lower():
                 logger.warning(
                     f"{self.bot_name} appears to have left character:\nInstruction: {instruction}\nResponse: {text}"
                 )
@@ -664,15 +668,20 @@ class SelfInstructor:
         ):
             prompt = new_instruction
             if contextual:
-                prompt = self.generate_response(
-                    "  ".join([new_instruction, CONTEXT_TASK_INJECTION])
-                )
+                injected = new_instruction + CONTEXT_TASK_INJECTION
+                if random.random() <= 0.2:
+                    injected += " " + FORMAT_INJECTION
+                prompt = self.generate_response(injected)
                 if not prompt or "=:=:=" not in prompt:
                     logger.error(
                         f"Error generating contextual prompt: {new_instruction}"
                     )
                     continue
-                parts = [part.strip() for part in prompt.split("=:=:=") if part.strip()]
+                parts = [
+                    part.strip().lstrip(":").strip()
+                    for part in prompt.split("=:=:=")
+                    if part.strip()
+                ]
                 if len(parts) != 2:
                     logger.warning(
                         f"Contextual prompt returned incorrect part count: {prompt}"
@@ -884,8 +893,8 @@ class SelfInstructor:
 
     def run(self):
         """Run prompt generation and answer to completion."""
-        self.initialize_docstores()
         self.initialize_topics()
+        self.initialize_docstores()
         self.run_prompt_generation_phase()
         logger.success(
             f"Finished generating instructions [asked for {self.instruction_count}, created {self.machine_task_count}], generating responses..."
@@ -955,7 +964,7 @@ def generate_topics(args):
         len(prompts) if len(prompts) <= args["concurrency"] else args["concurrency"]
     )
     request_concurrency = 1
-    if worker_concurrency < args["concurrency"] and args["request_count"] > 1:
+    if worker_concurrency < args["concurrency"] and args["topic_request_count"] > 1:
         request_concurrency = min(
             int(args["concurrency"] / worker_concurrency) or 1, args["concurrency"]
         )

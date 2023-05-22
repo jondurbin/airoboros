@@ -97,11 +97,12 @@ Since the returned topics may include duplicates, it is not guaranteed that your
 ## Models (research use only):
 
 * [airoboros-gpt-3.5-turbo-100k-7b](https://huggingface.co/jondurbin/airoboros-gpt-3.5-turbo-100k-7b)
-
+* [airoboros-13b](https://huggingface.co/jondurbin/airoboros-13b)
 
 ## Datasets (subject to OpenAI license):
 
 * [airoboros-gpt-3.5-turbo-100k](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/instructions.jsonl)
+* [airoboros-uncensored](https://storage.googleapis.com/airoboros-dump/uncensored/instructions.jsonl)
 
 ## Coming soon
 

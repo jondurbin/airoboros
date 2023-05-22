@@ -9,7 +9,7 @@ This updated implementation supports either the /v1/completions endpoint or /v1/
 
 * support for either /v1/completions or /v1/chat/completions APIs (which allows gpt-3.5-turbo instead of text-davinci-003, as well as gpt-4 if you have access)
 * support for custom topics list, custom topic generation prompt, or completely random topics
-* sn memory vector db (Chroma) for similarity comparison, which is much faster than calculating rouge score for each generated instruction
+* in-memory vector db (Chroma) for similarity comparison, which is much faster than calculating rouge score for each generated instruction
 * (seemingly) better prompts, which includes injection of random topics to relate the instructions to, which creates much more diverse synthetic instructions
 * multi-threaded producer/consumer implementation for significantly faster runtimes (generally 150+ unique prompts per minute, more initially since there are fewer duplicates, decreasing over time).
 * tries to ensure the context, if provided, is relevant to the topic and contains all the information that would be necessary to respond to the instruction, and nost just a link to article/etc.
@@ -98,6 +98,7 @@ Since the returned topics may include duplicates, it is not guaranteed that your
 
 * [airoboros-gpt-3.5-turbo-100k-7b](https://huggingface.co/jondurbin/airoboros-gpt-3.5-turbo-100k-7b)
 * [airoboros-13b](https://huggingface.co/jondurbin/airoboros-13b)
+* [airoboros-7b](https://huggingface.co/jondurbin/airoboros-7b)
 
 ## Datasets (subject to OpenAI license):
 

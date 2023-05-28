@@ -94,6 +94,10 @@ If you want to use random topics, but want those topics to be somewhat related t
 Since the returned topics may include duplicates, it is not guaranteed that your topic list will contain 100 * 10 topics.
 
 
+## Support the work
+
+https://bmc.link/jondurbin
+
 ## Models (research use only):
 
 * [airoboros-gpt-3.5-turbo-100k-7b](https://huggingface.co/jondurbin/airoboros-gpt-3.5-turbo-100k-7b)

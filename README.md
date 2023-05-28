@@ -106,8 +106,8 @@ https://bmc.link/jondurbin
 
 ## Datasets (subject to OpenAI license):
 
-* [airoboros-gpt-3.5-turbo-100k](https://storage.googleapis.com/airoboros-dump/gpt-3.5-turbo-100k/instructions.jsonl)
-* [airoboros-uncensored](https://storage.googleapis.com/airoboros-dump/uncensored/instructions.jsonl)
+* [airoboros-uncensored](https://huggingface.co/datasets/jondurbin/airoboros-uncensored)
+* [airoboros-gpt4](https://huggingface.co/datasets/jondurbin/airoboros-gpt4)
 
 ## Coming soon
 

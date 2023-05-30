@@ -106,7 +106,7 @@ https://bmc.link/jondurbin
 
 ## Datasets (subject to OpenAI license):
 
-* [airoboros-uncensored](https://huggingface.co/datasets/jondurbin/airoboros-uncensored)
+* [airoboros-gpt-3.5-turbo](https://huggingface.co/datasets/jondurbin/airoboros-uncensored)
 * [airoboros-gpt4](https://huggingface.co/datasets/jondurbin/airoboros-gpt4)
 
 ## Coming soon

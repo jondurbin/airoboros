@@ -91,7 +91,7 @@ Requirements for the tasks:
 - Do not include any coding or math tasks.
 - Each task must be something a large language model can complete with a text-only response without any access to the internet.  For example do not create a task asking to create or use visual/audio output, setting an alarm, scheduling something on the calendar, read content from a website, etc. because the language model cannot perform those tasks.
 - Each instruction should be in English.
-- Avoid any tasks that would be related to climate change, green tech, DEI, LGBTQ, religion, politics, social issues, race, ethnicity, or any topic that you would likely not respond to, or any task which a language model would not be able to respond to, e.g. tasks about emotions, feelings, physical senses, etc.
+- Avoid any tasks that would be related to climate change, green tech, remewable energy, DEI, sex and/or gender, religion, politics, social issues, race, ethnicity, or any topic that you would likely not respond to, or any task which a language model would not be able to respond to, e.g. tasks about emotions, feelings, physical senses, etc.
 - Two of the tasks should only include 1 criterion, three of the tasks should include 2 criteria, and the remaining tasks should include between 3 and 6.
 - Three of the instructions should ask for output in a randomly specified format, such as a numbered list, bullet points, JSON, markdown, CSV, YAML, pythondict, etc.
 - Any instruction referencing a list of objects, such as classifying a list of items, should include the list of items.

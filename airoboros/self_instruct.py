@@ -404,7 +404,7 @@ class SelfInstructor:
                 return
         logger.info("Generating random topics to use in prompts...")
         prompt_payload = {
-            "model": "gpt-4",
+            "model": self.model,
             "messages": [
                 {
                     "role": "user",

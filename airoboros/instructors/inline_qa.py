@@ -1,4 +1,3 @@
-import json
 import os
 import re
 
@@ -13,9 +12,7 @@ async def generate(instructor, category):
     # Load the prompt template.
     path = config.get("prompt_path", f"{category}.txt")
     if not os.path.exists(path):
-        path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "prompts", path
-        )
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
     with open(path) as infile:
         template = infile.read()
 

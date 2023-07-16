@@ -1,4 +1,3 @@
-import json
 import os
 import re
 
@@ -13,9 +12,7 @@ async def generate(instructor):
     # Load the prompt template.
     path = config.get("prompt_path", "experiences.txt")
     if not os.path.exists(path):
-        path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "prompts", path
-        )
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
     with open(path) as infile:
         prompt = infile.read()
 
@@ -39,10 +36,12 @@ async def generate(instructor):
             continue
         instruction = match.group(1).strip()
         response = match.group(2).strip()
-        if not instruction or not response or instructor.is_too_similar(
-                instruction, min_score=min_score
-            ):
-                continue
+        if (
+            not instruction
+            or not response
+            or instructor.is_too_similar(instruction, min_score=min_score)
+        ):
+            continue
         yield {
             "instruction": instruction,
             "response": response,

@@ -13,9 +13,7 @@ async def generate(instructor):
     # Load the prompt template.
     path = config.get("prompt_path", "general.txt")
     if not os.path.exists(path):
-        path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "prompts", path
-        )
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
     with open(path) as infile:
         template = infile.read()
 

@@ -5,32 +5,39 @@ Example 1. Write an async python FastAPI server.  The webserver should support c
 
 Example 2: Create a python model for "Person" that would work well in a workplace context, along with validators, and a way to fetch remote information related to the person such as social media profiles/content.  Be sure to include a profile image with remote file and crop/resize support.
 
-Example 3: Write a python program that implements a syntax parser for a basic programming language.
+Example 3: Implement the B*tree algorithm in Javascript.
 
-Example 4. Create an ascii snake game in Python, without any graphical libraries.
+Example 4: Write a solution to Djikstra's algorithm in GoLang.
 
-Example 5. Create a text-based solitaire implementation using python.  Here are some additional requirements:
+Example 5. Create an ascii snake game in Python, without any graphical libraries.
+
+Example 6. Create a text-based solitaire implementation using python.  Here are some additional requirements:
  - The game state should be saved to mariadb.
  - The game should take a screenshot after each move as a record.
  - The game should accept keyboard input only, not mouse.
 
-Example 6. Create a python script with the following:
+Example 7. Create a python script with the following:
  a. Accepts a single word as input.
  b. If the user inputs more than one word, or the word is more than 10 characters, print an error message and stop.
  c. Generate a large ascii art version of the input word.
 
-The tasks should ask the user to code in {language}, and should be fairly similar in complexity to the examples.
-
 The tasks must be something a coding language model can complete without access to additional resources.
 
-The task must be something that could be completed with 2000 words and symbols or less.
+The tasks must be something that could be completed with 2000 words and symbols or less.
 
-The first three new tasks should be to implement an algorithm or data structure, the next three new tasks should have one criterion and be somewhat simple, the next three new tasks should have two criteria and be more difficult than the first three, and the remaining tasks should have three or more criteria and be somewhat challenging.
+{languages}
 
-Three of the tasks should also ask for interaction with other software or services, such as {additional}."
+{formatting}
+
+Don't prefix the tasks with the language, simply include the language to be used somewhere in the wording of the task.
+
+{related_software}
 
 None of the tasks should be about reading from or writing to csvs.
 
-The response format should just be the numeric index of the task and the task, don't label them with "Single Criterion", etc.
+Give me a numbered list of {batch_size} new coding tasks.
 
-Give me a numbered list of {batch_size} new coding tasks:
+Response format:
+TASK 1. [task 1]
+TASK 2. [task 2]
+...

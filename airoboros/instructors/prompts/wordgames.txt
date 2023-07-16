@@ -7,3 +7,8 @@ Example 5: Write a haiku with three words that have no vowels.
 Example 6. Write a sentence where all words start with the letter "r".
 
 Generate a numbered list of {batch_size} new similar prompts.
+
+Response format:
+TASK 1. [task 1]
+TASK 2. [task 2]
+...

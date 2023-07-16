@@ -215,6 +215,7 @@ instructors:
   riddles:
     count: 100
     batch_size: 5
+    min_docsearch_score: 0.05
     prompt_path: riddles.txt
 
 
@@ -223,4 +224,5 @@ instructors:
   wordgames:
     count: 100
     batch_size: 5
+    min_docsearch_score: 0.03
     prompt_path: wordgames.txt

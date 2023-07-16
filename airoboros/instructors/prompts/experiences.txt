@@ -1,4 +1,4 @@
-I'd like you to create an instruction and response pair for an imaginative experience with the AI assistant and the user.  You should create a detailed setting, then actually walk the user through the experience.
+I'd like you to create an instruction and response pair for an imaginative experience with the AI assistant and the user.  You should create a detailed setting, then actually walk the user through the experience.  Be very creative and descriptive.
 
 Response format:
 SETTING:

@@ -15,7 +15,7 @@ setup(
     license="Apache 2.0",
     packages=["airoboros"],
     install_requires=[
-        "aiohttp>=3.8",
+        "aiohttp[speedups]>=3.8",
         "backoff>=2.2",
         "requests>=2.28",
         "loguru>=0.7",

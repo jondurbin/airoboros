@@ -117,6 +117,21 @@ instructors:
       - gitlab issue
       - how-to article
 
+    # Output formatting options.
+    formatting_options:
+      - JSON
+      - YAML
+      - CSV
+      - markdown
+      - markdown table
+      - bullet list
+      - numbered list
+      - python dict
+      - php associative array
+      - JSONL
+      - javascript object
+      - XML
+
     # Prompt path.
     prompt_path: contextual.txt
 

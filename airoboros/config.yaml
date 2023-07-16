@@ -208,7 +208,7 @@ instructors:
   orca:
     count: 100
     batch_size: 5
-    prompt_path: ocra.txt
+    prompt_path: orca.txt
 
   ##################################################################################
   # Orca style reasoning/math prompts.

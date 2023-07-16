@@ -194,6 +194,7 @@ instructors:
   trivia:
     count: 100
     batch_size: 20
+    min_docsearch_score: 0.05
     prompt_path: trivia.txt
 
   ##################################################################################

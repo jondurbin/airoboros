@@ -106,6 +106,8 @@ async def generate(instructor):
                 continue
             if "PLAINFORMAT" in instructions[idx] and "```" in response:
                 response = re.split(r"```[^\n]*(?:$|[\r\n])", response)[1].strip()
+                if not response:
+                    continue
             yield {
                 "instruction": instructions[idx].strip(),
                 "response": response.strip(),

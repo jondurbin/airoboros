@@ -60,6 +60,9 @@ topic_request_count: 20
 # Default count per generator, if not specified.
 default_count: 100
 
+# Default batch size, if not specified.
+default_batch_size: 5
+
 # Individual instructor configurations.
 instructors:
 
@@ -78,7 +81,7 @@ instructors:
     count: 100
 
     # Batch size/number of instructions to generate per request.
-    batch_size: 10
+    batch_size: 5
 
     # Path to prompt to use in generating instructions.
     prompt_path: general.txt
@@ -95,7 +98,7 @@ instructors:
   contextual:
     api_params:
       temperature: 0.5
-    count: 100
+    count: 70
 
     # Writing styles to use for the context being generated.
     context_styles:
@@ -145,7 +148,7 @@ instructors:
   # Counterfactual contextual prompts, used to de-hallucinate Q&A a bit.
   counterfactual_contextual:
     api_params: {}
-    count: 100
+    count: 30
     batch_size: 5
     prompt_path: counterfactual_contextual.txt
     response_prompt_path: counterfactual_contextual_response.txt
@@ -155,7 +158,7 @@ instructors:
   # Coding tasks.
   coding:
     count: 100
-    batch_size: 10
+    batch_size: 5
 
     # Ratio of prompts that should be "plain", i.e. without explanations, backticks, etc.
     plain_ratio: 0.5
@@ -232,7 +235,6 @@ instructors:
     batch_size: 5
     min_docsearch_score: 0.05
     prompt_path: riddles.txt
-
 
   ##################################################################################
   # Wordgames.

@@ -9,7 +9,7 @@ async def generate(instructor):
     config = instructor.instructors.get("coding")
     if not config:
         return
-    target_count = config.get("count", instructor.default_count)
+    target_count = config.get("count") or instructor.default_count
 
     # Load the prompt template.
     path = config.get("prompt_path", "coding.txt")

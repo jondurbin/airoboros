@@ -112,6 +112,7 @@ class SelfInstructor:
         self.topic_prompt = raw_config["topic_prompt"].format(topic_avoidance=self.topic_avoidance)
         self.topic_request_count = int(raw_config.get("topic_request_count") or 20)
         self.default_count = int(raw_config.get("default_count") or 100)
+        self.default_batch_size = int(raw_config.get("default_batch_size") or 5)
 
         # Validate the model for each generator.
         self.instructors = raw_config.get("instructors")

@@ -399,8 +399,10 @@ class SelfInstructor:
 
     async def run(self):
         """Run prompt generation and answer to completion."""
+        from airoboros.instructors.agent import generate as agent_generator
         from airoboros.instructors.coding import generate as coding_generator
         from airoboros.instructors.contextual import generate as contextual_generator
+        from airoboros.instructors.cot import generate as cot_generator
         from airoboros.instructors.counterfactual_contextual import (
             generate as counterfactual_contextual_generator,
         )
@@ -413,8 +415,10 @@ class SelfInstructor:
         from airoboros.instructors.wordgames import generate as wordgame_generator
 
         method_map = {
+            "agent": agent_generator,
             "coding": coding_generator,
             "contextual": contextual_generator,
+            "cot": cot_generator,
             "counterfactual_contextual": counterfactual_contextual_generator,
             "experience": experience_generator,
             "general": general_generator,
@@ -434,6 +438,7 @@ class SelfInstructor:
             for category in self.instructors:
                 if category not in method_map:
                     logger.warning(f"Unknown category: {category}, skipping...")
+                    continue
                 count = self.instructors[category].get("count") or self.default_count
                 logger.info(f"Generating {count} instructions for {category}...")
                 started_at = datetime.datetime.now()

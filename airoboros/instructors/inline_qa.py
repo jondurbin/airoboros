@@ -2,7 +2,7 @@ import os
 import re
 
 
-async def generate(instructor, category):
+async def generate(instructor, category, start_key="QUESTION", end_key="ANSWER"):
     """Generator for generic inline question answer pair training data."""
     config = instructor.instructors.get(category)
     if not config:
@@ -35,7 +35,7 @@ async def generate(instructor, category):
 
         # Parse instructions and generate responses.
         for instruction, response in re.findall(
-            r"QUESTION: (.*?)ANSWER: (.*?)(?=QUESTION|$)", response, re.DOTALL
+            f"{start_key}:(.*?){end_key}:(.*?)(?={start_key}|$)", response, re.DOTALL
         ):
             if not instruction.strip() or await instructor.is_too_similar(
                 instruction, min_score=min_score

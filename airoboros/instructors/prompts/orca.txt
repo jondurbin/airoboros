@@ -1,4 +1,4 @@
-I need you to help me generate math tests.
+I need you to help me generate math/reasoning tests.
 
 I would like you to provide both the question and the solution.
 

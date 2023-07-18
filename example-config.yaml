@@ -61,7 +61,7 @@ topic_request_count: 20
 default_count: 100
 
 # Default batch size, if not specified.
-default_batch_size: 5
+default_batch_size: 10
 
 # Language.
 language: English
@@ -84,7 +84,7 @@ instructors:
     count: 100
 
     # Batch size/number of instructions to generate per request.
-    batch_size: 5
+    batch_size: 10
 
     # Path to prompt to use in generating instructions.
     prompt_path: general.txt
@@ -155,7 +155,7 @@ instructors:
   counterfactual_contextual:
     api_params: {}
     count: 30
-    batch_size: 5
+    batch_size: 10
     prompt_path: counterfactual_contextual.txt
     response_prompt_path: counterfactual_contextual_response.txt
     topics_path:
@@ -164,7 +164,7 @@ instructors:
   # Coding tasks.
   coding:
     count: 100
-    batch_size: 5
+    batch_size: 10
 
     # Ratio of prompts that should be "plain", i.e. without explanations, backticks, etc.
     plain_ratio: 0.5
@@ -231,14 +231,14 @@ instructors:
   # Orca style reasoning/math prompts.
   orca:
     count: 100
-    batch_size: 5
+    batch_size: 10
     prompt_path: orca.txt
 
   ##################################################################################
   # Orca style reasoning/math prompts.
   riddle:
     count: 100
-    batch_size: 5
+    batch_size: 10
     min_docsearch_score: 0.05
     prompt_path: riddle.txt
 
@@ -246,7 +246,7 @@ instructors:
   # Wordgames.
   wordgame:
     count: 100
-    batch_size: 5
+    batch_size: 10
     min_docsearch_score: 0.03
     prompt_path: wordgame.txt
 
@@ -254,6 +254,22 @@ instructors:
   # Roleplay.
   roleplay:
     count: 100
-    batch_size: 5
+    batch_size: 10
     min_docsearch_score: 0.1
     prompt_path: roleplay.txt
+
+  ##################################################################################
+  # Chain-of-thought.
+  cot:
+    count: 50
+    batch_size: 5
+    min_docsearch_score: 0.1
+    prompt_path: cot.txt
+
+  ##################################################################################
+  # Agent/router.
+  agent:
+    count: 100
+    batch_size: 5
+    min_docsearch_score: 0.1
+    prompt_path: agent.txt

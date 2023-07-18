@@ -97,7 +97,9 @@ async def generate(instructor):
                     ]
                 )
             )
-            instructions.append(instruction if not plain else instruction + " PLAINFORMAT")
+            instructions.append(
+                instruction if not plain else instruction + " PLAINFORMAT"
+            )
             futures.append(instructor.generate_response(full_instruction, **api_params))
         if not futures:
             continue

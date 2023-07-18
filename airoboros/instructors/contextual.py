@@ -23,7 +23,10 @@ TASK_DISPLAY_OPTIONS = [
 ]
 TASK_DISPLAY = "The set of task(s) should be displayed as {task_format}."
 REQUEST_FORMATTING = "One task should ask for output to be formatted in a specific way, such as {sample_formats}, or similar type of formatting that would be appropriate for the task."
-VALID_FORMAT = re.compile(r"^[\s\n]*(?:BEGININPUT[\s\n]+BEGINCONTEXT(?:.*?)(?=ENDCONTEXT)ENDCONTEXT(?:.*?)(?=ENDINPUT)ENDINPUT[\s\n]*)+BEGININSTRUCTION.*ENDINSTRUCTION[\s\r\n]*$", re.DOTALL)
+VALID_FORMAT = re.compile(
+    r"^[\s\n]*(?:BEGININPUT[\s\n]+BEGINCONTEXT(?:.*?)(?=ENDCONTEXT)ENDCONTEXT(?:.*?)(?=ENDINPUT)ENDINPUT[\s\n]*)+BEGININSTRUCTION.*ENDINSTRUCTION[\s\r\n]*$",
+    re.DOTALL,
+)
 
 
 def generate_prompt(instructor, config, template, topic_iter):
@@ -184,7 +187,7 @@ async def generate(instructor):
             if not VALID_FORMAT.match(instruction):
                 logger.warning("Skipping contextual prompt, invalid format.")
                 continue
-            if instructor.is_too_similar(instruction, min_score=min_score):
+            if await instructor.is_too_similar(instruction, min_score=min_score):
                 logger.warning("Skipping contextual prompt, too similar.")
                 continue
             instructions.append(instruction)
@@ -199,8 +202,10 @@ async def generate(instructor):
             )
             for instruction in instructions
         ]
-        for idx, response in enumerate(await asyncio.gather(*futures)):
-            if not response:
+        responses = await asyncio.gather(*futures)
+        for idx in range(len(futures)):
+            response = responses[idx]
+            if not response or not response.strip():
                 continue
             yield {
                 "instruction": instructions[idx].strip(),

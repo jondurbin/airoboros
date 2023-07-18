@@ -63,13 +63,14 @@ async def generate(instructor):
         for instruction in re.findall(
             r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
         ):
-            if not instruction.strip() or instructor.is_too_similar(
+            if not instruction.strip() or await instructor.is_too_similar(
                 instruction, min_score=min_score
             ):
                 continue
-            futures.append(await instructor.generate_response(instruction, **api_params))
+            futures.append(instructor.generate_response(instruction, **api_params))
         if not futures:
             continue
+        print(f"{len(futures)} TO GATHER")
         responses = await asyncio.gather(*futures)
         for idx in range(len(futures)):
             response = responses[idx]

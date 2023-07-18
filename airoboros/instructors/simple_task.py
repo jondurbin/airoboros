@@ -24,15 +24,19 @@ async def generate(instructor, category):
     min_score = config.get("min_docsearch_score") or instructor.min_docsearch_score
 
     # Generate the instruction/response pairs until we reach the target count.
-    batch_size = config.get("batch_size") or  instructor.default_batch_size
+    batch_size = config.get("batch_size") or instructor.default_batch_size
     count = instructor.instructor_counts.get(category, 0)
     language = config.get("language") or instructor.language
     while count < target_count:
         # Get a batch of instructions.
         prompt = (
             template.format(batch_size=batch_size, language=language)
-            if '{topic_avoidance}' not in template
-            else template.format(batch_size=batch_size, language=language, topic_avoidance=instructor.topic_avoidance)
+            if "{topic_avoidance}" not in template
+            else template.format(
+                batch_size=batch_size,
+                language=language,
+                topic_avoidance=instructor.topic_avoidance,
+            )
         )
         response = await instructor.generate_response(prompt, **api_params)
         if not response:
@@ -43,7 +47,7 @@ async def generate(instructor, category):
         for instruction in re.findall(
             r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
         ):
-            if not instruction.strip() or instructor.is_too_similar(
+            if not instruction.strip() or await instructor.is_too_similar(
                 instruction, min_score=min_score
             ):
                 continue

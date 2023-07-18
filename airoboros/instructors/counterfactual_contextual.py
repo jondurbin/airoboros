@@ -123,7 +123,7 @@ async def generate(instructor):
                             "ENDINSTRUCTION",
                         ]
                     )
-                    if idx == 0 and instructor.is_too_similar(
+                    if idx == 0 and await instructor.is_too_similar(
                         instruction, min_score=min_score
                     ):
                         logger.warning(
@@ -133,7 +133,9 @@ async def generate(instructor):
                     instructions.append(instruction)
                     futures.append(
                         instructor.generate_response(
-                            response_template.format(instruction=instruction, language=language),
+                            response_template.format(
+                                instruction=instruction, language=language
+                            ),
                             **api_params,
                         )
                     )

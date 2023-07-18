@@ -223,9 +223,9 @@ instructors:
 
   ##################################################################################
   # Guided experiences, e.g. meditation.
-  experiences:
+  experience:
     count: 100
-    prompt_path: experiences.txt
+    prompt_path: experience.txt
 
   ##################################################################################
   # Orca style reasoning/math prompts.
@@ -236,19 +236,19 @@ instructors:
 
   ##################################################################################
   # Orca style reasoning/math prompts.
-  riddles:
+  riddle:
     count: 100
     batch_size: 5
     min_docsearch_score: 0.05
-    prompt_path: riddles.txt
+    prompt_path: riddle.txt
 
   ##################################################################################
   # Wordgames.
-  wordgames:
+  wordgame:
     count: 100
     batch_size: 5
     min_docsearch_score: 0.03
-    prompt_path: wordgames.txt
+    prompt_path: wordgame.txt
 
   ##################################################################################
   # Roleplay.

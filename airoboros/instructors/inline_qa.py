@@ -37,7 +37,7 @@ async def generate(instructor, category):
         for instruction, response in re.findall(
             r"QUESTION: (.*?)ANSWER: (.*?)(?=QUESTION|$)", response, re.DOTALL
         ):
-            if not instruction.strip() or instructor.is_too_similar(
+            if not instruction.strip() or await instructor.is_too_similar(
                 instruction, min_score=min_score
             ):
                 continue

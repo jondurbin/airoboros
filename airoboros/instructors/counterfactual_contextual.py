@@ -151,7 +151,7 @@ async def generate(instructor):
             yield {
                 "instruction": instructions[idx].strip(),
                 "response": response.strip(),
-                "category": "contextual",
+                "category": "counterfactual_contextual",
             }
             count += 1
             if count >= target_count:

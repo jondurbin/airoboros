@@ -47,7 +47,7 @@ async def generate(instructor):
     min_score = config.get("min_docsearch_score") or instructor.min_docsearch_score
 
     # Generate the instruction/response pairs until we reach the target count.
-    count = instructor.instructor_counts.get("contextual", 0)
+    count = instructor.instructor_counts.get("counterfactual_contextual", 0)
     batch_size = config.get("batch_size") or instructor.default_batch_size
     language = config.get("language") or instructor.language
     while count < target_count:
@@ -143,7 +143,11 @@ async def generate(instructor):
         # Generate responses.
         if not futures:
             continue
-        for idx, response in enumerate(await asyncio.gather(*futures)):
+        responses = await asyncio.gather(*futures)
+        for idx in range(len(futures)):
+            response = responses[idx]
+            if not response or not response.strip():
+                continue
             yield {
                 "instruction": instructions[idx].strip(),
                 "response": response.strip(),
@@ -152,3 +156,4 @@ async def generate(instructor):
             count += 1
             if count >= target_count:
                 break
+        futures = []

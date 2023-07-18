@@ -60,7 +60,7 @@ async def generate(instructor, category):
             if not response or not response.strip():
                 continue
             yield {
-                "instruction": instruction.strip(),
+                "instruction": instructions[idx].strip(),
                 "response": response.strip(),
                 "category": category,
             }

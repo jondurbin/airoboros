@@ -319,7 +319,7 @@ class SelfInstructor:
                 logger.debug(f"token usage: {self.used_tokens}")
                 return result
 
-    async def _post_no_exc(self, *a, **k) -> Dict[str, Any] | None:
+    async def _post_no_exc(self, *a, **k):
         """Post, ignoring all exceptions."""
         try:
             return await self._post(*a, **k)

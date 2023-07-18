@@ -363,7 +363,7 @@ class SelfInstructor:
         else:
             text = response["choices"][0]["message"]["content"]
 
-        if any([banned.match(text, re.I) for banned in self.response_filters]):
+        if any([banned.search(text, re.I) for banned in self.response_filters]):
             logger.warning(f"Banned response: {text}")
             return None
         if text.startswith(("I'm sorry,", "Apologies,", "I can't", "I won't")):

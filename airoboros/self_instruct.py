@@ -16,7 +16,7 @@ from loguru import logger
 from time import sleep
 from typing import List, Dict, Any
 from uuid import uuid4
-from exceptions import (
+from airoboros.exceptions import (
     RateLimitError,
     TooManyRequestsError,
     TokensExhaustedError,
@@ -60,7 +60,7 @@ class SelfInstructor:
     CLI_ARGS = {
         # The updated code with several instructors has way too many options to support
         # as CLI args, so we just accept the config file path now.
-        "--config": {
+        "--config-path": {
             "type": str,
             "default": "config.yaml",
             "help": "path to the airobors configuration file",
@@ -399,18 +399,18 @@ class SelfInstructor:
 
     async def run(self):
         """Run prompt generation and answer to completion."""
-        from instructors.coding import generate as coding_generator
-        from instructors.contextual import generate as contextual_generator
-        from instructors.counterfactual_contextual import (
+        from airoboros.instructors.coding import generate as coding_generator
+        from airoboros.instructors.contextual import generate as contextual_generator
+        from airoboros.instructors.counterfactual_contextual import (
             generate as counterfactual_contextual_generator,
         )
-        from instructors.experiences import generate as experience_generator
-        from instructors.general import generate as general_generator
-        from instructors.orca import generate as orca_generator
-        from instructors.riddles import generate as riddle_generator
-        from instructors.roleplay import generate as roleplay_generator
-        from instructors.trivia import generate as trivia_generator
-        from instructors.wordgames import generate as wordgame_generator
+        from airoboros.instructors.experiences import generate as experience_generator
+        from airoboros.instructors.general import generate as general_generator
+        from airoboros.instructors.orca import generate as orca_generator
+        from airoboros.instructors.riddles import generate as riddle_generator
+        from airoboros.instructors.roleplay import generate as roleplay_generator
+        from airoboros.instructors.trivia import generate as trivia_generator
+        from airoboros.instructors.wordgames import generate as wordgame_generator
 
         method_map = {
             "coding": coding_generator,

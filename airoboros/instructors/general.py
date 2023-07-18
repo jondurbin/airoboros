@@ -60,6 +60,7 @@ async def generate(instructor):
 
         # Parse instructions and generate responses.
         futures = []
+        instructions = []
         for instruction in re.findall(
             r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
         ):
@@ -67,6 +68,7 @@ async def generate(instructor):
                 instruction, min_score=min_score
             ):
                 continue
+            instructions.append(instruction)
             futures.append(instructor.generate_response(instruction, **api_params))
         if not futures:
             continue

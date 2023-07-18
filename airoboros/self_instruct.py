@@ -113,6 +113,7 @@ class SelfInstructor:
         self.topic_request_count = int(raw_config.get("topic_request_count") or 20)
         self.default_count = int(raw_config.get("default_count") or 100)
         self.default_batch_size = int(raw_config.get("default_batch_size") or 5)
+        self.language = raw_config.get("language") or "English"
 
         # Validate the model for each generator.
         self.instructors = raw_config.get("instructors")
@@ -217,7 +218,7 @@ class SelfInstructor:
                     if not response:
                         continue
                     for topic in re.findall(r"(?:^|\n)\d+\. (.*?)(?:$|(?=\n\d+\. ))", response, re.DOTALL):
-                        if not topic or topic.lower().strip() in seen:
+                        if not topic or topic.strip().endswith(":") or topic.lower().strip() in seen:
                             continue
                         seen.add(topic.lower().strip())
                         self.topics.append(topic)

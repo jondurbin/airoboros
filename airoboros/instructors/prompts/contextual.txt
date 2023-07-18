@@ -6,6 +6,8 @@ If the topic is about a specific person, place, or historical event, change the 
 
 The random text block(s) should be extremely realistic, and should not include any placeholders.  The dates should be before the year 2024, appropriate to the topic and text.
 
+Each text block should be in {language}, but "BEGININPUT", "BEGINCONTEXT", "ENDCONTEXT", "ENDINPUT", "BEGININSTRUCTION" and "ENDINSTRUCTION" are special tokens that must not be translated.
+
 The random text block(s) should be in the style:
 {styles}
 

@@ -24,9 +24,10 @@ async def generate(instructor):
 
     # Generate the instruction/response pairs until we reach the target count.
     count = instructor.instructor_counts.get("experiences", 0)
+    language = config.get("language") or instructor.language
     while count < target_count:
         # Get a batch of instructions.
-        response = await instructor.generate_response(prompt, **api_params)
+        response = await instructor.generate_response(prompt.format(language=language), **api_params)
         if not response:
             continue
 

@@ -63,6 +63,9 @@ default_count: 100
 # Default batch size, if not specified.
 default_batch_size: 5
 
+# Language.
+language: English
+
 # Individual instructor configurations.
 instructors:
 
@@ -91,6 +94,9 @@ instructors:
 
     # Optionally override the min similarity score.
     min_docsearch_score: 
+
+    # Optionally override language.
+    language:
 
 
   ##################################################################################
@@ -163,8 +169,8 @@ instructors:
     # Ratio of prompts that should be "plain", i.e. without explanations, backticks, etc.
     plain_ratio: 0.5
 
-    # Limit languages.
-    languages:
+    # Limit programming languages.
+    coding_languages:
       - python
       - javascript
       - java

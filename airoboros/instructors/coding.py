@@ -20,9 +20,9 @@ async def generate(instructor):
 
     # Additional configuration related to coding tasks.
     related = config.get("related_software", [])
-    languages = config.get("languages", [])
-    if not languages:
-        raise ValueError("At least one language must be configured.")
+    coding_languages = config.get("coding_languages", [])
+    if not coding_languages:
+        raise ValueError("At least one coding language must be configured.")
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}
@@ -34,13 +34,14 @@ async def generate(instructor):
     batch_size = config.get("batch_size", 10)
     count = instructor.instructor_counts.get("coding", 0)
     language_index = 0
+    language = config.get("language") or instructor.language
     while count < target_count:
         # Inject languages to use for this batch.
         current_languages = []
         for _ in range(batch_size):
-            current_languages.append(languages[language_index])
+            current_languages.append(coding_languages[language_index])
             language_index += 1
-            if language_index >= len(languages):
+            if language_index >= len(coding_languages):
                 language_index = 0
         languages_str = "\n".join(
             [
@@ -52,21 +53,12 @@ async def generate(instructor):
         if batch_size > 3:
             related_str = f"One of the tasks should require interacting with {random.choice(related)}."
 
-        # Formatting options.
-        formatting_options = []
-        for idx in range(batch_size):
-            if random.random() < 0.5:
-                formatting_options.append(
-                    f'* at the end of task {idx + 1}, add "PLAINFORMAT" without quotes'
-                )
-        formatting_str = "\n".join(formatting_options)
-
         # Get a batch of instructions.
         prompt = template.format(
             batch_size=batch_size,
             languages=languages_str,
             related_software=related_str,
-            formatting=formatting_str,
+            language=language,
         )
         response = await instructor.generate_response(prompt, **api_params)
         if not response:
@@ -76,15 +68,21 @@ async def generate(instructor):
         futures = []
         instructions = []
         for instruction in re.findall(
-            r"(?:^|\n)TASK \d+\. (.*?)(?:$|(?=\nTASK \d+\. ))", response, re.DOTALL
+            r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
         ):
             if not instruction.strip() or instructor.is_too_similar(
                 instruction, min_score=min_score
             ):
                 continue
+
+            # Optionally add plain formatting.
+            plain = False
+            if random.random() < 0.5:
+                plain = True
+
             full_instruction = (
                 instruction
-                if "PLAINFORMAT" not in instruction
+                if not plain
                 else "\n".join(
                     [
                         instruction,
@@ -99,7 +97,7 @@ async def generate(instructor):
                     ]
                 )
             )
-            instructions.append(instruction)
+            instructions.append(instruction + "" if not plain else " PLAINFORMAT")
             futures.append(instructor.generate_response(full_instruction, **api_params))
         for idx, response in enumerate(await asyncio.gather(*futures)):
             if not response:

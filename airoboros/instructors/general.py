@@ -30,6 +30,7 @@ async def generate(instructor):
     # Generate the instruction/response pairs until we reach the target count.
     batch_size = config.get("batch_size", 10)
     count = instructor.instructor_counts.get("general", 0)
+    language = config.get("language") or instructor.language
     while count < target_count:
         # Inject the topics to use for this batch.
         current_topics = []
@@ -50,6 +51,7 @@ async def generate(instructor):
             batch_size=batch_size,
             topics=topics_str,
             topic_avoidance=instructor.topic_avoidance,
+            language=language,
         )
         response = await instructor.generate_response(prompt, **api_params)
         if not response:
@@ -57,7 +59,7 @@ async def generate(instructor):
 
         # Parse instructions and generate responses.
         for instruction in re.findall(
-            r"(?:^|\n)TASK \d+\. (.*?)(?:$|(?=\nTASK \d+\. ))", response, re.DOTALL
+            r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
         ):
             if not instruction.strip() or instructor.is_too_similar(
                 instruction, min_score=min_score

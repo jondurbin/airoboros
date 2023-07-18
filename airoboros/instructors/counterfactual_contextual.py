@@ -49,9 +49,10 @@ async def generate(instructor):
     # Generate the instruction/response pairs until we reach the target count.
     count = instructor.instructor_counts.get("contextual", 0)
     batch_size = config.get("batch_size") or instructor.default_batch_size
+    language = config.get("language") or instructor.language
     while count < target_count:
         response = await instructor.generate_response(
-            template.format(batch_size=batch_size), **api_params
+            template.format(batch_size=batch_size, language=language), **api_params
         )
         if not response or not response.strip():
             continue
@@ -132,7 +133,7 @@ async def generate(instructor):
                     instructions.append(instruction)
                     futures.append(
                         instructor.generate_response(
-                            response_template.format(instruction=instruction),
+                            response_template.format(instruction=instruction, language=language),
                             **api_params,
                         )
                     )

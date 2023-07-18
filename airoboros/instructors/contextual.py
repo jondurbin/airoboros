@@ -26,7 +26,7 @@ REQUEST_FORMATTING = "One task should ask for output to be formatted in a specif
 VALID_FORMAT = re.compile(r"^[\s\n]*(?:BEGININPUT[\s\n]+BEGINCONTEXT(?:.*?)(?=ENDCONTEXT)ENDCONTEXT(?:.*?)(?=ENDINPUT)ENDINPUT[\s\n]*)+BEGININSTRUCTION.*ENDINSTRUCTION[\s\r\n]*$", re.DOTALL)
 
 
-def generate_prompt(config, template, topic_iter):
+def generate_prompt(instructor, config, template, topic_iter):
     """Generate a prompt with random selection of template values."""
 
     # Number of input context blocks to generate.
@@ -131,6 +131,7 @@ def generate_prompt(config, template, topic_iter):
         reference_texts=reference_texts,
         task_confounder=task_confounder,
         topic_avoidance=config.get("topic_avoidance") or "",
+        language=config.get("language") or instructor.language,
     )
 
 
@@ -172,7 +173,7 @@ async def generate(instructor):
     batch_size = config.get("batch_size") or instructor.default_batch_size
     futures = []
     while count < target_count:
-        prompt = generate_prompt(config, template, topic_iter)
+        prompt = generate_prompt(instructor, config, template, topic_iter)
         futures.append(instructor.generate_response(prompt, **api_params))
         if len(futures) < batch_size:
             continue

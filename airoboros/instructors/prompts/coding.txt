@@ -27,7 +27,7 @@ The tasks must be something that could be completed with 2000 words and symbols 
 
 {languages}
 
-{formatting}
+The tasks should be in {language}.
 
 Don't prefix the tasks with the language, simply include the language to be used somewhere in the wording of the task.
 
@@ -38,6 +38,8 @@ None of the tasks should be about reading from or writing to csvs.
 Give me a numbered list of {batch_size} new coding tasks.
 
 Response format:
-TASK 1. [task 1]
-TASK 2. [task 2]
+TSK 1. [task 1]
+TSK 2. [task 2]
 ...
+
+Be sure to include "TSK", untranslated, as a prefix as described in response format.

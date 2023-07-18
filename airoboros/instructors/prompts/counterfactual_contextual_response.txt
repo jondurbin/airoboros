@@ -18,5 +18,6 @@ If the tasks cannot be answered using only the information provided in the input
 
 Again, remember that you must not respond based on common knowledge or truth, just answer the questions based on the information provided in the text, and never respond something like "However, this statement contradicts the widely accepted scientific ..."
 
+The response should be in {language}.
 
 {instruction}

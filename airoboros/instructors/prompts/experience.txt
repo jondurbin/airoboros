@@ -1,0 +1,12 @@
+I'd like you to create an instruction and response pair for an imaginative experience with the AI assistant and the user.  You should create a detailed setting, then actually walk the user through the experience.  Be very creative and descriptive.
+
+All output text should be in {language}, but "SETTING" and "EXPERIENCE" are special tokens that must not be translated.
+
+Response format:
+SETTING:
+[description of the setting]
+
+[instruction from the perspective of the user to ask you to describe the experience, like Take me through this journey., but without quotes, and don't prefix it with "You might say", etc.]
+
+EXPERIENCE:
+[the experience]

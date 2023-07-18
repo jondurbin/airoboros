@@ -1,0 +1,117 @@
+I need you to help me generate math/reasoning tests.
+
+I would like you to provide both the question and the solution.
+
+The solutions should always include the work/intermediate steps used to generate a response.
+
+Here are a few examples:
+
+Example 1: QUESTION: How many heartbeats does an average human have in one day?  Reason step-by-step.
+ANSWER: The average human heart rate is around 60 to 100 beats per minute. For simplicity's sake, let's take the average of these two values, which is 80 beats per minute.
+
+First, let's calculate how many beats occur in an hour. We know there are 60 minutes in an hour, so:
+
+Heartbeats in 1 hour = Heart rate * Minutes per hour
+  = 80 beats per minute * 60 minutes
+  = 4800 beats
+
+Then, to find out how many beats occur in a day, we need to multiply this hourly rate by the number of hours in a day, which is 24:
+
+Heartbeats in 1 day = Heartbeats per hour * Hours per day
+  = 4800 beats * 24 hours
+  = 115,200 beats
+
+So, an average human heart will beat approximately 115,200 times in a day. This is a simplification, as heart rates can vary widely between individuals and under different conditions.
+
+Example 2: QUESTION: How many lightnight strikes occur every 5 minutes?  Show your work.
+ANSWER: It is estimated that the Earth is struck by lightning about 100 times every second. This estimate is based on the number of thunderstorms occurring globally at any given time and their typical rates of lightning production.
+
+To calculate how many lightning strikes occur every 5 minutes, we first need to figure out how many seconds there are in 5 minutes.
+
+We know that:
+1 minute = 60 seconds
+
+So,
+5 minutes = 5 * 60 = 300 seconds
+
+If Earth experiences approximately 100 lightning strikes per second, then the number of strikes in 5 minutes (or 300 seconds) would be:
+Number of strikes = Strikes per second * Number of seconds
+ = 100 * 300
+ = 30,000
+
+So, it's estimated that there are approximately 30,000 lightning strikes on Earth every 5 minutes.
+
+Please note that this is an estimation, as the actual number can vary depending on various factors such as the season, time of day, and geographic location.
+
+Example 3: QUESTION: There are three killers in the room.  Someone enters and kills one of them.  Nobody leaves the room.  How many killers are in the room?  Provide step-by-step logic.
+ANSWER: Let's think through this step-by-step:
+
+1. We start with three killers in the room.
+2. Another person enters the room, making the total number of people four (three original killers and one new person).
+3. This new person then kills one of the original killers. This act makes them a killer as well, even though one of the original killers is now dead.
+4. So, now we have three people remaining alive in the room: two of the original killers and the new person (who has become a killer by their action).
+5. Therefore, when considering all the killers (whether alive or dead), we have: the two remaining original killers, the new killer, and the original killer who was killed by the new person.
+
+The answer is four killers.
+
+Example 4: QUESTION: If we lay 5 shirts out in the sun to dry, and it takes 4 hours for them to dry, how long does it take to dry 20 shirts?  Explain it like I'm five.
+ANSWER: Let's reason through the problem:
+
+1. The time it takes for shirts to dry in the sun doesn't usually depend on the number of shirts. Rather, it depends on the intensity of the sun and the wetness of the shirts, among other factors.
+2. So, if we laid out 5 shirts and they took 4 hours to dry, then if we lay out 20 shirts at the same time, they would also take the same 4 hours to dry, assuming the sun's intensity and other conditions remain the same.
+3. This is because all the shirts are drying simultaneously, not one after the other. If you were drying the shirts one after the other, then you would need to multiply the number of shirts by the drying time for each shirt.
+4. However, in this scenario, the shirts are drying at the same time, so no additional time is required for more shirts.
+
+Hence, it still takes 4 hours to dry 20 shirts when laid out all at once under the same conditions as the original 5 shirts.
+
+Example 5: QUESTION: Jane is faster than Joe.  Joe is faster than Sam.  Is Sam faster than Jane?  Explain your thought process.
+ANSWER: Here's an easy way to understand this. Let's imagine they are all in a race.
+
+First, Jane races against Joe and wins because Jane is faster than Joe.
+
+Next, Joe races against Sam and Joe wins because Joe is faster than Sam.
+
+So, if Jane is faster than Joe, and Joe is faster than Sam, then Jane has to be faster than Sam as well.
+
+Think of it like this: Jane can run faster than Joe, and Joe can run faster than Sam, so Sam won't be able to outrun Jane, who is the fastest.
+
+So the final answer is no, Sam is not faster than Jane.
+
+Example 6: QUESTION: Jackie has 3 brothers.  Each brother has 2 sisters.  How many sisters does Jackie have?  Include your logic.
+ANSWER: Here's the logic behind this:
+
+1. We know that Jackie has 3 brothers.
+2. Then we are told that each of her brothers has 2 sisters.
+3. Jackie is one of the sisters to her brothers.
+4. So, if each of her brothers has 2 sisters, that means there must be another sister besides Jackie.
+5. Therefore, Jackie has 2 sisters.
+
+It's important to note that the number of sisters each brother has includes Jackie herself, hence why there's only one additional sister. The phrasing of the question can lead to a common misconception that each brother has 2 sisters in addition to Jackie, but that's not the case here.
+
+Final answer: Jackie has 2 sisters.
+
+End of examples.
+
+Please write {batch_size} more high quality examples of a similar format, with "QUESTION: [question]" and "ANSWER: [answer]" with the correct answer.
+
+Make sure the questions are somewhat difficult and not trivial.  Don't add line separators or use any special formatting (e.g. markdown) in the output.
+
+Make sure each answer includes the steps/work used to generate the response.
+
+The provided examples are very easy; the new questions should be much more difficult to solve.
+
+The new questions must not simple formulas, i.e.:
+- do not ask about anything related to volume, area, circumference, perimeter or other measurements of shapes
+- do not ask about about anything related to distances traveled or speed calculations
+- do not ask about anything related to trains or speed
+
+The answers should always have the reasoning first, then the final answer.  Don't ever put the final answer first, then reasoning.
+
+All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
+
+The output format should be:
+QUESTION: [first question]
+ANSWER: [first question's answer]
+
+QUESTION: [second question]
+ANSWER: [second question's answer]

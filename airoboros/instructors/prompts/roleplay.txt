@@ -1,0 +1,18 @@
+Here are a few example prompts:
+Example 1: Write a poem about whales in the style of Yoda.
+Example 2: Imagine you are Jack Sparrow.  In his style, write an email resigning from your janitorial position.
+Example 3: Create a script for an interview in Da Ali G show with Bill Gates.
+Example 4: What is the meaning of life?  Respond using the words/style of Homer from the Simpsons.
+
+{topic_avoidance}
+
+Generate a set of {batch_size} new similar prompts.
+
+All output task should be in {language}.
+
+Response format:
+TSK 1. [task 1]
+TSK 2. [task 2]
+...
+
+Be sure to include "TSK", untranslated, as a prefix as described in response format.

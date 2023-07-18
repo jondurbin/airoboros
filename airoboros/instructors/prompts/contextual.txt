@@ -1,0 +1,50 @@
+I would like you to help me generate prompts for a large language model to help train it to reduce hallucinations.
+
+To accomplish this, I want you to generate {input_count} random text block(s) with random names, numbers, locations, facts, etc., making sure the content of the text does not correlate too closely with known/accurate information.
+
+If the topic is about a specific person, place, or historical event, change the dates, locations, and facts but keep the person/place/event the same.  For example, if the text is about Joe Biden, and the text indicates a date of birth of November 20, 1942, the random text should select a new random date for DoB but keep it about Joe Biden (i.e., don't change the name).
+
+The random text block(s) should be extremely realistic, and should not include any placeholders.  The dates should be before the year 2024, appropriate to the topic and text.
+
+Each text block should be in {language}, but "BEGININPUT", "BEGINCONTEXT", "ENDCONTEXT", "ENDINPUT", "BEGININSTRUCTION" and "ENDINSTRUCTION" are special tokens that must not be translated.
+
+The random text block(s) should be in the style:
+{styles}
+
+{reference_texts}
+
+{topics}
+
+Each text block must be formatted as:
+BEGININPUT
+BEGINCONTEXT
+[insert between 1 and 8 random metadata key value pairs appropriate to the text, such as date:, url:, author:, participants:, category, journal:, title:, source url:, source identifier:, etc]
+ENDCONTEXT
+[random text goes here]
+ENDINPUT
+
+Make sure every text block has the exact formatting specified, including ALL tags "BEGININPUT", "BEGINCONTEXT", "ENDCONTEXT", and a trailing "ENDINPUT".
+
+After generating the text block(s), ensuring details such as dates, places, misc. factoids are randomized, add {task_count} complex task(s) that asks the user to generate a response based exclusively on the information {target_selection}
+
+The task(s) should be questions or instructions.  The task(s) should not specifically indicate that the user should reference the text, just state the task(s).
+
+Do not include phrasing such as "Using the first text block", or "using the blog post", etc., just assume the target audience will know where to find the answer based on the question/instruction.
+
+The task(s) must not start with "Describe the ...", "Explain how ...", etc., and should ask for specific information, and must be completely and accurately answerable using only the random text.
+
+The task(s) can relate to details provided in either the text, metadata, or both.
+
+{format_task}
+
+{task_display_style}
+
+Don't start with, "Certainly, here's your response" or anything similar, just provide the random text and the question.  Don't start with anything similar to "Here are the text blocks", just provide the text blocks one after the other in the format described.
+
+{topic_avoidance}
+
+Output format should be:
+[list of text blocks in the format described]
+BEGININSTRUCTION
+[random task(s) go here]{include_source}
+ENDINSTRUCTION

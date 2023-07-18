@@ -1,0 +1,275 @@
+# The model to use in generation.  Available models: https://platform.openai.com/docs/models/continuous-model-upgrades
+model: "gpt-4"
+  
+# OpenAI API key (if null, uses environment variable OPENAI_API_KEY)
+openai_api_key:
+
+# Optionally configure the OpenAI organization ID.
+organization_id:
+
+# Combined output file path.
+output_path: instructions.jsonl
+
+# Path to the default topics file.
+topics_path: topics.txt
+
+# Overwrite the output file, use with care!
+overwrite: false
+
+# Append to the output file.
+append: true
+
+# Topic avoidance prompt string.
+topic_avoidance: Avoid any tasks that would be related to climate change, green tech, remewable energy, DEI, sex and/or gender, religion, politics, social issues, race, ethnicity, artificial intelligence, baking/cooking, or any topic that you would likely not respond to, or any task which a language model would not be able to respond to, e.g. tasks about emotions, feelings, physical senses, etc.
+
+# Regexes used to filter responses, mostly common words and phrases used in refusals.
+response_filters:
+  - "my programming"
+  - "openai"
+  - "language model"
+  - "large language"
+  - "as an? (ai|generative language|gpt|bot)"
+  - "illegal and dangerous"
+  - "i do(n't| not) (possess|have|exhibit) (personal|consciousness|subjective)"
+  - "personal (feelings|thoughts|emotions|desires|experiences|goals|objective|belief)"
+  - "(can('t| ?not)|w(on't|will not)|unable.?) (\\w+\\s)+(with (that|your)|your \\w+|provide)"
+  - "my limitations"
+  - "the limitations of my"
+  - "my abilities"
+  - "violates my"
+  - "i (can('t| ?not)|w(on't|will not)|am (not |un)able.?).{0,30}(you are|you're|your )"
+  - "please note that"
+
+# Optionally limit the maximum number of tokens to use when generating instructions.
+max_tokens:
+
+# Minimum similarity score when checking for duplicates.
+min_docsearch_score: 0.35
+
+# Default OpenAI API request parameters.
+api_params:
+  temperature: 0.7
+  top_p: 0.5
+  frequency_penalty: 0.0
+  presence_penalty: 2
+
+# Topic generation prompt.
+topic_prompt: Give me a numbered list of 20 completely random topics. {topic_avoidance}
+topic_request_count: 20
+
+# Default count per generator, if not specified.
+default_count: 100
+
+# Default batch size, if not specified.
+default_batch_size: 10
+
+# Language.
+language: English
+
+# Individual instructor configurations.
+instructors:
+
+  ##################################################################################
+  # Generic/general prompt configuration.
+  general:
+
+    # OpenAI settings.
+    api_params:
+      temperature: 0.7
+      top_p: 0.5
+      frequency_penalty: 0.0
+      presence_penalty: 2
+
+    # Number of instructions to generate.
+    count: 100
+
+    # Batch size/number of instructions to generate per request.
+    batch_size: 10
+
+    # Path to prompt to use in generating instructions.
+    prompt_path: general.txt
+
+    # Optionally override the default topics path for general prompts.
+    topics_path:
+
+    # Optionally override the min similarity score.
+    min_docsearch_score: 
+
+    # Optionally override language.
+    language:
+
+
+  ##################################################################################
+  # Contextual, e.g. closed-context question answering/summarization/etc.
+  contextual:
+    api_params:
+      temperature: 0.5
+    count: 70
+
+    # Writing styles to use for the context being generated.
+    context_styles:
+      - news article
+      - blog post
+      - slack conversation
+      - text messages
+      - fictional short story
+      - video transcript
+      - song
+      - poem
+      - scientific study
+      - medical report
+      - reddit post with replies
+      - email
+      - tweet
+      - jira ticket
+      - github merge request
+      - gitlab issue
+      - how-to article
+
+    # Output formatting options.
+    formatting_options:
+      - JSON
+      - YAML
+      - CSV
+      - markdown
+      - markdown table
+      - bullet list
+      - numbered list
+      - python dict
+      - php associative array
+      - JSONL
+      - javascript object
+      - XML
+
+    # Prompt path.
+    prompt_path: contextual.txt
+
+    # Path to prompt used to generate responses.
+    response_prompt_path: contextual_response.txt
+
+    # Optionally override the topics to use for contextual prompts.
+    topics_path:
+
+  ##################################################################################
+  # Counterfactual contextual prompts, used to de-hallucinate Q&A a bit.
+  counterfactual_contextual:
+    api_params: {}
+    count: 30
+    batch_size: 10
+    prompt_path: counterfactual_contextual.txt
+    response_prompt_path: counterfactual_contextual_response.txt
+    topics_path:
+
+  ##################################################################################
+  # Coding tasks.
+  coding:
+    count: 100
+    batch_size: 10
+
+    # Ratio of prompts that should be "plain", i.e. without explanations, backticks, etc.
+    plain_ratio: 0.5
+
+    # Limit programming languages.
+    coding_languages:
+      - python
+      - javascript
+      - java
+      - c
+      - c++
+      - golang
+      - C#
+      - bash
+      - powershell
+      - SQL
+
+    # Additional related software to (randomly) reference in tasks.
+    related_software:
+      - elasticsearch
+      - opensearch
+      - mongodb
+      - cassandra
+      - redis
+      - memcached
+      - postgresql
+      - mariadb
+      - mysql
+      - aws s3
+      - gcs cloud storage
+      - azure storage
+      - aws lambda
+      - kubernetes
+      - pytorch
+      - pandas
+      - numpy
+      - keras
+      - tensorflow
+      - scipy
+      - matplotlib
+      - django
+      - cherrypy
+      - swagger/openapi
+      - pyramid web framework
+
+    # The prompt used to generate the instructions.
+    prompt_path: coding.txt
+
+  ##################################################################################
+  # Trivia tasks.
+  trivia:
+    count: 100
+    batch_size: 20
+    min_docsearch_score: 0.05
+    prompt_path: trivia.txt
+
+  ##################################################################################
+  # Guided experiences, e.g. meditation.
+  experience:
+    count: 100
+    prompt_path: experience.txt
+
+  ##################################################################################
+  # Orca style reasoning/math prompts.
+  orca:
+    count: 100
+    batch_size: 10
+    prompt_path: orca.txt
+
+  ##################################################################################
+  # Orca style reasoning/math prompts.
+  riddle:
+    count: 100
+    batch_size: 10
+    min_docsearch_score: 0.05
+    prompt_path: riddle.txt
+
+  ##################################################################################
+  # Wordgames.
+  wordgame:
+    count: 100
+    batch_size: 10
+    min_docsearch_score: 0.03
+    prompt_path: wordgame.txt
+
+  ##################################################################################
+  # Roleplay.
+  roleplay:
+    count: 100
+    batch_size: 10
+    min_docsearch_score: 0.1
+    prompt_path: roleplay.txt
+
+  ##################################################################################
+  # Chain-of-thought.
+  cot:
+    count: 50
+    batch_size: 5
+    min_docsearch_score: 0.1
+    prompt_path: cot.txt
+
+  ##################################################################################
+  # Agent/router.
+  agent:
+    count: 100
+    batch_size: 5
+    min_docsearch_score: 0.1
+    prompt_path: agent.txt

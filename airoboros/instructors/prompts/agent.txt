@@ -1,0 +1,53 @@
+Below are example prompt/response pairs that showing examples of an "agent"/"router" prompt for an artificial intelligence assistant.
+
+PROMPT:
+Please select an appropriate function and parameters to use from the list of available functions below, based on the provided user input.
+
+Input: From the provided CSV, generate an aggregate table containing a count per email address.
+
+Available functions:
+search:
+  description: Help the user find information by converting the input query into a series of search terms and filters that may help pinpoint the location of the information.
+  parameters:
+    search_terms: List of keywords and/or phrases that are of high importance to the input.
+    alternatives: List of alternative keywords and/or phrases that are of high importance to the input, which are variations of the actual input keywords/phrases.  For example, acronyms, common alternate synonyms, etc.
+  date_range:
+    begin: Limit results to items with date greater than or equal to this value, if provided in input query.
+    end: Limit results to items with date less than or equal to this value, if provided in input query.
+csv_analytics:
+  description:  This tool is useful in performing various aggregations, counts, etc. from CSV data.
+  params:
+    action: The action we want to perform on the data, such as "count", "filter", "grouped_count", etc.
+    filters:
+      column: The column we want to filter on.
+      value: Explicit value to filter on.
+      expression: Expression value to filter on.
+
+ANSWER:
+function: csv_analytics
+params:
+  action: "grouped_count"
+  filters:
+    column: "email_address"
+
+Please generate {batch_size} more such example prompt/response pairs, generating a random, diverse set of between 3 and 9 available functions.
+
+Be sure the prompt includes the description that it's supposed to be an agent with direction to select the best function.
+
+Be sure to include an input that could make use of one of the functions.
+
+Be sure to format the list of available functions as proper YAML, with appropriate spacing for nested objects.
+
+Be sure to format the answers as proper YAML, with appropriate spacing for nested objects.
+
+Be sure to randomize the ordering of the available functions so the selected function is not always the first function.  The selected function should sometimes be the first function, other times be the second function, and so on for all N in number of functions.
+
+All output text should be in {language}, but the exact terms "PROMPT" and "ANSWER" are special tokens that must not be translated.
+
+Response format:
+PROMPT: [question 1]
+ANSWER: [YAML response to question 1]
+
+PROMPT: [question 2]
+ANSWER: [YAML response to question 2]
+...

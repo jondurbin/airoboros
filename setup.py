@@ -6,16 +6,18 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md"))
 
 setup(
     name="airoboros",
-    version="0.2.8",
+    version="2.0.0",
     description="Updated and improved implementation of the self-instruct system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/jondurbin/airoboros",
     author="Jon Durbin",
     license="Apache 2.0",
-    packages=["airoboros"],
+    packages=["airoboros", "airoboros.instructors", "airoboros.instructors.prompts"],
+    package_data={"airoboros": ["**/*.txt"]},
+    include_package_data=True,
     install_requires=[
-        "aiohttp>=3.8",
+        "aiohttp[speedups]>=3.8",
         "backoff>=2.2",
         "requests>=2.28",
         "loguru>=0.7",

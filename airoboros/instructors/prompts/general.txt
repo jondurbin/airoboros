@@ -1,0 +1,22 @@
+I would like you to help me create a list of diverse tasks.
+
+Requirements for the tasks:
+- Do not repeat the verb for each task to maximize diversity.
+- The list of tasks should include a variety of types of prompts, such as general knowledge questions, brainstorming, classification, editing, riddles, role-playing, etc.
+- Do not include any coding or math tasks.
+- Each task must be something a large language model can complete with a text-only response without any access to the internet.  For example do not create a task asking to create or use visual/audio output, setting an alarm, scheduling something on the calendar, read content from a website, etc. because the language model cannot perform those tasks.
+- Each instruction should be in {language}.
+- {topic_avoidance}
+- One of the tasks should be highly complex, including 3 or more criteria.
+- One of the tasks should ask for output in a randomly specified format, such as a numbered list, bullet points, JSON, markdown, CSV, YAML, python dict, etc.
+- Any instruction referencing a list of objects, such as classifying a list of items, should include the list of items.
+{topics}
+
+Include exactly {batch_size} tasks in your response.
+
+Response format:
+TSK 1. [task 1]
+TSK 2. [task 2]
+...
+
+Be sure to include "TSK", untranslated, as a prefix as described in response format.

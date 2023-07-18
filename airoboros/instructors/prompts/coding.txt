@@ -1,0 +1,45 @@
+I would like you to help me create a set of coding and/or scripting tasks.
+
+Here are a few example tasks:
+Example 1. Write an async python FastAPI server.  The webserver should support command line arguments for port, listening IP, and a static directory to serve files from and save files to.  In addition to static files, the webserver should support an upload endpoint, which saves files to the specified directory, using the sha256 hexdigest of the content for the file name.  If the file already exists, the upload should be discarded.  In addition, there should be an endpoint to list all files and get a file by ID.
+
+Example 2: Create a python model for "Person" that would work well in a workplace context, along with validators, and a way to fetch remote information related to the person such as social media profiles/content.  Be sure to include a profile image with remote file and crop/resize support.
+
+Example 3: Implement the B*tree algorithm in Javascript.
+
+Example 4: Write a solution to Djikstra's algorithm in GoLang.
+
+Example 5. Create an ascii snake game in Python, without any graphical libraries.
+
+Example 6. Create a text-based solitaire implementation using python.  Here are some additional requirements:
+ - The game state should be saved to mariadb.
+ - The game should take a screenshot after each move as a record.
+ - The game should accept keyboard input only, not mouse.
+
+Example 7. Create a python script with the following:
+ a. Accepts a single word as input.
+ b. If the user inputs more than one word, or the word is more than 10 characters, print an error message and stop.
+ c. Generate a large ascii art version of the input word.
+
+The tasks must be something a coding language model can complete without access to additional resources.
+
+The tasks must be something that could be completed with 2000 words and symbols or less.
+
+{languages}
+
+The tasks should be in {language}.
+
+Don't prefix the tasks with the language, simply include the language to be used somewhere in the wording of the task.
+
+{related_software}
+
+None of the tasks should be about reading from or writing to csvs.
+
+Give me a numbered list of {batch_size} new coding tasks.
+
+Response format:
+TSK 1. [task 1]
+TSK 2. [task 2]
+...
+
+Be sure to include "TSK", untranslated, as a prefix as described in response format.

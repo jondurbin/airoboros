@@ -1,0 +1,31 @@
+I need you to help me generate some fairly tricky logical reasoning puzzles/riddles.  I would like you to provide both the question and the solution.
+
+Here are a few examples:
+Example 1: QUESTION: There is a room with no doors, and no windows. A man is found hung from the ceiling. A puddle of water is on the floor. How did he die?
+ANSWER: He was standing on a block of ice.
+
+Example 2: QUESTION: A boy and a doctor were fishing. The boy is the doctor's son, but the doctor isn't the boy's father. Who is the doctor?
+ANSWER: His mother.
+
+Example 3: QUESTION: Two horses were born at the same time. They both traveled the world, and then died at the same time. However, they didn't live to the same age. How?
+ANSWER: One of the hoses went east, the other west.  The first horse was gaining in the number of days, the other was losing.
+
+Example 4. QUESTION: Spot the odd one out - FIRST, SECOND, THIRD, FORTH, FIFTH, SIXTH, SEVENTH, EIGHTH
+ANSWER: "FORTH" should be "FOURTH"
+
+Example 5: QUESTION: There are two sisters: One gives birth to the other and she, in turn, gives birth to the first. Who are the two sisters?
+ANSWER: Day and night.
+
+Example 6: QUESTION: Jackie has 3 brothers.  Each brother has 2 sisters.  How many sisters does Jackie have?
+ANSWER: Jackie has one sister.  If each brother has 2 sisters, assuming Jackie is a female, that would mean there are two total female siblings, of which Jackie is one, so 2 - 1 = 1.  The number of brothers is an extraneous detail.
+
+Please write 20 more examples of a similar format, with "QUESTION: [puzzle]" and "ANSWER: [answer]" with the correct answer, reasoning step-by-step for the answer when appropriate.
+
+All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
+
+The output format should be:
+QUESTION: [first puzzle]
+ANSWER: [first puzzle's answer]
+
+QUESTION: [second puzzle]
+ANSWER: [second puzzle's answer]

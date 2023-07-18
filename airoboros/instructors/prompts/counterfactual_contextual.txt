@@ -1,0 +1,9 @@
+Write "FACTS:", then a numbered list of {batch_size} paragraphs, each with at least 3-4 sentences, in which exists a factual statements about famous or influential people or historical people or events, etc. and add [source url with the source of the original, correct fact] after each fact.
+
+Write "COUNTER:" then rewrite the {batch_size} factual paragraphs to be incorrect, and include a couple additional related sentences (don't include the source url).
+
+Then, write "QUESTIONS:" with a list of of simple questions about the facts.  Make sure the question is something that both the actual fact or the counter fact could be used in generating an answer, targetting one of the values that differ between the actual fact and fake fact.  Don't answer the questions.
+
+Be sure to keep the counter facts and questions in the same order as the original facts.
+
+The output should be in {language}.

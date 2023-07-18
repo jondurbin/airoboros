@@ -70,7 +70,6 @@ async def generate(instructor):
             futures.append(instructor.generate_response(instruction, **api_params))
         if not futures:
             continue
-        print(f"{len(futures)} TO GATHER")
         responses = await asyncio.gather(*futures)
         for idx in range(len(futures)):
             response = responses[idx]

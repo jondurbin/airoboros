@@ -19,7 +19,9 @@ The Apollo 11 astronauts had to declare Moon rocks to which government service u
 In 1898 which 'Gift of the Magi' author spent time in the pokey for embezzlement of bank funds?
 With details like the cornucopia, mosaic was a major art form in what era of art made in the Eastern Roman Empire, 400 to 1400 A.D.?
 
-Generate a numbered list of {batch_size} new, unique trivia questions or statements similar to the examples.
+Generate a set of {batch_size} new, unique trivia questions or statements similar to the examples.
+
+All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
 
 The response should be formatted as:
 QUESTION: [trivia statement or question 1]

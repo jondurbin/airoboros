@@ -1,9 +1,10 @@
+import asyncio
 import os
 import re
 
 
 async def generate(instructor, category):
-    """Generator for generic inline question answer pair training data."""
+    """Generator for simple instruction response tasks (e.g. roleplay, wordgames)."""
     config = instructor.instructors.get(category)
     if not config:
         return
@@ -23,23 +24,36 @@ async def generate(instructor, category):
     min_score = config.get("min_docsearch_score") or instructor.min_docsearch_score
 
     # Generate the instruction/response pairs until we reach the target count.
-    batch_size = config.get("batch_size", 10)
+    batch_size = config.get("batch_size") or  instructor.default_batch_size
     count = instructor.instructor_counts.get(category, 0)
     language = config.get("language") or instructor.language
     while count < target_count:
         # Get a batch of instructions.
-        prompt = template.format(batch_size=batch_size, language=language)
+        prompt = (
+            template.format(batch_size=batch_size, language=language)
+            if '{topic_avoidance}' not in template
+            else template.format(batch_size=batch_size, language=language, topic_avoidance=instructor.topic_avoidance)
+        )
         response = await instructor.generate_response(prompt, **api_params)
         if not response:
             continue
 
         # Parse instructions and generate responses.
-        for instruction, response in re.findall(
-            r"QUESTION: (.*?)ANSWER: (.*?)(?=QUESTION|$)", response, re.DOTALL
+        futures = []
+        for instruction in re.findall(
+            r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
         ):
             if not instruction.strip() or instructor.is_too_similar(
                 instruction, min_score=min_score
             ):
+                continue
+            futures.append(instructor.generate_response(instruction, **api_params))
+        if not futures:
+            continue
+        responses = await asyncio.gather(*futures)
+        for idx in range(len(responses)):
+            response = responses[idx]
+            if not response or not response.strip():
                 continue
             yield {
                 "instruction": instruction.strip(),

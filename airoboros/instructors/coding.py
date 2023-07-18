@@ -99,7 +99,11 @@ async def generate(instructor):
             )
             instructions.append(instruction + "" if not plain else " PLAINFORMAT")
             futures.append(instructor.generate_response(full_instruction, **api_params))
-        for idx, response in enumerate(await asyncio.gather(*futures)):
+        if not futures:
+            continue
+        responses = await asyncio.gather(*futures)
+        for idx in range(len(futures)):
+            response = responses[idx]
             if not response:
                 continue
             if "PLAINFORMAT" in instructions[idx] and "```" in response:

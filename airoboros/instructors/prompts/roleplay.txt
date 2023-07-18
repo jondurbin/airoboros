@@ -6,4 +6,13 @@ Example 4: What is the meaning of life?  Respond using the words/style of Homer 
 
 {topic_avoidance}
 
-Generate a numbered list of {batch_size} new similar prompts.
+Generate a set of {batch_size} new similar prompts.
+
+All output task should be in {language}.
+
+Response format:
+TSK 1. [task 1]
+TSK 2. [task 2]
+...
+
+Be sure to include "TSK", untranslated, as a prefix as described in response format.

@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import re
@@ -28,7 +29,7 @@ async def generate(instructor):
     min_score = config.get("min_docsearch_score") or instructor.min_docsearch_score
 
     # Generate the instruction/response pairs until we reach the target count.
-    batch_size = config.get("batch_size", 10)
+    batch_size = config.get("batch_size") or config.default_batch_size
     count = instructor.instructor_counts.get("general", 0)
     language = config.get("language") or instructor.language
     while count < target_count:
@@ -58,6 +59,7 @@ async def generate(instructor):
             continue
 
         # Parse instructions and generate responses.
+        futures = []
         for instruction in re.findall(
             r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
         ):
@@ -65,8 +67,13 @@ async def generate(instructor):
                 instruction, min_score=min_score
             ):
                 continue
-            response = await instructor.generate_response(instruction, **api_params)
-            if not response:
+            futures.append(await instructor.generate_response(instruction, **api_params))
+        if not futures:
+            continue
+        responses = await asyncio.gather(*futures)
+        for idx in range(len(futures)):
+            response = responses[idx]
+            if not response or not response.strip():
                 continue
             yield {
                 "instruction": instruction.strip(),

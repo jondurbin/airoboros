@@ -264,7 +264,7 @@ instructors:
   cot:
     count: 50
     batch_size: 5
-    min_docsearch_score: 0.1
+    min_docsearch_score: 0.05
     prompt_path: cot.txt
 
   ##################################################################################
@@ -272,7 +272,7 @@ instructors:
   agent:
     count: 100
     batch_size: 5
-    min_docsearch_score: 0.1
+    min_docsearch_score: 0.03
     prompt_path: agent.txt
 
   ##################################################################################
@@ -280,7 +280,7 @@ instructors:
   plan:
     count: 100
     batch_size: 1
-    min_docsearch_score: 0.1
+    min_docsearch_score: 0.03
     prompt_path: plan.txt
 
   ##################################################################################

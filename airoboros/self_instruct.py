@@ -430,29 +430,33 @@ class SelfInstructor:
                 f"Generated unique instruction [{category}, total={running_total}]: {item['instruction'][:100]}"
             )
         delta = (datetime.datetime.now() - started_at).total_seconds()
-        logger.success(f"Finished generating {running_total} instructions [{category}] in {delta} seconds.")
+        logger.success(
+            f"Finished generating {running_total} instructions [{category}] in {delta} seconds."
+        )
 
     async def run(self):
         """Run prompt generation and answer to completion."""
         from airoboros.instructors.agent import generate as agent_generator
+        from airoboros.instructors.card import generate as card_generator
         from airoboros.instructors.coding import generate as coding_generator
         from airoboros.instructors.contextual import generate as contextual_generator
         from airoboros.instructors.cot import generate as cot_generator
         from airoboros.instructors.counterfactual_contextual import (
             generate as counterfactual_contextual_generator,
         )
-        from airoboros.instructors.experiences import generate as experience_generator
+        from airoboros.instructors.experience import generate as experience_generator
         from airoboros.instructors.general import generate as general_generator
         from airoboros.instructors.orca import generate as orca_generator
         from airoboros.instructors.plan import generate as plan_generator
-        from airoboros.instructors.riddles import generate as riddle_generator
+        from airoboros.instructors.riddle import generate as riddle_generator
         from airoboros.instructors.roleplay import generate as roleplay_generator
         from airoboros.instructors.trivia import generate as trivia_generator
-        from airoboros.instructors.wordgames import generate as wordgame_generator
+        from airoboros.instructors.wordgame import generate as wordgame_generator
         from airoboros.instructors.writing import generate as writing_generator
 
         method_map = {
             "agent": agent_generator,
+            "card": card_generator,
             "coding": coding_generator,
             "contextual": contextual_generator,
             "cot": cot_generator,

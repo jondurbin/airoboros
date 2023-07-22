@@ -41,11 +41,12 @@ async def generate(
     language = config.get("language") or instructor.language
     while count < target_count:
         # Get a batch of instructions.
-        prompt = (
-            template.format(batch_size=batch_size, language=language)
-            if "{batch_size}" in template
-            else template.format(language=language)
-        )
+        prompt_args = {"language": language}
+        if "{batch_size}" in template:
+            prompt_args["batch_size"] = batch_size
+        if "{topic_avoidance}" in template:
+            prompt_args["topic_avoidance"] = instructor.topic_avoidance
+        prompt = template.format(**prompt_args)
         response = await instructor.generate_response(
             prompt, filter_response=filter_response, **api_params
         )

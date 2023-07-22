@@ -14,7 +14,7 @@ async def generate(instructor):
     target_count = int(target_count)
 
     # Load the prompt template.
-    path = config.get("prompt_path", "experiences.txt")
+    path = config.get("prompt_path", "experience.txt")
     if not os.path.exists(path):
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
     with open(path) as infile:
@@ -30,7 +30,7 @@ async def generate(instructor):
     min_score = float(min_score)
 
     # Generate the instruction/response pairs until we reach the target count.
-    count = instructor.instructor_counts.get("experiences", 0)
+    count = instructor.instructor_counts.get("experience", 0)
     language = config.get("language") or instructor.language
     batch_size = config.get("batch_size")
     if batch_size is None:
@@ -65,7 +65,7 @@ async def generate(instructor):
             yield {
                 "instruction": instruction,
                 "response": response,
-                "category": "experiences",
+                "category": "experience",
             }
             count += 1
             if count >= target_count:

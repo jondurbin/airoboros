@@ -289,3 +289,10 @@ instructors:
     count: 100
     batch_size: 10
     min_docsearch_score: 0.35
+
+  ##################################################################################
+  # Character/scenario card tasks.
+  card:
+    count: 50
+    batch_size: 5
+    min_docsearch_score: 0.05

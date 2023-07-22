@@ -1,0 +1,61 @@
+Help me generate example prompt response pairs used for generating random scenario/character cards.
+
+These cards briefly describe something with a handful of descriptive attributes.
+
+Below are a few examples:
+
+Example 1:
+PROMPT:
+Please generate a random model card for a new character.  Attributes to populate:
+
+Name: The name of the creature.
+Race: The primary "family" that a creature belongs to. Monsterfolk, Demifolk, Beastmen, Beastfolk, ect.
+Lineage: The broad category that a creature is. Harpies, Centaurs, Lamias, and so on are all Monsterfolk, for example.
+Breed: Particular variants of a lineage. A Harpy Peacock is different in ability and features from a Harpy Owl.
+Mutation: Unique racial features that are uncommon. Not an actual mutation unless specifically stated.
+Backstory: Brief description of the creatures backstory.
+
+ANSWER:
+Name: Faelock Frostspray
+Race: Beastfolk
+Lineage: Canid
+Breed: Snowfox Canid
+Mutation: Ethereal Glowing Markings
+Backstory: Born to a nomadic pack in the icy wastes, Faelock was the only one in his litter to bear the ethereal markings of his ancestors. Legends spoke of these signs as omens of change and power. Cast out due to the superstitions of his tribe, Faelock learnt to fend for himself in the harsh tundra. His glowing markings, once a curse, became his greatest asset, aiding him in hunting at night and warding off predators with their unnatural glow. Faelock now roams the frozen landscapes, both feared and respected as a solitary wanderer, embracing his role as the living legacy of the ancient Snowfox Canid legends.
+
+Example 2:
+PROMPT:
+Please generate a random scenario card for a new story setting. Attributes to populate:
+
+Location: The name of the place where the scenario occurs.
+Climate: The general weather and environmental conditions in the location.
+Culture: The lifestyle and habits of the people living in the location.
+Event: A significant occurrence or situation that is currently happening in the location.
+Conflict: A problem or challenge that arises due to the event.
+
+Only include the attributes specified in the response, and don't use any special formatting, just output:
+[attribute key]: [randomly generated value for attribute]
+
+ANSWER:
+Location: Aridale, The Whispering Sands
+Climate: Arid desert with extreme temperature fluctuations between day and night.
+Culture: Nomadic tribes with a deep reverence for nature, renowned for their knowledge of desert survival and intricate sand art.
+Event: A celestial body, known locally as the "Desert's Eye", has appeared in the sky for the first time in centuries.
+Conflict: The sudden appearance of the Desert's Eye has caused an unexpected change in the local fauna, leading to an imbalance in the ecosystem that threatens the survival of the tribes.
+
+Please write {batch_size} more high quality example PROMPT/ANWSWER pairs.
+
+Select a random "thing" the card should represent, which could be a person, a creature, scenario, location, or any number of other types of entities or objects.
+
+Be creative in the list of attributes each prompt should ask for, and try to come up with a random list each time.
+
+{topic_avoidance}
+
+All output text should be in {language}, but the exact terms "PROMPT" and "ANSWER" are special tokens that must not be translated.
+
+The output format should be:
+PROMPT: [first prompt]
+ANSWER: [first prompt's answer]
+
+PROMPT: [second prompt]
+ANSWER: [second prompt's answer]

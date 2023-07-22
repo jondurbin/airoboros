@@ -71,7 +71,7 @@ Be sure the new questions contain instructions to use chain-of-thought reasoning
 
 Provide a set of {batch_size} new, complex, unique, diverse tasks.
 
-Be sure to randomize the ordering of the optimal solution within the list of possible solutions, i.e., the best solution should sometimes be solution 1, sometimes solution 2, and sometimes solution 3+.
+Rotate the order if the optimal solution in each ANSWER segment, i.e. if the first ANSWER segment has the optimal solution as "Solution 1", the second ANSWER should have the optimal solution as "Solution 2", and so on, so the optimal solution for each ANSWER block is in a different position, starting over at 1 if we exceed the number of possible solutions.  You must provide an even distribution of optimal solution positions across all ANSWER segments.
 
 Be sure to include at least 2, preferably 3 possible solutions for each question.
 

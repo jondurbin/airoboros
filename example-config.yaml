@@ -225,6 +225,7 @@ instructors:
   # Guided experiences, e.g. meditation.
   experience:
     count: 100
+    min_docsearch_score: 0.15
     prompt_path: experience.txt
 
   ##################################################################################

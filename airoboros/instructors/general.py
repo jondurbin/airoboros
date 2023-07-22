@@ -39,7 +39,7 @@ async def generate(instructor):
     # Generate the instruction/response pairs until we reach the target count.
     batch_size = config.get("batch_size")
     if batch_size is None:
-        batch_size = config.default_batch_size
+        batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
     count = instructor.instructor_counts.get("general", 0)
     language = config.get("language") or instructor.language

@@ -110,8 +110,12 @@ class SelfInstructor:
             topic_avoidance=self.topic_avoidance
         )
         self.topic_request_count = int(raw_config.get("topic_request_count") or 20)
-        self.default_count = int(raw_config.get("default_count") or 100)
-        self.default_batch_size = int(raw_config.get("default_batch_size") or 5)
+        self.default_count = 100
+        if raw_config.get("default_count") is not None:
+            self.default_count = int(raw_config["default_count"])
+        self.default_batch_size = 5
+        if raw_config.get("default_batch_size") is not None:
+            self.default_batch_size = raw_config["default_batch_size"]
         self.language = raw_config.get("language") or "English"
 
         # Validate the model for each generator.
@@ -143,7 +147,7 @@ class SelfInstructor:
                     f"Found {len(docs)} existing machine-generated instruction(s)."
                 )
                 for category, count in self.instructor_counts.items():
-                    logger.info(f"  - category {category}: {count}")
+                    logger.info(f" * category {category}: {count}")
             else:
                 raise RuntimeError(
                     f"{self.output_path} already exists, but overwrite and append are false!"
@@ -257,7 +261,7 @@ class SelfInstructor:
         return topics
 
     @backoff.on_exception(
-        backoff.expo,
+        backoff.fibo,
         (
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
@@ -266,6 +270,7 @@ class SelfInstructor:
             TooManyRequestsError,
             ServerOverloadedError,
         ),
+        max_value=19,
     )
     async def _post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Perform a post request to OpenAI API.
@@ -333,12 +338,10 @@ class SelfInstructor:
         :param instruction: The instruction to respond to.
         :type instruction: str
 
-        :param recurse: Allow recursive calls, e.g. to rephrase to remove AI refs.
-        :type recurse: bool
-
         :return: Response text.
         :rtype: str
         """
+        filter_response = kwargs.pop("filter_response", True)
         model = kwargs.get("model", self.model)
         completions = True if model in MODEL_ENDPOINTS["completions"] else False
         path = "/v1/completions" if completions else "/v1/chat/completions"
@@ -363,12 +366,14 @@ class SelfInstructor:
         else:
             text = response["choices"][0]["message"]["content"]
 
-        if any([banned.search(text, re.I) for banned in self.response_filters]):
-            logger.warning(f"Banned response: {text}")
-            return None
-        if text.startswith(("I'm sorry,", "Apologies,", "I can't", "I won't")):
-            logger.warning(f"Banned response: {text}")
-            return None
+        if filter_response:
+            for banned in self.response_filters:
+                if banned.search(text, re.I):
+                    logger.warning(f"Banned response [{banned}]: {text}")
+                    return None
+            if text.startswith(("I'm sorry,", "Apologies,", "I can't", "I won't")):
+                logger.warning(f"Banned response [apology]: {text}")
+                return None
         return text
 
     async def is_too_similar(self, instruction: str, min_score: float = None):
@@ -397,6 +402,36 @@ class SelfInstructor:
                 return True
             return False
 
+    def persist(self, item):
+        """Persist a single item to the output file and docstore."""
+        self.outfile.write(json.dumps(item) + "\n")
+        self.outfile.flush()
+        self.docstores[-1].add_texts([item["instruction"]])
+        self.docstore_size += 1
+        if self.docstore_size >= MAX_DOCSTORE_SIZE:
+            logger.info("Initializing new docstore...")
+            self.docstores.append(
+                Chroma.from_texts(["__initialize__"], self.embeddings)
+            )
+            self.docstore_size = 0
+
+    async def run_instructor(self, category, method_map):
+        """Run a single instructor, as an async task."""
+        if category not in method_map:
+            logger.warning(f"Unknown category: {category}, skipping...")
+            return
+        logger.info(f"Generating instructions for {category}...")
+        started_at = datetime.datetime.now()
+        running_total = self.instructor_counts.get(category, 0)
+        async for item in method_map[category](self):
+            self.persist(item)
+            running_total += 1
+            logger.success(
+                f"Generated unique instruction [{category}, total={running_total}]: {item['instruction'][:100]}"
+            )
+        delta = (datetime.datetime.now() - started_at).total_seconds()
+        logger.success(f"Finished generating {running_total} instructions [{category}] in {delta} seconds.")
+
     async def run(self):
         """Run prompt generation and answer to completion."""
         from airoboros.instructors.agent import generate as agent_generator
@@ -414,6 +449,7 @@ class SelfInstructor:
         from airoboros.instructors.roleplay import generate as roleplay_generator
         from airoboros.instructors.trivia import generate as trivia_generator
         from airoboros.instructors.wordgames import generate as wordgame_generator
+        from airoboros.instructors.writing import generate as writing_generator
 
         method_map = {
             "agent": agent_generator,
@@ -429,40 +465,28 @@ class SelfInstructor:
             "roleplay": roleplay_generator,
             "trivia": trivia_generator,
             "wordgame": wordgame_generator,
+            "writing": writing_generator,
         }
 
         await self.initialize_topics()
         self.initialize_docstores()
 
         # Generate instructions for each category.
-        total = sum(self.instructor_counts.values())
-        with open(self.output_path, "a+") as outfile:
-            for category in self.instructors:
-                if category not in method_map:
-                    logger.warning(f"Unknown category: {category}, skipping...")
-                    continue
-                count = self.instructors[category].get("count") or self.default_count
-                logger.info(f"Generating {count} instructions for {category}...")
-                started_at = datetime.datetime.now()
-                async for item in method_map[category](self):
-                    delta = round(
-                        (datetime.datetime.now() - started_at).total_seconds(), 3
-                    )
-                    outfile.write(json.dumps(item) + "\n")
-                    outfile.flush()
-                    self.docstores[-1].add_texts([item["instruction"]])
-                    self.docstore_size += 1
-                    if self.docstore_size >= MAX_DOCSTORE_SIZE:
-                        logger.info("Initializing new docstore...")
-                        self.docstores.append(
-                            Chroma.from_texts(["__initialize__"], self.embeddings)
-                        )
-                        self.docstore_size = 0
-                    total += 1
-                    logger.success(
-                        f"Generated unique instruction in {delta}s [total={total}]: {item['instruction'][:100]}"
-                    )
-                    started_at = datetime.datetime.now()
+        self.outfile = open(self.output_path, "a+")
+        started_at = datetime.datetime.now()
+        try:
+            tasks = [
+                asyncio.create_task(self.run_instructor(category, method_map))
+                for category in self.instructors
+            ]
+            for task in tasks:
+                await task
+        finally:
+            self.outfile.close()
+        delta = (datetime.datetime.now() - started_at).total_seconds()
+        logger.success(
+            f"Finished generating all instructions in {delta} seconds, enjoy!"
+        )
 
 
 def generate_instructions(args):

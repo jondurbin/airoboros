@@ -9,7 +9,12 @@ async def generate(instructor):
     config = instructor.instructors.get("general")
     if not config:
         return
-    target_count = config.get("count") or instructor.default_count
+    target_count = config.get("count")
+    if target_count is None:
+        target_count = instructor.default_count
+    target_count = int(target_count)
+    if not target_count:
+        return
 
     # Load the prompt template.
     path = config.get("prompt_path", "general.txt")
@@ -26,10 +31,16 @@ async def generate(instructor):
     api_params = {**instructor.api_params, **config.get("api_params", {})}
 
     # Min similarity score.
-    min_score = config.get("min_docsearch_score") or instructor.min_docsearch_score
+    min_score = config.get("min_docsearch_score")
+    if min_score is None:
+        min_score = instructor.min_docsearch_score
+    min_score = float(min_score)
 
     # Generate the instruction/response pairs until we reach the target count.
-    batch_size = config.get("batch_size") or config.default_batch_size
+    batch_size = config.get("batch_size")
+    if batch_size is None:
+        batch_size = config.default_batch_size
+    batch_size = int(batch_size)
     count = instructor.instructor_counts.get("general", 0)
     language = config.get("language") or instructor.language
     while count < target_count:

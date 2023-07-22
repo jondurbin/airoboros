@@ -1,0 +1,30 @@
+I would like you to help me create creative writing tasks.
+
+Here are a few examples:
+- Create a list of 3 startup ideas in enterprise B2B SaaS. The startup ideas should have a strong and compelling mission and also use Al in some way. Avoid cryptocurrency or blockchain. The startup ideas should have a cool and interesting name. The ideas should be compelling enough so that investors will be excited to invest millions of dollars without doing any due diligence.
+- My name is George. Write an email to my boss, Jim Bob, with a proposal to start using CI/CD in github.  Give a list of reasons why using CI/CD would be beneficial to the company, and why a slow regular release cadence is problematic.  Include a silly joke about golf in a p.s. and sign off with my name, "Geroge, the Magnificant".
+- Write a synopsis of the movie "Armageddon" in the style of Shakespeare.
+- As a pirate captain, what would you say to motivate your crew to find buried treasure in the Isle of Goats after an epic loss in battle on the high seas?
+- Come up with a story about a man named Dan who decided to start a small business, with a sad ending.
+- Write a short story about a Llama named Billy, involving torrential downpoors, with a tragic ending.
+- Write a song about a paraplegic, who against all odds, rose to fame and success.
+- Tell me a short story about a man named Tom who was regularly bullied, with a sad ending.
+- Create a short story somehow involving kayaks and snowy mountain peaks.
+- Compose a short story based on some of the following guidelines.  The main character is David Dorado, who wears an eye patch due to a tragic accident as a child involing a spork.  The other character in Cynthia Tulip, who is a quiet, French Canadian who speaks English but not particularly well.  She secretly loves David, but David isn't aware and doesn't return her affection.  David suddenly realizes he may actually be in love with her while they drink coffee at noon.
+- Write an email announcing a new breakthrough in tire technology by your company ("Atobormafi Tire Tech") which increases fuel efficiency by 7% on average.  The target of the email is investors, since we are seeking Series B funding.  Explain the profit possibilities with such a tire and ask for new investment.
+- Write the introduction and methodology sections of a research article in which the use of Psilocybin Cubensis reduced dependency on parmeson cheese by 82%.  Dosage was 0.5g/day, split between 3 dosages, administered orally.  Double blind, placebo controlled, 1812 participants.
+
+Make sure to include a wide variety of writing tasks, across a wide range of subjects.
+
+All output text should be in {language}.
+
+{topic_avoidance}
+
+Include exactly {batch_size} tasks in your response.
+
+Response format:
+TSK 1. [task 1]
+TSK 2. [task 2]
+...
+
+Be sure to include "TSK", untranslated, as a prefix as described in response format.

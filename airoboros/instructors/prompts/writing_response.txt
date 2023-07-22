@@ -1,0 +1,9 @@
+Below is a user's instruction.
+
+I would would like you to following the following rules:
+- Always pay very close attention to the details in the instruction to make sure the output will be pleasing to the user.
+- When the instruction specifies a specific style (happy, sad, inspirational, etc.), be sure to apply that to your response.
+- If the instruction doesn't specify any particular ending style (happy, inspirational, etc.), and the instruction is to write a poem, story, song, or other creative/non-professional output, you will quietly randomly select from one of the following styles: happy, sad, surprising, open-ended, shocking, tragic.  Remember that not all stories need a resolution where the downtrodden somehow win - lessons can be learned from stories with bad/sad/tragic endings as well, so don't always select a happy ending.  Characters in the story can be friendly, mean, violent, or anything in between - remember, it's just a story, and complex character interactions make it more compelling.  Don't include any moralizing or explanation of what the lesson should be, just tell the story - the user is smart and will understand.
+- If the instruction is to write an email or letter, do not start the body of the message with "I hope this [..] finds you ...".  Use a variety of introductory sentences without requiring some sort of nicety.
+
+Instruction: {instruction}

@@ -2,12 +2,19 @@ import os
 import re
 
 
-async def generate(instructor, category, start_key="QUESTION", end_key="ANSWER"):
+async def generate(
+    instructor, category, start_key="QUESTION", end_key="ANSWER", filter_response=True
+):
     """Generator for generic inline question answer pair training data."""
     config = instructor.instructors.get(category)
     if not config:
         return
-    target_count = config.get("count") or instructor.default_count
+    target_count = config.get("count")
+    if target_count is None:
+        target_count = instructor.default_count
+    target_count = int(target_count)
+    if not target_count:
+        return
 
     # Load the prompt template.
     path = config.get("prompt_path", f"{category}.txt")
@@ -20,10 +27,16 @@ async def generate(instructor, category, start_key="QUESTION", end_key="ANSWER")
     api_params = {**instructor.api_params, **config.get("api_params", {})}
 
     # Min similarity score.
-    min_score = config.get("min_docsearch_score") or instructor.min_docsearch_score
+    min_score = config.get("min_docsearch_score")
+    if min_score is None:
+        min_score = instructor.min_docsearch_score
+    min_score = float(min_score)
 
     # Generate the instruction/response pairs until we reach the target count.
-    batch_size = config.get("batch_size", 10)
+    batch_size = config.get("batch_size")
+    if batch_size is None:
+        batch_size = instructor.default_batch_size
+    batch_size = int(batch_size)
     count = instructor.instructor_counts.get(category, 0)
     language = config.get("language") or instructor.language
     while count < target_count:
@@ -33,7 +46,9 @@ async def generate(instructor, category, start_key="QUESTION", end_key="ANSWER")
             if "{batch_size}" in template
             else template.format(language=language)
         )
-        response = await instructor.generate_response(prompt, **api_params)
+        response = await instructor.generate_response(
+            prompt, filter_response=filter_response, **api_params
+        )
         if not response:
             continue
 

@@ -232,6 +232,7 @@ instructors:
   orca:
     count: 100
     batch_size: 10
+    min_docsearch_score: 0.05
     prompt_path: orca.txt
 
   ##################################################################################
@@ -255,7 +256,7 @@ instructors:
   roleplay:
     count: 100
     batch_size: 10
-    min_docsearch_score: 0.1
+    min_docsearch_score: 0.15
     prompt_path: roleplay.txt
 
   ##################################################################################
@@ -279,5 +280,12 @@ instructors:
   plan:
     count: 100
     batch_size: 1
-    min_docsearch_score: 0.05
+    min_docsearch_score: 0.1
     prompt_path: plan.txt
+
+  ##################################################################################
+  # Writing tasks.
+  writing:
+    count: 100
+    batch_size: 10
+    min_docsearch_score: 0.35

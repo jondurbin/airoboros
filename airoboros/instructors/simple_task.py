@@ -8,7 +8,12 @@ async def generate(instructor, category):
     config = instructor.instructors.get(category)
     if not config:
         return
-    target_count = config.get("count") or instructor.default_count
+    target_count = config.get("count")
+    if target_count is None:
+        target_count = instructor.default_count
+    target_count = int(target_count)
+    if not target_count:
+        return
 
     # Load the prompt template.
     path = config.get("prompt_path", f"{category}.txt")
@@ -17,14 +22,29 @@ async def generate(instructor, category):
     with open(path) as infile:
         template = infile.read()
 
+    # Response prompt template (optional).
+    response_prompt = None
+    path = config.get("response_prompt_path", f"{category}_response.txt")
+    if not os.path.exists(path):
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
+        if os.path.exists(path):
+            with open(path) as infile:
+                response_prompt = infile.read()
+
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}
 
     # Min similarity score.
-    min_score = config.get("min_docsearch_score") or instructor.min_docsearch_score
+    min_score = config.get("min_docsearch_score")
+    if min_score is None:
+        min_score = instructor.min_docsearch_score
+    min_score = float(min_score)
 
     # Generate the instruction/response pairs until we reach the target count.
-    batch_size = config.get("batch_size") or instructor.default_batch_size
+    batch_size = config.get("batch_size")
+    if batch_size is None:
+        batch_size = instructor.default_batch_size
+    batch_size = int(batch_size)
     count = instructor.instructor_counts.get(category, 0)
     language = config.get("language") or instructor.language
     while count < target_count:
@@ -53,7 +73,10 @@ async def generate(instructor, category):
             ):
                 continue
             instructions.append(instruction)
-            futures.append(instructor.generate_response(instruction, **api_params))
+            full_prompt = instruction
+            if response_prompt:
+                full_prompt = response_prompt.format(instruction=instruction)
+            futures.append(instructor.generate_response(full_prompt, **api_params))
         if not futures:
             continue
         responses = await asyncio.gather(*futures)

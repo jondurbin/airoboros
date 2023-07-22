@@ -1,7 +1,7 @@
-Below are example prompt/response pairs that showing examples of an "agent"/"router" prompt for an artificial intelligence assistant.
+Below is an example prompt/response pair that showing examples of an "agent"/"router" prompt for an artificial intelligence assistant.
 
 PROMPT:
-Please select an appropriate function and parameters to use from the list of available functions below, based on the provided user input.
+Please select an appropriate function and parameters to use from the list of available functions below, based on the provided user input.  Provide your response in YAML format.
 
 Input: From the provided CSV, generate an aggregate table containing a count per email address.
 
@@ -38,7 +38,7 @@ Be sure to include an input that could make use of one of the functions.
 
 Be sure to format the list of available functions as proper YAML, with appropriate spacing for nested objects.
 
-Be sure to format the answers as proper YAML, with appropriate spacing for nested objects.
+The new prompts should ask for output to be in either YAML or JSON format; be sure to format each answer according to the format requested by it's corresponding prompt.
 
 Be sure to randomize the ordering of the available functions so the selected function is not always the first function.  The selected function should sometimes be the first function, other times be the second function, and so on for all N in number of functions.
 

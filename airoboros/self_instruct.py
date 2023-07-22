@@ -409,6 +409,7 @@ class SelfInstructor:
         from airoboros.instructors.experiences import generate as experience_generator
         from airoboros.instructors.general import generate as general_generator
         from airoboros.instructors.orca import generate as orca_generator
+        from airoboros.instructors.plan import generate as plan_generator
         from airoboros.instructors.riddles import generate as riddle_generator
         from airoboros.instructors.roleplay import generate as roleplay_generator
         from airoboros.instructors.trivia import generate as trivia_generator
@@ -422,6 +423,7 @@ class SelfInstructor:
             "counterfactual_contextual": counterfactual_contextual_generator,
             "experience": experience_generator,
             "general": general_generator,
+            "plan": plan_generator,
             "orca": orca_generator,
             "riddle": riddle_generator,
             "roleplay": roleplay_generator,

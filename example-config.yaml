@@ -273,3 +273,11 @@ instructors:
     batch_size: 5
     min_docsearch_score: 0.1
     prompt_path: agent.txt
+
+  ##################################################################################
+  # reWOO style planner
+  plan:
+    count: 100
+    batch_size: 1
+    min_docsearch_score: 0.05
+    prompt_path: plan.txt

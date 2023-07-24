@@ -452,7 +452,7 @@ class SelfInstructor:
         )
         from airoboros.instructors.experience import generate as experience_generator
         from airoboros.instructors.general import generate as general_generator
-        from aiorboros.instructors.joke import generate as joke_generator
+        from airoboros.instructors.joke import generate as joke_generator
         from airoboros.instructors.orca import generate as orca_generator
         from airoboros.instructors.plan import generate as plan_generator
         from airoboros.instructors.riddle import generate as riddle_generator

@@ -210,6 +210,9 @@ instructors:
       - swagger/openapi
       - pyramid web framework
 
+    # Min docsearch score.
+    min_docsearch_score: 0.04
+
     # The prompt used to generate the instructions.
     prompt_path: coding.txt
 

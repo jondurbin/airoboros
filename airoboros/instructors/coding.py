@@ -104,13 +104,14 @@ async def generate(instructor):
                                 "Do not include an intro sentence indicating what the code will do.",
                                 "Do not include any instructions for usage, warnings about replacing certain values, etc.",
                                 "Do not surround the code with backticks/markdown formatting.",
+                                "Include help code comments.",
                             ]
                         ),
                     ]
                 )
             )
             instructions.append(
-                instruction if not plain else instruction + " PLAINFORMAT"
+                instruction if not plain else instruction.strip() + " PLAINFORMAT"
             )
             futures.append(
                 instructor.generate_response(

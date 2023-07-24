@@ -158,9 +158,15 @@ class SelfInstructor:
         if not docs:
             docs = ["__initialize__"]
         self.embeddings = HuggingFaceEmbeddings()
-        self.docstores = [Chroma.from_texts(docs, self.embeddings)]
-        self.docstore_size = len(docs)
-        self.docstore_rotated_at = 0
+        batches = [
+            docs[i * MAX_DOCSTORE_SIZE : (i + 1) * MAX_DOCSTORE_SIZE]
+            for i in range((len(docs) + MAX_DOCSTORE_SIZE - 1) // MAX_DOCSTORE_SIZE)
+        ]
+        logger.info(f"Need to create {len(batches)} unique docstores...")
+        self.docstores = [
+            Chroma.from_texts(batch, self.embeddings) for batch in batches
+        ]
+        self.docstore_size = len(batches[-1])
         self.topic_index = 0
         if self.docstore_size >= MAX_DOCSTORE_SIZE:
             logger.info("Initializing fresh docstore due to doc count...")

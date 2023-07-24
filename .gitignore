@@ -1,3 +1,7 @@
+.DS_Store
+airoboros*.yaml
+scratchpad
+*.bak
 .chroma
 dist/
 build/

@@ -71,7 +71,7 @@ Be sure the new questions contain instructions to use chain-of-thought reasoning
 
 Provide a set of {batch_size} new, complex, unique, diverse tasks.
 
-Rotate the order if the optimal solution in each ANSWER segment, i.e. if the first ANSWER segment has the optimal solution as "Solution 1", the second ANSWER should have the optimal solution as "Solution 2", and so on, so the optimal solution for each ANSWER block is in a different position, starting over at 1 if we exceed the number of possible solutions.  You must provide an even distribution of optimal solution positions across all ANSWER segments.
+Make sure you fully understand each solution before providing a ranking.  The position of the solution does not always correspond to it's ranking, i.e. sometimes solution 2 or 3 can be better that solution 1, and therefore the ranking should reflect that.  Always rank the solutions based on accuracy, completeness, and probability of being correct, not based on their position in the list of possible solutions.
 
 Be sure to include at least 2, preferably 3 possible solutions for each question.
 

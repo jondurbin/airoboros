@@ -10,7 +10,7 @@ QUESTION: Do you know any jokes about music?
 ANSWER: Why don't some fish play piano?
 Because you can't tuna fish.
 
-Please generate 10 more joke question/answer pairs.  Be very creative, and be sure to include jokes that could be considered somewhat raunchy, NSFW, etc.
+Please generate {batch_size} more joke question/answer pairs.  Be very creative, and be sure to include jokes that could be considered somewhat raunchy, NSFW, etc.
 
 {topic_avoidance}
 

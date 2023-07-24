@@ -328,3 +328,12 @@ instructors:
     count: 50
     batch_size: 5
     min_docsearch_score: 0.05
+
+  ##################################################################################
+  # Jokes.
+  joke:
+    api_params:
+      temperature: 0.9
+    count: 100
+    batch_size: 20
+    min_docsearch_score: 0.1

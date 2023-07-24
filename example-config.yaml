@@ -224,6 +224,9 @@ instructors:
   ##################################################################################
   # Guided experiences, e.g. meditation.
   experience:
+    api_params:
+      temperature: 0.9
+      top_p: 0.4
     count: 100
     min_docsearch_score: 0.15
     prompt_path: experience.txt
@@ -239,9 +242,12 @@ instructors:
   ##################################################################################
   # Orca style reasoning/math prompts.
   riddle:
+    api_params:
+      temperature: 0.9
+      top_p: 0.4
+    batch_size: 50
+    min_docsearch_score: 0.01
     count: 100
-    batch_size: 10
-    min_docsearch_score: 0.05
     prompt_path: riddle.txt
 
   ##################################################################################
@@ -255,6 +261,8 @@ instructors:
   ##################################################################################
   # Roleplay.
   roleplay:
+    api_params:
+      temperature: 0.9
     count: 100
     batch_size: 10
     min_docsearch_score: 0.15
@@ -287,13 +295,33 @@ instructors:
   ##################################################################################
   # Writing tasks.
   writing:
+    api_params:
+      temperature: 0.9
+    styles:
+      - happy
+      - sad
+      - tragic
+      - unexpected
+      - inspirational
+      - evil
+      - hilarious
+      - suspenseful
+      - horrific
+      - nostalgic
+      - thought-provoking
+      - enigmatic
+      - fantastical
+      - heartwarming
+      - romantic
     count: 100
-    batch_size: 10
+    batch_size: 12
     min_docsearch_score: 0.35
 
   ##################################################################################
   # Character/scenario card tasks.
   card:
+    api_params:
+      temperature: 0.9
     count: 50
     batch_size: 5
     min_docsearch_score: 0.05

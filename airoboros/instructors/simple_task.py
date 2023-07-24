@@ -3,7 +3,7 @@ import os
 import re
 
 
-async def generate(instructor, category):
+async def generate(instructor, category, template_kwargs={}):
     """Generator for simple instruction response tasks (e.g. roleplay, wordgames)."""
     config = instructor.instructors.get(category)
     if not config:
@@ -49,16 +49,14 @@ async def generate(instructor, category):
         instructor.instructor_counts[category] = 0
     language = config.get("language") or instructor.language
     while instructor.instructor_counts[category] < target_count:
+        format_args = {"batch_size": batch_size, "language": language}
+        for key, val in template_kwargs.items():
+            format_args[key] = val(instructor)
+        if "{topic_avoidance}" in template:
+            format_args["topic_avoidance"] = instructor.topic_avoidance
+
         # Get a batch of instructions.
-        prompt = (
-            template.format(batch_size=batch_size, language=language)
-            if "{topic_avoidance}" not in template
-            else template.format(
-                batch_size=batch_size,
-                language=language,
-                topic_avoidance=instructor.topic_avoidance,
-            )
-        )
+        prompt = template.format(**format_args)
         response = await instructor.generate_response(prompt, **api_params)
         if not response:
             continue
@@ -76,7 +74,9 @@ async def generate(instructor, category):
             instructions.append(instruction)
             full_prompt = instruction
             if response_prompt:
-                full_prompt = response_prompt.format(instruction=instruction)
+                full_prompt = response_prompt.format(
+                    language=language, instruction=instruction
+                )
             futures.append(instructor.generate_response(full_prompt, **api_params))
         if not futures:
             continue

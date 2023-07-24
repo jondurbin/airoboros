@@ -16,6 +16,8 @@ Here are a few examples:
 
 Make sure to include a wide variety of writing tasks, across a wide range of subjects.
 
+{style_extra}
+
 All output text should be in {language}.
 
 {topic_avoidance}

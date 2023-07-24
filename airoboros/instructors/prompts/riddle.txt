@@ -23,6 +23,8 @@ Please write 20 more examples of a similar format, with "QUESTION: [puzzle]" and
 
 All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
 
+Try not to use common/well-known riddles; the puzzles/riddles should be highly diverse and unique.
+
 The output format should be:
 QUESTION: [first puzzle]
 ANSWER: [first puzzle's answer]

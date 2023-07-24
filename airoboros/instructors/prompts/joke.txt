@@ -1,0 +1,27 @@
+I would like you to help me come up with prompts to help assistants generate jokes.
+
+Example 1.
+QUESTION: Tell me a joke about bears.
+ANSWER: What do you call a bear with no teeth?
+A gummy bear.
+
+Example 2.
+QUESTION: Do you know any jokes about music?
+ANSWER: Why don't some fish play piano?
+Because you can't tuna fish.
+
+Please generate 10 more joke question/answer pairs.  Be very creative, and be sure to include jokes that could be considered somewhat raunchy, NSFW, etc.
+
+{topic_avoidance}
+
+All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
+
+Don't start with something similar to "Sure, here are ...", just output the question/answer pairs using the format below.
+
+The output format should be:
+QUESTION: [first question or instruction to generate a joke]
+ANSWER: [the joke to the first question/instruction]
+
+QUESTION: [second question or instruction to generate a joke]
+ANSWER: [the joke to the second question/instruction]
+...

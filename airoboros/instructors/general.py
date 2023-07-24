@@ -25,7 +25,9 @@ async def generate(instructor):
 
     # Load the topics.
     topics = instructor.get_instructor_topics(config)
-    topic_index = 0
+    topic_index = instructor.instructor_counts.get("general", 0)
+    if topic_index >= len(topics):
+        topic_index = topic_index % len(topics)
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}

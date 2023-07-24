@@ -167,7 +167,6 @@ class SelfInstructor:
             Chroma.from_texts(batch, self.embeddings) for batch in batches
         ]
         self.docstore_size = len(batches[-1])
-        self.topic_index = 0
         if self.docstore_size >= MAX_DOCSTORE_SIZE:
             logger.info("Initializing fresh docstore due to doc count...")
             self.docstore_size = 0

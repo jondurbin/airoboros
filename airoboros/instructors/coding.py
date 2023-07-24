@@ -43,10 +43,11 @@ async def generate(instructor):
     if batch_size is None:
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
-    count = instructor.instructor_counts.get("coding", 0)
+    if "coding" not in instructor.instructor_counts:
+        instructor.instructor_counts["coding"] = 0
     language_index = 0
     language = config.get("language") or instructor.language
-    while count < target_count:
+    while instructor.instructor_counts["coding"] < target_count:
         # Inject languages to use for this batch.
         current_languages = []
         for _ in range(batch_size):
@@ -111,7 +112,11 @@ async def generate(instructor):
             instructions.append(
                 instruction if not plain else instruction + " PLAINFORMAT"
             )
-            futures.append(instructor.generate_response(full_instruction, **api_params))
+            futures.append(
+                instructor.generate_response(
+                    full_instruction, filter_response=False, **api_params
+                )
+            )
         if not futures:
             continue
         responses = await asyncio.gather(*futures)
@@ -128,6 +133,5 @@ async def generate(instructor):
                 "response": response.strip(),
                 "category": "coding",
             }
-            count += 1
-            if count >= target_count:
+            if instructor.instructor_counts["coding"] >= target_count:
                 break

@@ -30,16 +30,19 @@ async def generate(instructor):
     min_score = float(min_score)
 
     # Generate the instruction/response pairs until we reach the target count.
-    count = instructor.instructor_counts.get("experience", 0)
+    if "experience" not in instructor.instructor_counts:
+        instructor.instructor_counts["experience"] = 0
     language = config.get("language") or instructor.language
     batch_size = config.get("batch_size")
     if batch_size is None:
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
     futures = []
-    while count < target_count:
+    while instructor.instructor_counts["experience"] < target_count:
         futures.append(
-            instructor.generate_response(prompt.format(language=language), **api_params)
+            instructor.generate_response(
+                prompt.format(language=language), filter_response=False, **api_params
+            )
         )
         if len(futures) < batch_size:
             continue
@@ -67,7 +70,6 @@ async def generate(instructor):
                 "response": response,
                 "category": "experience",
             }
-            count += 1
-            if count >= target_count:
+            if instructor.instructor_counts["experience"] >= target_count:
                 break
         futures = []

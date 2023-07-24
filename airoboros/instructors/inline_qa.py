@@ -37,9 +37,10 @@ async def generate(
     if batch_size is None:
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
-    count = instructor.instructor_counts.get(category, 0)
+    if category not in instructor.instructor_counts:
+        instructor.instructor_counts[category] = 0
     language = config.get("language") or instructor.language
-    while count < target_count:
+    while instructor.instructor_counts[category] < target_count:
         # Get a batch of instructions.
         prompt_args = {"language": language}
         if "{batch_size}" in template:
@@ -66,6 +67,5 @@ async def generate(
                 "response": response.strip(),
                 "category": category,
             }
-            count += 1
-            if count >= target_count:
+            if instructor.instructor_counts[category] >= target_count:
                 break

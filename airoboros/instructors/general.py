@@ -41,9 +41,10 @@ async def generate(instructor):
     if batch_size is None:
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
-    count = instructor.instructor_counts.get("general", 0)
+    if "general" not in instructor.instructor_counts:
+        instructor.instructor_counts["general"] = 0
     language = config.get("language") or instructor.language
-    while count < target_count:
+    while instructor.instructor_counts["general"] < target_count:
         # Inject the topics to use for this batch.
         current_topics = []
         for _ in range(batch_size):
@@ -93,6 +94,5 @@ async def generate(instructor):
                 "response": response.strip(),
                 "category": "general",
             }
-            count += 1
-            if count >= target_count:
+            if instructor.instructor_counts["general"] >= target_count:
                 break

@@ -180,13 +180,14 @@ async def generate(instructor):
     min_score = float(min_score)
 
     # Generate the instruction/response pairs until we reach the target count.
-    count = instructor.instructor_counts.get("contextual", 0)
+    if "contextual" not in instructor.instructor_counts:
+        instructor.instructor_counts["contextual"] = 0
     batch_size = config.get("batch_size")
     if batch_size is None:
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
     futures = []
-    while count < target_count:
+    while instructor.instructor_counts["contextual"] < target_count:
         prompt = generate_prompt(instructor, config, template, topic_iter)
         futures.append(instructor.generate_response(prompt, **api_params))
         if len(futures) < batch_size:
@@ -223,7 +224,6 @@ async def generate(instructor):
                 "response": response.strip(),
                 "category": "contextual",
             }
-            count += 1
-            if count >= target_count:
+            if instructor.instructor_counts["contextual"] >= target_count:
                 break
         futures = []

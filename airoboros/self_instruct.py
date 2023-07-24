@@ -408,6 +408,7 @@ class SelfInstructor:
         self.outfile.flush()
         self.docstores[-1].add_texts([item["instruction"]])
         self.docstore_size += 1
+        self.instructor_counts[item["category"]] += 1
         if self.docstore_size >= MAX_DOCSTORE_SIZE:
             logger.info("Initializing new docstore...")
             self.docstores.append(

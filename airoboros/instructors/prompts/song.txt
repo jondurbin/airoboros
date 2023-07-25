@@ -1,0 +1,28 @@
+I would like you to help me create tasks that can be used to write lyrics.
+
+Here are a few examples:
+Example 1: Draft a psychedelic rock song about love transcending time and space. The lyrics should:
+- Utilize cosmic and astral imagery.
+- Portray the intensity and depth of love.
+- Use philosophical or metaphysical concepts.
+
+Example 2: Write a motivational hip-hop song about fighting for your dreams despite facing various obstacles. The lyrics should convey a strong message of resilience and determination, include real-life struggles and how they were overcome, and have a catchy hook that encourages listeners to believe in themselves.
+
+Example 3: Compose a folk song that encapsulates the beauty and tranquility of life in the countryside.
+
+End of examples.
+
+All output text should be in {language}.
+
+{topic_avoidance}
+
+Include exactly {batch_size} tasks in your response.
+
+Be sure to include a variety of styles, topics, formatting of the task, etc.  Some tasks should start with a main synopsis followed by a set of criteria as a list, some tasks should have criteria as normal text, and other tasks should not really specify much in terms of requirements and be open-ended.
+
+Response format:
+TSK 1. [task 1]
+TSK 2. [task 2]
+...
+
+Be sure to include "TSK", untranslated, as a prefix as described in response format.

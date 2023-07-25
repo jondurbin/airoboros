@@ -337,3 +337,12 @@ instructors:
     count: 100
     batch_size: 20
     min_docsearch_score: 0.1
+
+  ##################################################################################
+  # Songs.
+  song:
+    api_params:
+      temperature: 0.9
+    count: 200
+    batch_size: 25
+    min_docsearch_score: 0.25

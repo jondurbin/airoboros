@@ -457,6 +457,7 @@ class SelfInstructor:
         from airoboros.instructors.plan import generate as plan_generator
         from airoboros.instructors.riddle import generate as riddle_generator
         from airoboros.instructors.roleplay import generate as roleplay_generator
+        from airoboros.instructors.song import generate as song_generator
         from airoboros.instructors.trivia import generate as trivia_generator
         from airoboros.instructors.wordgame import generate as wordgame_generator
         from airoboros.instructors.writing import generate as writing_generator
@@ -475,6 +476,7 @@ class SelfInstructor:
             "orca": orca_generator,
             "riddle": riddle_generator,
             "roleplay": roleplay_generator,
+            "song": song_generator,
             "trivia": trivia_generator,
             "wordgame": wordgame_generator,
             "writing": writing_generator,

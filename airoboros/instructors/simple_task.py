@@ -3,7 +3,7 @@ import os
 import re
 
 
-async def generate(instructor, category, template_kwargs={}):
+async def generate(instructor, category, filter_response=True, template_kwargs={}):
     """Generator for simple instruction response tasks (e.g. roleplay, wordgames)."""
     config = instructor.instructors.get(category)
     if not config:
@@ -49,7 +49,9 @@ async def generate(instructor, category, template_kwargs={}):
         instructor.instructor_counts[category] = 0
     language = config.get("language") or instructor.language
     while instructor.instructor_counts[category] < target_count:
-        format_args = {"batch_size": batch_size, "language": language}
+        format_args = {"language": language}
+        if "{batch_size}" in template:
+            format_args["batch_size"] = batch_size
         for key, val in template_kwargs.items():
             format_args[key] = val(instructor)
         if "{topic_avoidance}" in template:
@@ -57,7 +59,9 @@ async def generate(instructor, category, template_kwargs={}):
 
         # Get a batch of instructions.
         prompt = template.format(**format_args)
-        response = await instructor.generate_response(prompt, **api_params)
+        response = await instructor.generate_response(
+            prompt, filter_response=filter_response, **api_params
+        )
         if not response:
             continue
 
@@ -65,7 +69,7 @@ async def generate(instructor, category, template_kwargs={}):
         futures = []
         instructions = []
         for instruction in re.findall(
-            r"(?:^|\n)TSK \d+\. (.*?)(?:$|(?=\nTSK \d+\. ))", response, re.DOTALL
+            r"(?:^|\n)TSK \d+\.\s*(.*?)(?:$|(?=\nTSK \d+\.\s*))", response, re.DOTALL
         ):
             if not instruction.strip() or await instructor.is_too_similar(
                 instruction, min_score=min_score
@@ -77,7 +81,11 @@ async def generate(instructor, category, template_kwargs={}):
                 full_prompt = response_prompt.format(
                     language=language, instruction=instruction
                 )
-            futures.append(instructor.generate_response(full_prompt, **api_params))
+            futures.append(
+                instructor.generate_response(
+                    full_prompt, filter_response=filter_response, **api_params
+                )
+            )
         if not futures:
             continue
         responses = await asyncio.gather(*futures)

@@ -49,6 +49,8 @@ I would like you to generate {batch_size} new, unique tasks of a similar format.
 
 Be sure to include at least 5 unique available tools per task.
 
+Make sure the inputs are somewhat complex, with multiple criteria that would require making use of all of the provided tools.
+
 One of the tools must be a question answering tool similar to "QA" in the example, but it can have a different name.
 
 Don't make any reference to the examples in the output.

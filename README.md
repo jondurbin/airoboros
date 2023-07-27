@@ -51,6 +51,9 @@ https://bmc.link/jondurbin
 ## Models (research use only):
 
 ### gpt-4 versions
+* [airoboros-l2-70b-gpt4-1.4.1](https://huggingface.co/jondurbin/airoboros-l2-70b-gpt4-1.4.1)
+* [airoboros-l2-13b-gpt4-1.4.1](https://huggingface.co/jondurbin/airoboros-l2-13b-gpt4-1.4.1)
+* [airoboros-l2-7b-gpt4-1.4.1](https://huggingface.co/jondurbin/airoboros-l2-7b-gpt4-1.4.1)
 * [airoboros-65b-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-65b-gpt4-1.4)
 * [airoboros-33b-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-33b-gpt4-1.4)
 * [airoboros-mpt-30bb-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-mpt-30b-gpt4-1p4-five-epochs)
@@ -71,8 +74,8 @@ https://bmc.link/jondurbin
 * [airoboros-gpt4-1.2](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-1.2)
 * [airoboros-gpt4-1.3](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-1.3)
 * [airoboros-gpt4-1.4](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-1.4)
-* [airoboros-gpt4-1.4.1 (recommended)](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-1.4.1)
-
+* [airoboros-gpt4-2.0 (June only GPT4)](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-2.0)
+* [airoboros-gpt4-m2.0 (recommended)](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-m2.0)
 
 ## Coming soon
 

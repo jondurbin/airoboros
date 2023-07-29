@@ -48,6 +48,9 @@ You can override the `topic_prompt` string in the configuration to use a differe
 
 https://bmc.link/jondurbin
 
+ETH 0xce914eAFC2fe52FdceE59565Dd92c06f776fcb11
+BTC bc1qdwuth4vlg8x37ggntlxu5cjfwgmdy5zaa7pswf
+
 ## Models (research use only):
 
 ### gpt-4 versions

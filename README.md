@@ -57,15 +57,35 @@ bc1qdwuth4vlg8x37ggntlxu5cjfwgmdy5zaa7pswf
 ## Models (research use only):
 
 ### gpt-4 versions
+
+#### llama-2 base model
+
+Latest version (2.0 / m2.0 datasets)
+* [airoboros-l2-7b-gpt4-2.0](https://huggingface.co/jondurbin/airoboros-l2-7b-gpt4-2.0)
+* [airoboros-l2-7b-gpt4-m2.0](https://huggingface.co/jondurbin/airoboros-l2-7b-gpt4-m2.0)
+* [airoboros-l2-13b-gpt4-2.0](https://huggingface.co/jondurbin/airoboros-l2-13b-gpt4-2.0)
+* [airoboros-l2-13b-gpt4-m2.0](https://huggingface.co/jondurbin/airoboros-l2-13b-gpt4-m2.0)
+
+Previous generation (1.4.1 dataset)
 * [airoboros-l2-70b-gpt4-1.4.1](https://huggingface.co/jondurbin/airoboros-l2-70b-gpt4-1.4.1)
 * [airoboros-l2-13b-gpt4-1.4.1](https://huggingface.co/jondurbin/airoboros-l2-13b-gpt4-1.4.1)
 * [airoboros-l2-7b-gpt4-1.4.1](https://huggingface.co/jondurbin/airoboros-l2-7b-gpt4-1.4.1)
+
+#### original llama base model
+
+Latest version (2.0 / m2.0 datasets)
+* [airoboros-33b-gpt4-2.0](https://huggingface.co/jondurbin/airoboros-33b-gpt4-2.0)
+* [airoboros-33b-gpt4-m2.0](https://huggingface.co/jondurbin/airoboros-33b-gpt4-m2.0)
+
+Previous generation (1.4.1 dataset)
 * [airoboros-65b-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-65b-gpt4-1.4)
 * [airoboros-33b-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-33b-gpt4-1.4)
-* [airoboros-mpt-30bb-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-mpt-30b-gpt4-1p4-five-epochs)
 * [airoboros-13b-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-13b-gpt4-1.4)
 * [airoboros-7b-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-7b-gpt4-1.4)
 * *older versions on HF as well*
+
+#### mpt-30b base model
+* [airoboros-mpt-30bb-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-mpt-30b-gpt4-1p4-five-epochs)
 
 ### gpt-3.5-turbo versions
 * [airoboros-gpt-3.5-turbo-100k-7b](https://huggingface.co/jondurbin/airoboros-gpt-3.5-turbo-100k-7b)

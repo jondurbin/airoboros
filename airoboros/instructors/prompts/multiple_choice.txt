@@ -1,0 +1,29 @@
+I would like you to assist me in creating multiple choice tests.
+
+Question topics:
+{topics}
+
+{context}
+
+Be sure to include either 4 or 5 options for the possible solutions.
+
+{options}
+
+{answers}
+
+The quiz must be difficult, i.e. it should not be very obvious what the correct option is at first glance.
+
+Don't start with something like "Certainly, here's a quiz...", just produce the question answer pairs described in the response format.
+
+All output text must be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
+
+Response format:
+QUESTION: question 1, including all options
+ANSWER: answer to question 1
+
+QUESTION: question 2, including all options
+ANSWER: answer to question 2
+
+The answer must include both the letter and text of the option.  Be sure to double check that the letter and text match the correct solution.
+
+Don't number the question/answer pairs, just include them in the response format indicated.

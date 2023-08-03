@@ -1,9 +1,15 @@
+import json
 import os
 import re
 
 
 async def generate(
-    instructor, category, start_key="QUESTION", end_key="ANSWER", filter_response=True
+    instructor,
+    category,
+    start_key="QUESTION",
+    end_key="ANSWER",
+    filter_response=True,
+    template_kwargs={},
 ):
     """Generator for generic inline question answer pair training data."""
     config = instructor.instructors.get(category)
@@ -22,6 +28,12 @@ async def generate(
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
     with open(path) as infile:
         template = infile.read()
+
+    # Topics included in template?
+    topics = instructor.get_instructor_topics(config)
+    topic_index = instructor.instructor_counts.get(category, 0)
+    if topic_index >= len(topics):
+        topic_index = topic_index % len(topics)
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}
@@ -47,6 +59,28 @@ async def generate(
             prompt_args["batch_size"] = batch_size
         if "{topic_avoidance}" in template:
             prompt_args["topic_avoidance"] = instructor.topic_avoidance
+
+        # Inject the topics to use for this batch, if enabled.
+        if "{topics}" in template:
+            current_topics = []
+            for _ in range(batch_size):
+                current_topics.append(topics[topic_index])
+                topic_index += 1
+                if topic_index >= len(topics):
+                    topic_index = 0
+            topics_str = "\n".join(
+                [
+                    f" * {start_key} {idx + 1} must be related to topic: {json.dumps(topic)}"
+                    for idx, topic in enumerate(current_topics)
+                ]
+            )
+            prompt_args["topics"] = topics_str
+
+        # Inject any additional template args.
+        for key, method in template_kwargs.items():
+            print(f"GOT HERE: {key} {method}")
+            prompt_args[key] = method(instructor)
+
         prompt = template.format(**prompt_args)
         response = await instructor.generate_response(
             prompt, filter_response=filter_response, **api_params

@@ -346,3 +346,14 @@ instructors:
     count: 200
     batch_size: 25
     min_docsearch_score: 0.25
+
+
+  ##################################################################################
+  # Multiple choice.
+  multiple_choice:
+    api_params:
+      temperature: 0.3
+    count: 100
+    batch_size: 5
+    min_docsearch_score: 0.1
+    contextual_ratio: 0.2

@@ -12,6 +12,8 @@ Requirements for the tasks:
 - Any instruction referencing a list of objects, such as classifying a list of items, should include the list of items.
 {topics}
 
+All output should have an approximate Flesch reading ease score of {flesch}.
+
 Include exactly {batch_size} tasks in your response.
 
 Response format:

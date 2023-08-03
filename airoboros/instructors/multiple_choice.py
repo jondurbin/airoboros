@@ -18,6 +18,7 @@ async def generate(instructor):
     config = instructor.instructors.get("multiple_choice")
     if not config:
         return
+    flesch = config.get("flesch") or "40"
     batch_size = config.get("batch_size")
     if batch_size is None:
         batch_size = instructor.default_batch_size
@@ -77,6 +78,7 @@ async def generate(instructor):
             "answers": gen_answer_index,
             "options": gen_options,
             "context": gen_context,
+            "flesch": lambda _: flesch,
         },
     ):
         # Let's double check the answer letter/text match.

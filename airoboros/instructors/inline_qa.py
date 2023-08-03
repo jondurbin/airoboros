@@ -52,9 +52,10 @@ async def generate(
     if category not in instructor.instructor_counts:
         instructor.instructor_counts[category] = 0
     language = config.get("language") or instructor.language
+    flesch = config.get("flesch") or instructor.default_flesch
     while instructor.instructor_counts[category] < target_count:
         # Get a batch of instructions.
-        prompt_args = {"language": language}
+        prompt_args = {"language": language, "flesch": flesch}
         if "{batch_size}" in template:
             prompt_args["batch_size"] = batch_size
         if "{topic_avoidance}" in template:
@@ -78,7 +79,6 @@ async def generate(
 
         # Inject any additional template args.
         for key, method in template_kwargs.items():
-            print(f"GOT HERE: {key} {method}")
             prompt_args[key] = method(instructor)
 
         prompt = template.format(**prompt_args)

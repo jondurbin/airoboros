@@ -63,6 +63,9 @@ default_count: 100
 # Default batch size, if not specified.
 default_batch_size: 10
 
+# Default readability score where 0 is extremely difficult to read, 100 would be easily understood by 11 year old.
+default_flesch: 45
+
 # Language.
 language: English
 

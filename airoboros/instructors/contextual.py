@@ -135,6 +135,7 @@ def generate_prompt(instructor, config, template, topic_iter):
         task_confounder=task_confounder,
         topic_avoidance=config.get("topic_avoidance") or "",
         language=config.get("language") or instructor.language,
+        flesch=config.get("flesch") or instructor.default_flesch,
     )
 
 
@@ -187,6 +188,7 @@ async def generate(instructor):
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
     futures = []
+    flesch = config.get("flesch") or instructor.default_flesch
     while instructor.instructor_counts["contextual"] < target_count:
         prompt = generate_prompt(instructor, config, template, topic_iter)
         futures.append(instructor.generate_response(prompt, **api_params))
@@ -210,7 +212,8 @@ async def generate(instructor):
         # Generate the responses.
         futures = [
             instructor.generate_response(
-                response_template.format(instruction=instruction), **api_params
+                response_template.format(instruction=instruction, flesch=flesch),
+                **api_params,
             )
             for instruction in instructions
         ]

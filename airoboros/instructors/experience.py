@@ -37,11 +37,14 @@ async def generate(instructor):
     if batch_size is None:
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
+    flesch = config.get("flesch") or instructor.default_flesch
     futures = []
     while instructor.instructor_counts["experience"] < target_count:
         futures.append(
             instructor.generate_response(
-                prompt.format(language=language), filter_response=False, **api_params
+                prompt.format(language=language, flesch=flesch),
+                filter_response=False,
+                **api_params
             )
         )
         if len(futures) < batch_size:

@@ -48,8 +48,9 @@ async def generate(instructor, category, filter_response=True, template_kwargs={
     if category not in instructor.instructor_counts:
         instructor.instructor_counts[category] = 0
     language = config.get("language") or instructor.language
+    flesch = config.get("flesch") or instructor.default_flesch
     while instructor.instructor_counts[category] < target_count:
-        format_args = {"language": language}
+        format_args = {"language": language, "flesch": flesch}
         if "{batch_size}" in template:
             format_args["batch_size"] = batch_size
         for key, val in template_kwargs.items():
@@ -79,7 +80,7 @@ async def generate(instructor, category, filter_response=True, template_kwargs={
             full_prompt = instruction
             if response_prompt:
                 full_prompt = response_prompt.format(
-                    language=language, instruction=instruction
+                    language=language, instruction=instruction, flesch=flesch
                 )
             futures.append(
                 instructor.generate_response(

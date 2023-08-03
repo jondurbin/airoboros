@@ -62,6 +62,7 @@ async def generate(instructor):
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
     language = config.get("language") or instructor.language
+    flesch = config.get("flesch") or instructor.default_flesch
     while instructor.instructor_counts["counterfactual_contextual"] < target_count:
         response = await instructor.generate_response(
             template.format(batch_size=batch_size, language=language), **api_params
@@ -146,7 +147,9 @@ async def generate(instructor):
                     futures.append(
                         instructor.generate_response(
                             response_template.format(
-                                instruction=instruction, language=language
+                                instruction=instruction,
+                                language=language,
+                                flesch=flesch,
                             ),
                             **api_params,
                         )

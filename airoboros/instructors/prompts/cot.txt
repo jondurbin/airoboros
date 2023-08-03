@@ -12,6 +12,8 @@ Provide a set of {batch_size} new, complex, unique, diverse tasks.
 
 Be sure to include a wide variety of tasks, including tasks that explore ideas of set theory, information theory, parallelism, logic, extrapolation from scientific studies, etc., but also be sure to only include questions that have multiple potentially correct answers.
 
+All output should have an approximate Flesch reading ease score of {flesch}.
+
 All output text should be in {language}, but the exact term "TSK" is a special token that must not be translated.
 
 The output format should be:

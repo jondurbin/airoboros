@@ -107,6 +107,8 @@ The new questions must not simple formulas, i.e.:
 
 The answers should always have the reasoning first, then the final answer.  Don't ever put the final answer first, then reasoning.
 
+All output should have an approximate Flesch reading ease score of {flesch}.
+
 All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
 
 The output format should be:

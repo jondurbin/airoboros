@@ -46,6 +46,7 @@ async def generate(instructor):
     if "general" not in instructor.instructor_counts:
         instructor.instructor_counts["general"] = 0
     language = config.get("language") or instructor.language
+    flesch = config.get("flesch") or instructor.default_flesch
     while instructor.instructor_counts["general"] < target_count:
         # Inject the topics to use for this batch.
         current_topics = []
@@ -67,6 +68,7 @@ async def generate(instructor):
             topics=topics_str,
             topic_avoidance=instructor.topic_avoidance,
             language=language,
+            flesch=flesch,
         )
         response = await instructor.generate_response(prompt, **api_params)
         if not response:

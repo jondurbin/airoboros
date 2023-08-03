@@ -8,6 +8,10 @@ Example 4: What is the meaning of life?  Respond using the words/style of Homer 
 
 Generate a set of {batch_size} new similar prompts.
 
+Be sure your output would rate with an appropriate Flesch reading ease score for the character/persona requested, or {flesch} if the character is fictional and doesn't have a predefined intelligence/vocabulary/education level.
+
+Be appropriately loquacious for the task, e.g. stories should be long, complex, and detailed, whereas a haiku should be the standard three/5-7-5 format.
+
 All output task should be in {language}.
 
 Response format:

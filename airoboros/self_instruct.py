@@ -117,6 +117,7 @@ class SelfInstructor:
         if raw_config.get("default_batch_size") is not None:
             self.default_batch_size = raw_config["default_batch_size"]
         self.language = raw_config.get("language") or "English"
+        self.default_flesch = int(raw_config.get("flesch") or "50")
 
         # Validate the model for each generator.
         self.instructors = raw_config.get("instructors")

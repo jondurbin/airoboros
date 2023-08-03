@@ -53,6 +53,8 @@ Be creative in the list of attributes each prompt should ask for, and try to com
 
 All output text should be in {language}, but the exact terms "PROMPT" and "ANSWER" are special tokens that must not be translated.
 
+All output should have an approximate Flesch reading ease score of {flesch}.
+
 The output format should be:
 PROMPT: [first prompt]
 ANSWER: [first prompt's answer]

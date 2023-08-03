@@ -8,6 +8,8 @@ The random text block(s) should be extremely realistic, and should not include a
 
 Each text block should be in {language}, but "BEGININPUT", "BEGINCONTEXT", "ENDCONTEXT", "ENDINPUT", "BEGININSTRUCTION" and "ENDINSTRUCTION" are special tokens that must not be translated.
 
+Each text block should have an approximate Flesch reading ease score of {flesch}.
+
 The random text block(s) should be in the style:
 {styles}
 

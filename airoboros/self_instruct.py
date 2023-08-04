@@ -52,6 +52,7 @@ MODEL_ENDPOINTS = {
         "gpt-3.5-turbo-16k-0613",
     ],
 }
+READABILITY_HINT = "The output should be written in such a way as to have a Flesch-Kincaid readability score of 30 or lower - best understood by those with college education.  Only output the story - don't add any notes or information about Flesch-Kincaid scores."
 
 
 class SelfInstructor:
@@ -117,7 +118,7 @@ class SelfInstructor:
         if raw_config.get("default_batch_size") is not None:
             self.default_batch_size = raw_config["default_batch_size"]
         self.language = raw_config.get("language") or "English"
-        self.default_flesch = int(raw_config.get("default_flesch") or "50")
+        self.default_flesch = raw_config.get("default_flesch") or READABILITY_HINT
 
         # Validate the model for each generator.
         self.instructors = raw_config.get("instructors")

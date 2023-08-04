@@ -2,7 +2,7 @@ I'd like you to create an instruction and response pair for an imaginative exper
 
 Select a completely random location for the new setting, and be very creative in the details.
 
-All output should have an approximate Flesch reading ease score of {flesch}.
+{flesch}
 
 All output text should be in {language}, but "SETTING" and "EXPERIENCE" are special tokens that must not be translated.
 

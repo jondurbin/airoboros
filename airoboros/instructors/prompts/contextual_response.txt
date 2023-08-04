@@ -28,7 +28,7 @@ Don't include any references unless asked.
 
 If there are multiple context blocks from which the references are extracted, be sure to logically separate the references rather than including a single large mixed block.
 
-All output should have an approximate Flesch reading ease score of {flesch}.
+{flesch}
 
 If the tasks cannot be answered using only the information provided in the input, do not make up a response.
 

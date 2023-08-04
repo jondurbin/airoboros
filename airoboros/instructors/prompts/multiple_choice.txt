@@ -17,7 +17,7 @@ Don't start with something like "Certainly, here's a quiz...", just produce the 
 
 All output text must be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
 
-Your output should have an approximate Flesch reading ease score of around {flesch}.
+{flesch}
 
 Response format:
 QUESTION: question 1, including all options

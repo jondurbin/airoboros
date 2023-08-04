@@ -39,6 +39,7 @@ response_filters:
   - "violates my"
   - "i (can('t| ?not)|w(on't|will not)|am (not |un)able.?).{0,30}(you are|you're|your )"
   - "please note that"
+  - "flesch"
 
 # Optionally limit the maximum number of tokens to use when generating instructions.
 max_tokens:
@@ -63,8 +64,8 @@ default_count: 100
 # Default batch size, if not specified.
 default_batch_size: 10
 
-# Default readability score where 0 is extremely difficult to read, 100 would be easily understood by 11 year old.
-default_flesch: 45
+# Default readability score hint: https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests
+default_flesch: The output should be written in such a way as to have a Flesch-Kincaid readability score of 30 or lower - best understood by those with college education.  The response must not contain any notes or information about Flesch-Kincaid scores.
 
 # Language.
 language: English

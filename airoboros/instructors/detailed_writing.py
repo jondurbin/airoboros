@@ -113,30 +113,12 @@ async def generate(instructor):
             for instruction in instructions
         ]
         responses = await asyncio.gather(*futures)
-
-        # Lengthen the responses.
-        complete_instructions = []
-        futures = []
         for idx in range(len(responses)):
             response = responses[idx]
             if not response or not response.strip():
                 continue
-            complete_instructions.append(instructions[idx])
-            futures.append(
-                instructor.generate_response(
-                    f"Below is some text that seems very low effort and short/boring. Please rewrite it so as to double the length, add significantly more detail, and make it more interesting and colorful.\n\n{response}",
-                    **api_params,
-                )
-            )
-        if not futures:
-            continue
-        responses = await asyncio.gather(*futures)
-        for idx in range(len(futures)):
-            response = responses[idx]
-            if not response or not response.strip():
-                continue
             yield {
-                "instruction": complete_instructions[idx].strip(),
+                "instruction": instructions[idx].strip(),
                 "response": response.strip(),
                 "category": "detailed_writing",
             }

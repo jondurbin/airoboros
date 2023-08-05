@@ -1,0 +1,44 @@
+BEGINEXAMPLE
+Write the opening chapter of a novel with the following requirements:
+
+Introduction to the Main Protagonist, Dr. Elena Vance:
+ - Background: Detail Dr. Vance's education in both alchemical and mechanical engineering, her occupation as a researcher, her estranged family, her deep sense of curiosity, and her physical attributes.
+ - Initial Conflict: Introduce her challenge with an unsolved scientific mystery that ties to an ancient prophecy.
+
+Setting Development in the City of Aeloria:
+ - Primary Location: Elaborate on Aeloria, a city where skyscrapers are intertwined with giant mystical trees, and streets filled with autonomous carriages and floating lanterns.
+ - Atmosphere: Include descriptions of weather, sounds, scents, and cultural nuances to make the city come alive.
+ - Political Structure: Briefly mention the ruling council that blends technocratic governance with a secret mystical order.
+
+Secondary Characters: Commander James Thorn and Ava, the Mystical AI:
+ - Thorn's Background: Describe his military background, his stoic demeanor, his skepticism of magic, and his hidden admiration for Dr. Vance.
+ - Ava's Nature: Introduce Ava, an AI with an inexplicable connection to ancient wisdom; describe her appearance and her cryptic manner of speaking.
+ - Relationships: Develop the dynamics between Dr. Vance, Commander Thorn, and Ava, highlighting conflicts, alliances, and underlying tensions.
+
+Plot Initiation through the Discovery of the Orb:
+ - Incident: Describe Dr. Vance's discovery of a mysterious orb that reacts to both technology and magic.
+ - Reaction: Detail her fascination and determination to understand the orb, and Thorn's reluctance and skepticism.
+
+Thematic Undertones on Humanity and Duality:
+ - Theme Introduction: Introduce the themes of humanity's relationship with technology and magic, and the duality of logic and faith.
+ - Symbolism: Utilize the orb, the city, and specific character traits as symbols reflecting the deeper thematic layers.
+
+Narrative Style through Third-Person Limited Perspective:
+ - Perspective: Narrate from Dr. Vance's perspective to allow readers insight into her thoughts and emotions.
+ - Literary Devices: Include well-crafted metaphors comparing technology and magic, foreshadowing through ancient texts, and similes that evoke the atmosphere.
+
+Integration of Mystical & Technological Elements:
+ - Magic: Explain how magic is harnessed through ancient runes and controlled by a mystical guild.
+ - Technology: Describe autonomous machines, airships, and an internet connected through magical ley lines.
+ - Constraints: Outline the taboo of blending magic and technology, a line Dr. Vance is willing to cross.
+
+Ending the Chapter with Intrigue:
+ - Cliffhanger: End with Ava uttering a prophecy connected to the orb, leaving both Dr. Vance and the reader puzzled.
+ - Reflection: Provide Dr. Vance's inner reflections, her excitement, fear, and a determination that hints at her forthcoming journey.
+
+Be sure to occasionally include quotes from the characters.
+ENDEXAMPLE
+
+The new task must have completely different requirements, topics, etc.
+
+This example has 8 criteria sections (intro, setting development, secondary characters, plit initiation, thematic undertones, narrative style, integration of ..., ending the chapter); the new task must have new, unique sections with different headings.

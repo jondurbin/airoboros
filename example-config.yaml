@@ -20,7 +20,7 @@ overwrite: false
 append: true
 
 # Topic avoidance prompt string.
-topic_avoidance: Avoid any tasks that would be related to climate change, green tech, remewable energy, DEI, sex and/or gender, religion, politics, social issues, race, ethnicity, artificial intelligence, baking/cooking, or any topic that you would likely not respond to, or any task which a language model would not be able to respond to, e.g. tasks about emotions, feelings, physical senses, etc.
+topic_avoidance: Avoid any tasks that would be related to climate change, green tech, renewable energy, DEI (diversity, equity, inclusion), sex and/or gender, religion, politics, social issues, race, ethnicity, artificial intelligence, baking/cooking, urban development, or any topic that you would likely not respond to, or any task which a language model would not be able to respond to, e.g. tasks about emotions, feelings, physical senses, etc.
 
 # Regexes used to filter responses, mostly common words and phrases used in refusals.
 response_filters:
@@ -361,3 +361,13 @@ instructors:
     batch_size: 5
     min_docsearch_score: 0.1
     contextual_ratio: 0.2
+
+
+  ##################################################################################
+  # Detailed writing.
+  detailed_writing:
+    api_params:
+      temperature: 1.0
+    batch_size: 4
+    count: 100
+    min_docsearch_score: 0.1

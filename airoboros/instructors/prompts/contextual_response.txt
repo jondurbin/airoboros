@@ -32,4 +32,6 @@ If there are multiple context blocks from which the references are extracted, be
 
 If the tasks cannot be answered using only the information provided in the input, do not make up a response.
 
+All output should be in {language}.
+
 {instruction}

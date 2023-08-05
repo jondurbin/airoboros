@@ -1,0 +1,22 @@
+BEGINEXAMPLE
+Compose a Research Paper on the Ecological Impacts of Llama Grazing with the following criteria.
+
+Introduction to Llama Grazing Practices and Their Importance:
+- Background: Provide a historical overview of llama grazing in South America, highlighting its cultural and economic significance. Detail the regions where llamas are primarily grazed.
+- Relevance: Discuss the importance of llamas in agricultural systems and briefly mention the existing concerns regarding their ecological impacts.
+- Thesis Statement: Clearly state the purpose of the research paper, the hypothesis, and the specific ecological aspects that will be investigated.
+
+Analysis of Ecological Effects of Llama Grazing:
+- Soil Quality and Erosion: Analyze how llama grazing affects soil quality, including changes in nutrient content, compaction, and erosion rates. Utilize scientific studies and field observations.
+- Vegetation and Biodiversity: Investigate the impacts of llama grazing on native plant species and overall biodiversity. Include the potential for invasive species propagation.
+- Water Resources: Evaluate the relationship between llama grazing and local water quality and availability, including effects on streams, ponds, and groundwater. 
+
+Recommendations and Conclusions:
+- Best Practices: Propose evidence-based best practices for sustainable llama grazing that balances ecological health with economic needs.
+- Policy Implications: Discuss potential policy interventions or regulations to guide sustainable llama grazing. Include an assessment of the roles of local communities and governments.
+- Concluding Remarks: Sum up the main findings of the paper and their implications for future research and practice in sustainable agriculture.
+ENDEXAMPLE
+
+The new task must not ask for any output that a language model could not produce, e.g. images, charts, etc.
+
+This example has 3 criteria sections: introduction, analysis, recommendations and conclusions.  The new task must have different, unique criteria sections from the example, with a different output format, i.e. you need not use bullet points for the specifics, it could be a numbered list or plain text paragraph, but be internally consistent with the style you choose.

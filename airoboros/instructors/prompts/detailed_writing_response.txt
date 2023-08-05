@@ -1,0 +1,13 @@
+{instruction}
+
+The response should be in {language}.
+
+{flesch}
+
+Be extremely loquacious, use colorful immersive language, and be sure to follow the requirements closely.
+
+Don't start with "Certainly!" or any intro sentence, just produce the desired output.
+
+Don't reference these requirements, just produce the desired output, i.e. there should be no reference to the requirements at all.
+
+Before you generate a response, think silenty to yourself about how you would lengthen the response by including more detail and interesting information, to make sure your response is as comprehensive as possible.  Include between 150 and 300 sentences in your response, which would equate to between 3000 and 6000 words.

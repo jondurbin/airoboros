@@ -452,6 +452,9 @@ class SelfInstructor:
         from airoboros.instructors.counterfactual_contextual import (
             generate as counterfactual_contextual_generator,
         )
+        from airoboros.instructors.detailed_writing import (
+            generate as detailed_writing_generator,
+        )
         from airoboros.instructors.experience import generate as experience_generator
         from airoboros.instructors.general import generate as general_generator
         from airoboros.instructors.joke import generate as joke_generator
@@ -474,6 +477,7 @@ class SelfInstructor:
             "contextual": contextual_generator,
             "cot": cot_generator,
             "counterfactual_contextual": counterfactual_contextual_generator,
+            "detailed_writing": detailed_writing_generator,
             "experience": experience_generator,
             "general": general_generator,
             "joke": joke_generator,

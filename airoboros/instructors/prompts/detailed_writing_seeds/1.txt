@@ -1,0 +1,22 @@
+BEGINEXAMPLE
+Write the next section of a post-apocalyptic tale.
+
+Here's a summary of the previous chapter:
+In a desolate world ravaged by an unprecedented catastrophe, Kael, a young scavenger, has stumbled upon a seemingly abandoned facility. He encounters Seraphina, a mysterious woman with knowledge of the Old World. Together they discover hidden secrets, indicating that the world may still harbor pockets of civilization. Their relationship is marked by trust and suspicion, and as the chapter ends, they resolve to venture further into the unknown to find others like themselves.
+
+Requirements for the next section:
+1. Character Development of Kael and Seraphina:
+- Kael's Growth: Reveal more about Kael's life before the apocalypse, his fears, dreams, and determination to find his family. Show his developing skills, curiosity, and growing reliance on Seraphina.
+- Seraphina's Enigma: Introduce the ambiguity surrounding Seraphina's origins and true intentions. Build tension by hinting at secrets she's hiding, while also portraying her empathy and wisdom.
+
+2. Exploration of the Wasteland and the Unknown Facility:
+- The Wasteland: Describe the perilous journey across the wasteland, including encounters with mutated creatures, extreme weather, and remnants of the Old World.
+- The Unknown Facility: Develop the hidden facility they discover, filled with technological marvels, forgotten experiments, and cryptic messages hinting at the survival of humanity.
+
+3. Emergence of the Subplot: The Cryo Chamber:
+- Discovery: Have Kael and Seraphina discover a concealed cryogenic chamber with living humans in suspended animation, triggering new questions about the past and the existence of other survivors.
+- Decision: Capture their moral dilemma on whether to wake the sleepers, the potential dangers, and the hopes it brings for rebuilding civilization.
+- Clue: End with a clue that leads them to believe there are other facilities, setting the stage for their new quest.
+ENDEXAMPLE
+
+This example has 3 criteria sections (character development, exploration of..., emergence of subplot); the new task must have new, unique sections with different headings with interesting requirements.

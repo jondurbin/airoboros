@@ -1,7 +1,7 @@
 BEGINEXAMPLE
 Write the next section of a post-apocalyptic tale.
 
-Here's a summary of the previous chapter:
+Here's a summary of the previous section:
 In a desolate world ravaged by an unprecedented catastrophe, Kael, a young scavenger, has stumbled upon a seemingly abandoned facility. He encounters Seraphina, a mysterious woman with knowledge of the Old World. Together they discover hidden secrets, indicating that the world may still harbor pockets of civilization. Their relationship is marked by trust and suspicion, and as the chapter ends, they resolve to venture further into the unknown to find others like themselves.
 
 Requirements for the next section:

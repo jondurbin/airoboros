@@ -13,6 +13,15 @@ INNER_PART = (
     "Don't include any indication that this is only one part, e.g. 'to be continued..', etc., just output the {index} part."
 )
 FINAL_PART = "Generate the final part, which must include a mimimum of {quarter} words."
+COMBINE = (
+    "Below is an instruction, and the response to the instruction. "
+    "Please read the instruction very carefully, then read the response. "
+    "I would like you rewrite the response have a better flow to it. "
+    "Use a broader, more colorful and vibrant vocabulary, and add in interesting details. "
+    "Make sure all of the requirements are met, and remove any hallucinated factors not outlined in the requirements. "
+    "Most importantly, don't shorten the overall length.  The output must be at least as long as the original response.\n\n"
+    "Instruction: {instruction}\n\nResponse: {response}"
+)
 
 
 async def generate(instructor):
@@ -151,7 +160,7 @@ async def generate(instructor):
                         index="second", quarter=int((word_count * 1.3) / 4)
                     ),
                     messages=messages[-1],
-                    **api_params
+                    **api_params,
                 )
             )
         if not futures:
@@ -187,7 +196,7 @@ async def generate(instructor):
                         index="third", quarter=int((word_count * 1.3) / 4)
                     ),
                     messages=messages_next[-1],
-                    **api_params
+                    **api_params,
                 )
             )
         if not futures:
@@ -221,7 +230,7 @@ async def generate(instructor):
                 instructor.generate_response(
                     FINAL_PART.format(quarter=int((word_count * 1.3) / 4)),
                     messages=messages_final[-1],
-                    **api_params
+                    **api_params,
                 )
             )
         if not futures:
@@ -229,6 +238,8 @@ async def generate(instructor):
         responses = await asyncio.gather(*futures)
 
         # Now put everything together.
+        fluid_instructions = []
+        futures = []
         for idx in range(len(responses)):
             response = responses[idx]
             if not response or not response.strip():
@@ -238,9 +249,27 @@ async def generate(instructor):
                 if message["role"] == "assistant":
                     full_response.append(message["content"].strip())
             full_response.append(response)
+            fluid_instructions.append(successful_instructions[idx].strip())
+            futures.append(
+                instructor.generate_response(
+                    COMBINE.format(
+                        instruction=successful_instructions[idx],
+                        response="\n\n".join(full_response),
+                    ),
+                    **api_params,
+                )
+            )
+        if not futures:
+            continue
+        fluid_responses = await asyncio.gather(*futures)
+        for idx in range(len(futures)):
+            if not fluid_responses[idx] or not fluid_responses[idx].strip():
+                continue
+            apprx_word_count = len(fluid_responses[idx].split(" "))
             yield {
-                "instruction": successful_instructions[idx].strip(),
-                "response": "\n\n".join(full_response),
+                "instruction": fluid_instructions[idx].strip()
+                + f"\n\nYour response should be approximately {apprx_word_count} words.",
+                "response": fluid_responses[idx].strip(),
                 "category": "detailed_writing",
             }
             if instructor.instructor_counts["detailed_writing"] >= target_count:

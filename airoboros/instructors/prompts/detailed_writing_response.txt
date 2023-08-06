@@ -1,13 +1,15 @@
 {instruction}
 
-The response should be in {language}.
-
 {flesch}
 
-Be extremely loquacious, use colorful immersive language, and be sure to follow the requirements closely.
+All output text must be in {language}.
 
-Don't start with "Certainly!" or any intro sentence, just produce the desired output.
+The total output will be {word_count} words, but you will only output the first quarter, i.e. {quarter} words, and those {quarter} words need not satisfy all requirements - additional prompts will be made to complete the task with the previously generated content.
 
-Don't reference these requirements, just produce the desired output, i.e. there should be no reference to the requirements at all.
+Write the first quarter of the response, which must contain a minimum of {quarter} words.
 
-Before you generate a response, think silenty to yourself about how you would lengthen the response by including more detail and interesting information, to make sure your response is as comprehensive as possible.  Include between a minimum of 200 sentences in your response.
+Remember, this is only the first quarter, and the remaining sections will be asked for later.
+
+Don't try to add some sort of conclusion or wrap-up sentence or paragraph, because this is only the first quarter.  The output should end in such a way as to be easily and fluidly continued by a subsequent prompt, i.e. don't end with "And so, ..."
+
+Don't include any indication that this is only one quarter, e.g. 'to be continued..', etc., just output the first quarter.

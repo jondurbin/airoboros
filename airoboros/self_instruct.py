@@ -31,27 +31,6 @@ from langchain.embeddings import HuggingFaceEmbeddings
 # Defaults and constants.
 MAX_DOCSTORE_SIZE = 15000
 OPENAI_API_BASE_URL = "https://api.openai.com"
-MODEL_ENDPOINTS = {
-    "completions": [
-        "text-davinci-003",
-        "text-davinci-002",
-        "text-curie-001",
-        "text-babbage-001",
-        "text-ada-001",
-    ],
-    "chat_completions": [
-        "gpt-4",
-        "gpt-4-0314",
-        "gpt-4-32k",
-        "gpt-4-32k-0314",
-        "gpt-4-0613",
-        "gpt-4-32k-0613",
-        "gpt-3.5-turbo",
-        "gpt-3.5-turbo-0301",
-        "gpt-3.5-turbo-0613",
-        "gpt-3.5-turbo-16k-0613",
-    ],
-}
 READABILITY_HINT = "The output should be written in such a way as to have a Flesch-Kincaid readability score of 30 or lower - best understood by those with college education.  Only output the story - don't add any notes or information about Flesch-Kincaid scores."
 
 
@@ -177,16 +156,7 @@ class SelfInstructor:
             )
 
     def validate_model(self, model):
-        """Ensure the specified model is available, and configure the endpoint
-        to use accordingly (chat completions or completions).
-        """
-        if model in MODEL_ENDPOINTS["completions"]:
-            self._completions = True
-        elif model in MODEL_ENDPOINTS["chat_completions"]:
-            self._completions = False
-        else:
-            raise ValueError(f"Model is not currently supported: {model}")
-        # Ensure the model is authorized for this key.
+        """Ensure the specified model is available."""
         headers = {"Authorization": f"Bearer {self.openai_api_key}"}
         if self.organization_id:
             headers["OpenAI-Organization"] = self.organization_id
@@ -267,6 +237,19 @@ class SelfInstructor:
                 )
         return topics
 
+    @staticmethod
+    def load_template(path: str) -> str:
+        """Load a prompt template."""
+        if not os.path.exists(path):
+            path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "instructors",
+                "prompts",
+                path,
+            )
+        with open(path) as infile:
+            return infile.read()
+
     @backoff.on_exception(
         backoff.fibo,
         (
@@ -339,27 +322,27 @@ class SelfInstructor:
             logger.error(f"Error performing post: {ex}")
         return None
 
-    async def generate_response(self, instruction: str, **kwargs) -> str:
+    async def generate_response(
+        self, instruction: str, messages: List[Dict[str, Any]] = [], **kwargs
+    ) -> str:
         """Call OpenAI with the specified instruction and return the text response.
 
         :param instruction: The instruction to respond to.
         :type instruction: str
+
+        :param messages: Any previous messages/system prompt.
+        :type messages: List[Dict[str, Any]]
 
         :return: Response text.
         :rtype: str
         """
         filter_response = kwargs.pop("filter_response", True)
         model = kwargs.get("model", self.model)
-        completions = True if model in MODEL_ENDPOINTS["completions"] else False
-        path = "/v1/completions" if completions else "/v1/chat/completions"
+        path = "/v1/chat/completions"
         payload = {**kwargs}
         if "model" not in payload:
             payload["model"] = model
-        if completions:
-            payload["prompt"] = instruction
-            payload["max_tokens"] = 2000
-        else:
-            payload["messages"] = [{"role": "user", "content": instruction}]
+        payload["messages"] = messages + [{"role": "user", "content": instruction}]
         response = await self._post_no_exc(path, payload)
         if (
             not response
@@ -367,11 +350,7 @@ class SelfInstructor:
             or response["choices"][0]["finish_reason"] == "length"
         ):
             return None
-        text = None
-        if self._completions:
-            text = response["choices"][0]["text"]
-        else:
-            text = response["choices"][0]["message"]["content"]
+        text = response["choices"][0]["message"]["content"]
 
         if filter_response:
             for banned in self.response_filters:

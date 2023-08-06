@@ -5,6 +5,15 @@ import os
 import random
 from loguru import logger
 
+INNER_PART = (
+    "Now, generate the {index} part, which must include a minimum of {quarter} words. "
+    "Remember, this is only the {index} part, and the remaining sections will be asked for later. "
+    "Don't try to add some sort of conclusion or wrap-up sentence or paragraph, because this is only the {index} part. "
+    'The output for this section should end in such a way as to be easily and fluidly continued by a subsequent prompt, i.e. don\'t end with "And so, ... " '
+    "Don't include any indication that this is only one part, e.g. 'to be continued..', etc., just output the {index} part."
+)
+FINAL_PART = "Generate the final part, which must include a mimimum of {quarter} words."
+
 
 async def generate(instructor):
     """Generator for detailed writing training data."""
@@ -32,19 +41,13 @@ async def generate(instructor):
             seeds.append(infile.read())
     seed_index = 0
 
-    # Load the prompt template.
-    path = config.get("prompt_path", "detailed_writing.txt")
-    if not os.path.exists(path):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
-    with open(path) as infile:
-        template = infile.read()
-
-    # Load the response generating prompt template.
-    path = config.get("response_prompt_path", "detailed_writing_response.txt")
-    if not os.path.exists(path):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
-    with open(path) as infile:
-        response_template = infile.read()
+    # Load the prompt templates.
+    template = instructor.load_template(
+        config.get("prompt_path", "detailed_writing.txt")
+    )
+    response_template = instructor.load_template(
+        config.get("response_prompt_path", "detailed_writing_response.txt")
+    )
 
     # Load the topics.
     topics = instructor.get_instructor_topics(config)
@@ -70,8 +73,9 @@ async def generate(instructor):
     futures = []
     language = config.get("language") or instructor.language
     flesch = config.get("flesch") or instructor.default_flesch
+    word_count = config.get("word_count", 4000)
     while instructor.instructor_counts["detailed_writing"] < target_count:
-        # Generate the prompts.
+        # Generate a unique prompt to use.
         topic = topics[topic_index]
         topic_index += 1
         if topic_index >= len(topics):
@@ -90,6 +94,8 @@ async def generate(instructor):
         if len(futures) < batch_size:
             continue
 
+        # Once we have batch_size instruction prompts, we can generate responses,
+        # which are the actual instructions.
         instructions = []
         for instruction in await asyncio.gather(*futures):
             if not instruction or not instruction.strip():
@@ -102,24 +108,139 @@ async def generate(instructor):
             futures = []
             continue
 
-        # Generate the responses.
-        futures = [
-            instructor.generate_response(
-                response_template.format(
-                    instruction=instruction, flesch=flesch, language=language
-                ),
-                **api_params,
+        # Generate the first part of the response.
+        partitioned_instructions = [
+            response_template.format(
+                instruction=instruction,
+                flesch=flesch,
+                language=language,
+                word_count=int(word_count * 1.3),  # words != tokens, add buffer
+                quarter=int((word_count * 1.3) / 4),
             )
             for instruction in instructions
         ]
+        futures = [
+            instructor.generate_response(instruction, **api_params)
+            for instruction in partitioned_instructions
+        ]
         responses = await asyncio.gather(*futures)
+
+        # Generate the second part of the response.
+        messages = []
+        futures = []
+        original_instructions = []
+        for idx in range(len(responses)):
+            if not responses[idx] or not responses[idx].strip():
+                continue
+            original_instructions.append(instructions[idx])
+            messages.append(
+                [
+                    {
+                        "role": "user",
+                        "content": partitioned_instructions[idx],
+                    },
+                    {
+                        "role": "assistant",
+                        "content": responses[idx],
+                    },
+                ]
+            )
+            futures.append(
+                instructor.generate_response(
+                    INNER_PART.format(
+                        index="second", quarter=int((word_count * 1.3) / 4)
+                    ),
+                    messages=messages[-1],
+                    **api_params
+                )
+            )
+        if not futures:
+            continue
+
+        # Generate the next part.
+        responses = await asyncio.gather(*futures)
+        messages_next = []
+        futures = []
+        successful_instructions = []
+        for idx in range(len(responses)):
+            if not responses[idx] or not responses[idx].strip():
+                continue
+            successful_instructions.append(original_instructions[idx])
+            messages_next.append(
+                messages[idx]
+                + [
+                    {
+                        "role": "user",
+                        "content": INNER_PART.format(
+                            index="second", quarter=int((word_count * 1.3) / 4)
+                        ),
+                    },
+                    {
+                        "role": "assistant",
+                        "content": responses[idx],
+                    },
+                ]
+            )
+            futures.append(
+                instructor.generate_response(
+                    INNER_PART.format(
+                        index="third", quarter=int((word_count * 1.3) / 4)
+                    ),
+                    messages=messages_next[-1],
+                    **api_params
+                )
+            )
+        if not futures:
+            continue
+
+        # Generate the final section of the response.
+        responses = await asyncio.gather(*futures)
+        messages_final = []
+        futures = []
+        successful_instructions = []
+        for idx in range(len(responses)):
+            if not responses[idx] or not responses[idx].strip():
+                continue
+            successful_instructions.append(original_instructions[idx])
+            messages_final.append(
+                messages_next[idx]
+                + [
+                    {
+                        "role": "user",
+                        "content": INNER_PART.format(
+                            index="third", quarter=int((word_count * 1.3) / 4)
+                        ),
+                    },
+                    {
+                        "role": "assistant",
+                        "content": responses[idx],
+                    },
+                ]
+            )
+            futures.append(
+                instructor.generate_response(
+                    FINAL_PART.format(quarter=int((word_count * 1.3) / 4)),
+                    messages=messages_final[-1],
+                    **api_params
+                )
+            )
+        if not futures:
+            continue
+        responses = await asyncio.gather(*futures)
+
+        # Now put everything together.
         for idx in range(len(responses)):
             response = responses[idx]
             if not response or not response.strip():
                 continue
+            full_response = []
+            for message in messages_final[idx]:
+                if message["role"] == "assistant":
+                    full_response.append(message["content"].strip())
+            full_response.append(response)
             yield {
-                "instruction": instructions[idx].strip(),
-                "response": response.strip(),
+                "instruction": successful_instructions[idx].strip(),
+                "response": "\n\n".join(full_response),
                 "category": "detailed_writing",
             }
             if instructor.instructor_counts["detailed_writing"] >= target_count:

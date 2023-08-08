@@ -8,23 +8,21 @@ from loguru import logger
 from airoboros.instructors.chat_card import generate as generate_chat_card
 
 
-FIRST_MESSAGE_TEMPLATE = (
-    "As {name}, briefly start a conversation with me related to {topic}\n"
-)
+FIRST_MESSAGE_TEMPLATE = "As {name}, briefly start the conversation."
 DISCLAIMERS = (
     "Avoid any and all warnings, disclaimers, reminders, etc. that this is only roleplay. "
     'If you absolutely cannot avoid adding some type of warning/disclaimer/reminder/etc., it must be at the end of the output, prefixed with "REMINDER:"'
 )
 RULES = (
-    "You will only ever speak or emote on as the character specified in your system prompt. "
-    "Be sure to respond appropriately for a chat; try not to take up too much of the conversation, since there are others involved. "
-    "Don't be too aggreable. "
+    "You will only ever speak, emote, or story-write as {name}."
+    "Don't be too aggreable - act as the character, hold to their beliefs, don't just abruptly change your entire existence. "
     "If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply. "
     "Don't be repetitive.  Make sure you never repeat questions, or points already made.  Keep it intelligent and on track. "
     "Avoid making toasts, cheering, etc., or other type of verbiage that could indicate an attempt to wrap up the conversation. "
     'Never start any sentence with "Ah, ". '
-    "Never start by complementing or acknowleding the message, e.g. \"That's an interesting ...\""
-    "Never start any response with \"Indeed...\"."
+    'Never start by complementing or acknowleding the message, e.g. "That\'s an interesting ..."'
+    'Never start any response with "Indeed...".'
+    "{flesch}"
 )
 NON_USER_RULES = (
     "When the character refers to USER, USER's name is actually {user_name}. "
@@ -32,6 +30,7 @@ NON_USER_RULES = (
 FORMATTING = (
     "For all of your responses, any non-spoken actions (such as scratches head, nods in aggreement, etc.) must be surrounded by {action_delim} to denote actions. "
     'For all of your responses, the actual words spoken by the characters (but not actions) must be in quotes, e.g. "Hello", in order to differentiate spoken words from physical actions. '
+    "The response can also contain narrative, that is not the character's action or speech."
 )
 ADD_NEXT = 'After your response, you must add "NEXT: " plus the name of the character who would likely speak next, which would be one of: {next_names}'
 USER_FORMAT = (
@@ -40,6 +39,8 @@ USER_FORMAT = (
 )
 CONTINUE = "Keep the conversation going, naturally.  If it would be natural as the next part of the conversation, and fit with your character, {response_type}."
 RESPONSE_TYPES = [
+    "become completely fascinated and entirely absorbed by the topic",
+    "dive deep into the subject, with extraordinary detail; be immersive",
     "ask a follow-up question or ask for elaboration",
     "disagree, and argue with a counter-point",
     "agree with the sentiment",
@@ -109,65 +110,99 @@ async def generate_cards(instructor):
     return cards
 
 
+async def generate_setting(instructor, user_card, characters, topic, **api_params):
+    """Generate a setting to use for the chat."""
+    path = (
+        instructor.instructors["chat"].get("setting_prompt_path") or "chat_setting.txt"
+    )
+    prompt_template = instructor.load_template(path)
+    return await instructor.generate_response(
+        prompt_template.format(
+            characters="\n\n".join(
+                [
+                    f"{name}: {card['description']}"
+                    for name, card in {
+                        **characters,
+                        **{user_card["name"]: user_card},
+                    }.items()
+                ]
+            ),
+            topic=topic,
+        ),
+        **api_params,
+    )
+
+
 async def generate_first_message(
     instructor, user_card, characters, topic, **api_params
 ):
     """Generate the first message for the chat."""
     messages = {name: [] for name in list(characters) + ["USER"]}
-    training = []
+    flesch = (
+        instructor.instructors.get("chat", {}).get("flesch")
+        or instructor.default_flesch
+    )
     action_delim = random.choice(["*", "~", "`"])
     first_name = None
-    next_names = []
     all_names = list(characters) + ["USER"]
+    setting = await generate_setting(
+        instructor, user_card, characters, topic, **api_params
+    )
+    character_block = "\n\n".join(
+        [
+            f'{name}: {card["description"]}'
+            for name, card in {**characters, **{user_card["name"]: user_card}}.items()
+        ]
+    )
+    training = [
+        {
+            "role": "system",
+            "content": "\n".join(
+                [
+                    f"This is a chat between {len(all_names)} characters:",
+                    ", ".join(all_names),
+                    character_block,
+                    f"USER is also known as {user_card['name']}, and must be referred to with that name.",
+                    "\n",
+                    setting,
+                ]
+            ),
+        }
+    ]
+    logger.success(f"Generated the chat card:\n{training[0]['content']}")
     for name in all_names:
-        card = characters[name] if name != "USER" else user_card
         if not first_name:
             first_name = name
-        else:
-            next_names.append(name)
         others = list(set(all_names) - set([name]))
 
-        # For the training data, we'll be a little less verbose, and not
-        # include all of our rules, formatting, etc.
-        if name != "USER":
-            if not training:
-                training.append(
-                    {
-                        "name": "__system__",
-                        "content": "\n".join(
-                            [
-                                f"This is a chat between {len(all_names)} characters: "
-                                + ", ".join(all_names),
-                                f"USER is also known as {user_card['name']}, and must be referred to with that name.",
-                                card["name"] + ":",
-                                card["description"],
-                            ]
+        # Create the OpenAI messages to use for generating responses, which require some extra rules.
+        messages[name].append(
+            {
+                "role": "system",
+                "content": training[0]["content"]
+                + "\n"
+                + "\n".join(
+                    [
+                        "RULES:",
+                        RULES.format(
+                            flesch=flesch,
+                            name=user_card["name"] if name == "USER" else name,
                         ),
-                    }
-                )
-            else:
-                training[0]["content"] += (
-                    "\n\n" + card["name"] + ":\n" + card["description"]
-                )
-
-        # For OpenAI to return better results, we'll add the extra junk.
-        messages[name].append({"role": "system", "content": training[-1]["content"]})
-        messages[name][-1]["content"] += "\n".join(
-            [
-                "RULES:",
-                RULES,
-                "" if name == "USER" else NON_USER_RULES.format(user_name=user_card["name"]),
-                "" if name == "USER" else FORMATTING.format(action_delim=action_delim),
-                ADD_NEXT.format(next_names=json.dumps(others)),
-                DISCLAIMERS,
-            ]
+                        ""
+                        if name == "USER"
+                        else NON_USER_RULES.format(user_name=user_card["name"]),
+                        ""
+                        if name == "USER"
+                        else FORMATTING.format(action_delim=action_delim),
+                        ADD_NEXT.format(next_names=json.dumps(others)),
+                        DISCLAIMERS,
+                    ]
+                ),
+            }
         )
 
     # Format the prompt for the first message.
-    prompt = FIRST_MESSAGE_TEMPLATE.format(
-        name=first_name,
-        topic=json.dumps(topic),
-    )
+    prompt = FIRST_MESSAGE_TEMPLATE.format(name=first_name)
 
     # Generate an example message, which will help the AI to learn how
     # to represent the formatting (actions vs speech).
@@ -220,14 +255,19 @@ async def generate_chat(instructor, cards, topic, **api_params):
     current_name = next_name
     all_names = list(characters) + ["USER"]
     full_chat = [f"{first_name}: {messages[first_name][-1]['content']}"]
-    for idx in range(10):
+    flesch = (
+        instructor.instructors.get("chat", {}).get("flesch")
+        or instructor.default_flesch
+    )
+    target_turns = instructor.instructors.get("chat", {}).get("turn_count", 50)
+    while True:
         others = list(set(all_names) - set([current_name]))
 
         # Re-iterate the continuation and NEXT: instructions.
         messages[current_name][-1]["content"] += "\n" + "\n".join(
             [
                 "RULES:\nRemember, you must always stay in character.",
-                RULES,
+                RULES.format(flesch=flesch, name=current_name),
                 CONTINUE.format(response_type=random.choice(RESPONSE_TYPES)),
                 ADD_NEXT.format(next_names=json.dumps(others)),
             ]
@@ -259,8 +299,10 @@ async def generate_chat(instructor, cards, topic, **api_params):
         # Update training data.
         training.append(
             {
-                "name": current_name,
-                "content": response,
+                "role": "assistant" if current_name != "USER" else "user",
+                "content": f"{current_name}: {response}"
+                if current_name != "USER"
+                else response,
             }
         )
 
@@ -269,11 +311,20 @@ async def generate_chat(instructor, cards, topic, **api_params):
             messages[name][-1]["content"] += f"\n\n{response}"
         logger.success(f"{current_name}: {response}")
         current_name = next_name
-
-    print("FULL CHAT:\n" + "\n====\n".join(full_chat))
-    print(json.dumps(training, indent=2))
-
-    return None
+        if len(training) >= target_turns or (
+            current_name == "USER" and len(training) >= target_turns - 1
+        ):
+            logger.success(f"Reached {len(training)}, finished.")
+            break
+    merged_training = []
+    for idx in range(1, len(training)):
+        if training[idx]["name"] != "USER":
+            merged_training[-1][
+                "content"
+            ] += "\n{training[idx]['name']}: {training[idx]['content']}"
+        else:
+            merged_training.append(training[idx])
+    return merged_training
 
 
 async def generate(instructor):
@@ -283,6 +334,11 @@ async def generate(instructor):
         return
     card_config = instructor.instructors.get("chat_card", {})
     if not card_config:
+        return
+    target_count = instructor.instructors["chat"].get("count")
+    if target_count is None:
+        target_count = instructor.default_count
+    if not target_count:
         return
 
     # Load the character cards.
@@ -297,8 +353,17 @@ async def generate(instructor):
     api_params = {**instructor.api_params, **config.get("api_params", {})}
 
     # Start generating some chats.
-    chat = await generate_chat(
-        instructor, random.sample(cards, 3), topics[0], **api_params
-    )
-    raise Exception("goats")
-    yield chat
+    while instructor.instructor_counts["chat"] < target_count:
+        card_count = random.choice([2, 2, 2, 2, 2, 3, 3, 4, 5])
+        chat = await generate_chat(
+            instructor,
+            random.sample(cards, card_count),
+            topics[topic_index],
+            **api_params,
+        )
+        print(json.dumps(chat, indent=2))
+        break
+        yield chat
+        # topic_index += 1
+        # if topic_index >= len(topics):
+        #    topic_index = 0

@@ -84,7 +84,7 @@ class SelfInstructor:
             "temperature": float(api_params.get("temperature") or 0.7),
             "top_p": float(api_params.get("top_p") or 0.5),
             "frequency_penalty": float(api_params.get("frequency_penalty") or 0.0),
-            "presence_penalty": float(api_params.get("presence_penalty") or 2.0),
+            "presence_penalty": float(api_params.get("presence_penalty") or 0.0),
         }
         self.topic_prompt = raw_config["topic_prompt"].format(
             topic_avoidance=self.topic_avoidance

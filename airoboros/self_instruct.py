@@ -342,7 +342,9 @@ class SelfInstructor:
         payload = {**kwargs}
         if "model" not in payload:
             payload["model"] = model
-        payload["messages"] = messages + [{"role": "user", "content": instruction}]
+        payload["messages"] = messages
+        if instruction:
+            payload["messages"].append({"role": "user", "content": instruction})
         response = await self._post_no_exc(path, payload)
         if (
             not response
@@ -425,6 +427,7 @@ class SelfInstructor:
         """Run prompt generation and answer to completion."""
         from airoboros.instructors.agent import generate as agent_generator
         from airoboros.instructors.card import generate as card_generator
+        from airoboros.instructors.chat import generate as chat_generator
         from airoboros.instructors.coding import generate as coding_generator
         from airoboros.instructors.contextual import generate as contextual_generator
         from airoboros.instructors.cot import generate as cot_generator
@@ -452,6 +455,7 @@ class SelfInstructor:
         method_map = {
             "agent": agent_generator,
             "card": card_generator,
+            "chat": chat_generator,
             "coding": coding_generator,
             "contextual": contextual_generator,
             "cot": cot_generator,

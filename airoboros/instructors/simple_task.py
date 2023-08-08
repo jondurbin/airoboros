@@ -3,7 +3,13 @@ import os
 import re
 
 
-async def generate(instructor, category, filter_response=True, template_kwargs={}):
+async def generate(
+    instructor,
+    category,
+    filter_response=True,
+    only_instructions=False,
+    template_kwargs={},
+):
     """Generator for simple instruction response tasks (e.g. roleplay, wordgames)."""
     config = instructor.instructors.get(category)
     if not config:
@@ -77,16 +83,19 @@ async def generate(instructor, category, filter_response=True, template_kwargs={
             ):
                 continue
             instructions.append(instruction)
-            full_prompt = instruction
-            if response_prompt:
-                full_prompt = response_prompt.format(
-                    language=language, instruction=instruction, flesch=flesch
+            if only_instructions:
+                yield {"instruction": instruction}
+            else:
+                full_prompt = instruction
+                if response_prompt:
+                    full_prompt = response_prompt.format(
+                        language=language, instruction=instruction, flesch=flesch
+                    )
+                futures.append(
+                    instructor.generate_response(
+                        full_prompt, filter_response=filter_response, **api_params
+                    )
                 )
-            futures.append(
-                instructor.generate_response(
-                    full_prompt, filter_response=filter_response, **api_params
-                )
-            )
         if not futures:
             continue
         responses = await asyncio.gather(*futures)

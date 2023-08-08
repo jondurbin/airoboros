@@ -351,7 +351,6 @@ instructors:
     batch_size: 25
     min_docsearch_score: 0.25
 
-
   ##################################################################################
   # Multiple choice.
   multiple_choice:
@@ -362,12 +361,29 @@ instructors:
     min_docsearch_score: 0.1
     contextual_ratio: 0.2
 
-
   ##################################################################################
   # Detailed writing.
   detailed_writing:
     api_params:
       temperature: 1.0
-    batch_size: 4
+    batch_size: 3
     count: 100
     min_docsearch_score: 0.1
+
+  ##################################################################################
+  # Chat cards.
+  chat_card:
+    api_params:
+      temperature: 0.9
+    count: 16
+    batch_size: 4
+    min_docsearch_score: 0.1
+    output_dir: chat_cards
+
+  ##################################################################################
+  # Chats.
+  chat:
+    api_params:
+      temperature: 0.9
+    count: 5
+    max_rounds: 500

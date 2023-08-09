@@ -1,0 +1,12 @@
+Imagine a chat between the following characters:
+{characters}
+
+The setting should somehow, perhaps tangentially, relate to the topic: {topic}
+
+It doesn't need to be the main focus of the setting, but it should somehow be related or a small detail.
+
+Come up with an interesting, unique scenario involving these characters.
+
+Only create the setting for the scenario, as an introduction to a chat, but don't actually specify any character actions, what they might say, etc., just the setting.
+
+Don't start with "Sure" or other, similar sentences, just output the scenario.

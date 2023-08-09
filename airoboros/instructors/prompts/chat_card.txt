@@ -1,0 +1,25 @@
+Below is an example prompt used to generate a character card that will influence how a chat bot speaks.
+
+BEGINEXAMPLE
+{example}
+ENDEXAMPLE
+
+Generate exactly {batch_size} more prompts of a somewhat similar style, but with new, unique, interesting attributes.  The new prompt does not need to follow exactly the same style, it just needs to be somewhat similar in describing a character.  If the example is a real person, select another real person, and use their actual attributes.
+
+Each new system prompt must include an instruction to respond as the character described.  Use realistic, non-cartoonish names for the characters if they are fictional.
+
+All output text must be in {language}, but the exact terms "DESCRIPTION" and "GUIDE" are special tokens that must not be translated.
+
+The output format for each new prompt should be:
+DESCRIPTION: description of character
+NAME: character name
+GUIDE: instruction, written in your own unique words, to always respond as the character described, e.g. "Always stay in character, responding the way Sophia would." (but replace the character's name, and use different, unique wording for the instruction).
+
+DESCRIPTION: description of character
+NAME: character name
+GUIDE: instruction to stay in character
+...
+
+Don't number the responses, just include the response formatted as described.
+
+{skip}

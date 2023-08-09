@@ -84,7 +84,7 @@ class SelfInstructor:
             "temperature": float(api_params.get("temperature") or 0.7),
             "top_p": float(api_params.get("top_p") or 0.5),
             "frequency_penalty": float(api_params.get("frequency_penalty") or 0.0),
-            "presence_penalty": float(api_params.get("presence_penalty") or 2.0),
+            "presence_penalty": float(api_params.get("presence_penalty") or 0.0),
         }
         self.topic_prompt = raw_config["topic_prompt"].format(
             topic_avoidance=self.topic_avoidance
@@ -123,7 +123,8 @@ class SelfInstructor:
                     for line in infile.readlines():
                         task = json.loads(line)
                         self.instructor_counts[task.get("category", "general")] += 1
-                        docs.append(task["instruction"])
+                        if task["category"] != "chat":
+                            docs.append(task["instruction"])
                 logger.info(
                     f"Found {len(docs)} existing machine-generated instruction(s)."
                 )
@@ -322,27 +323,25 @@ class SelfInstructor:
             logger.error(f"Error performing post: {ex}")
         return None
 
-    async def generate_response(
-        self, instruction: str, messages: List[Dict[str, Any]] = [], **kwargs
-    ) -> str:
+    async def generate_response(self, instruction: str, **kwargs) -> str:
         """Call OpenAI with the specified instruction and return the text response.
 
         :param instruction: The instruction to respond to.
         :type instruction: str
 
-        :param messages: Any previous messages/system prompt.
-        :type messages: List[Dict[str, Any]]
-
         :return: Response text.
         :rtype: str
         """
+        messages = kwargs.pop("messages", None) or []
         filter_response = kwargs.pop("filter_response", True)
         model = kwargs.get("model", self.model)
         path = "/v1/chat/completions"
         payload = {**kwargs}
         if "model" not in payload:
             payload["model"] = model
-        payload["messages"] = messages + [{"role": "user", "content": instruction}]
+        payload["messages"] = messages
+        if instruction:
+            payload["messages"].append({"role": "user", "content": instruction})
         response = await self._post_no_exc(path, payload)
         if (
             not response
@@ -392,15 +391,16 @@ class SelfInstructor:
         """Persist a single item to the output file and docstore."""
         self.outfile.write(json.dumps(item) + "\n")
         self.outfile.flush()
-        self.docstores[-1].add_texts([item["instruction"]])
-        self.docstore_size += 1
+        if item["category"] != "chat":
+            self.docstores[-1].add_texts([item["instruction"]])
+            self.docstore_size += 1
+            if self.docstore_size >= MAX_DOCSTORE_SIZE:
+                logger.info("Initializing new docstore...")
+                self.docstores.append(
+                    Chroma.from_texts(["__initialize__"], self.embeddings)
+                )
+                self.docstore_size = 0
         self.instructor_counts[item["category"]] += 1
-        if self.docstore_size >= MAX_DOCSTORE_SIZE:
-            logger.info("Initializing new docstore...")
-            self.docstores.append(
-                Chroma.from_texts(["__initialize__"], self.embeddings)
-            )
-            self.docstore_size = 0
 
     async def run_instructor(self, category, method_map):
         """Run a single instructor, as an async task."""
@@ -413,8 +413,13 @@ class SelfInstructor:
         async for item in method_map[category](self):
             self.persist(item)
             running_total += 1
+            preview = None
+            if category != "chat":
+                preview = item["instruction"][:100]
+            else:
+                preview = item["chat"][0]["content"].splitlines()[0]
             logger.success(
-                f"Generated unique instruction [{category}, total={running_total}]: {item['instruction'][:100]}"
+                f"Generated unique instruction [{category}, total={running_total}]: {preview}"
             )
         delta = (datetime.datetime.now() - started_at).total_seconds()
         logger.success(
@@ -425,6 +430,7 @@ class SelfInstructor:
         """Run prompt generation and answer to completion."""
         from airoboros.instructors.agent import generate as agent_generator
         from airoboros.instructors.card import generate as card_generator
+        from airoboros.instructors.chat import generate as chat_generator
         from airoboros.instructors.coding import generate as coding_generator
         from airoboros.instructors.contextual import generate as contextual_generator
         from airoboros.instructors.cot import generate as cot_generator
@@ -452,6 +458,7 @@ class SelfInstructor:
         method_map = {
             "agent": agent_generator,
             "card": card_generator,
+            "chat": chat_generator,
             "coding": coding_generator,
             "contextual": contextual_generator,
             "cot": cot_generator,

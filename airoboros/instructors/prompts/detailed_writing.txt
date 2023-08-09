@@ -1,4 +1,4 @@
-I would like you to help me create another example of an detailed writing task.  Don't actually respond to the example task, just create a new task.
+I would like you to help me create another example of a detailed writing task.  Don't actually respond to the example task, just create a new task.
 
 The example prompt is between "BEGINEXAMPLE" and "ENDEXAMPLE".  Any details following "ENDEXAMPLE" are requirements for your output, and must not be included or referenced in any way in the new tasks.
 

@@ -39,6 +39,7 @@ FORMATTING = """
 Actions the character performs must be differentiated from spoken words and general narration.
 Actions must therefore be surround by {action_delim}, e.g. {action_delim}she slowly lifts her gaze{action_delim}
 Keep the actions fairly succint and lowercase, and combine any immediately adjacent actions.
+Characters must avoid repeating actions.
 Actions will not include any references to the actor or include "I [some action]".
 For example, instead of {action_delim}I raise an eyebrow{action_delim}, the action would be {action_delim}raises an eyebrow{action_delim}.
 Never start the action with "I ..."

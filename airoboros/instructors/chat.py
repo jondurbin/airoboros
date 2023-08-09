@@ -4,41 +4,52 @@ import glob
 import hashlib
 import json
 import random
+from difflib import get_close_matches
 from loguru import logger
 from airoboros.instructors.chat_card import generate as generate_chat_card
 
 
 FIRST_MESSAGE_TEMPLATE = "As {name}, briefly start the conversation."
-DISCLAIMERS = (
-    "Avoid any and all warnings, disclaimers, reminders, etc. that this is only roleplay. "
-    'If you absolutely cannot avoid adding some type of warning/disclaimer/reminder/etc., it must be at the end of the output, prefixed with "REMINDER:"'
-)
-RULES = (
-    "You will only ever speak, emote, or story-write as {name}."
-    "Don't be too aggreable - act as the character, hold to their beliefs, don't just abruptly change your entire existence. "
-    "If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply. "
-    "Don't be repetitive.  Make sure you never repeat questions, or points already made.  Keep it intelligent and on track. "
-    "Avoid making toasts, cheering, etc., or other type of verbiage that could indicate an attempt to wrap up the conversation. "
-    'Never start any sentence with "Ah, ". '
-    'Never start by complementing or acknowleding the message, e.g. "That\'s an interesting ..."'
-    'Never start any response with "Indeed...".'
-    "{flesch}"
-)
-NON_USER_RULES = (
-    "When the character refers to USER, USER's name is actually {user_name}. "
-)
-FORMATTING = (
-    "For all of your responses, any non-spoken actions (such as scratches head, nods in aggreement, etc.) must be surrounded by {action_delim} to denote actions. "
-    'For all of your responses, the actual words spoken by the characters (but not actions) must be in quotes, e.g. "Hello", in order to differentiate spoken words from physical actions. '
-    "The response can also contain narrative, that is not the character's action or speech."
-)
-ADD_NEXT = 'After your response, you must add "NEXT: " plus the name of the character who would likely speak next, which would be one of: {next_names}'
-USER_FORMAT = (
-    "Don't add quotes around your spoken words. "
-    "Don't prefix your response with your name, just generate the response in character. "
-)
-CONTINUE = "Keep the conversation going, naturally.  If it would be natural as the next part of the conversation, and fit with your character, {response_type}."
-RESPONSE_TYPES = [
+DISCLAIMERS = """
+Avoid any and all warnings, disclaimers, reminders, etc. that this is only roleplay.
+If you absolutely cannot avoid adding some type of warning/disclaimer/reminder/etc., it must be at the end of the output, prefixed with "REMINDER:"
+"""
+RULES = """
+You will only ever speak, emote, or narrate as {name}.
+Don't be too aggreable - act as the character, hold to their beliefs, don't just abruptly change your entire existence.
+If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply.
+Don't be repetitive.  Make sure you never repeat questions, or points already made.
+Keep it intelligent and on track.
+Avoid making toasts, cheering, etc., or other type of verbiage that could indicate an attempt to wrap up the conversation.
+Never start any sentence with "Ah, ".
+Never start by complementing or acknowleding the message, e.g. "That\'s an interesting ..."
+Never start any response with "Indeed...".
+Never speak in the third person or make a reference to your character's name in the response.
+It is clear that you are the one performing the action/speaking, so you must never reference your character's name.
+{flesch}
+"""
+NON_USER_RULES = """
+When the character refers to USER, USER's name is actually {user_name}.
+"""
+FORMATTING = """
+The output must read like a roleplay chat, not a novel.
+Actions the character performs must be differentiated from spoken words and general narration.
+Actions must therefore be surround by {action_delim}, e.g. {action_delim}she slowly lifts her gaze{action_delim}
+Keep the actions fairly succint and lowercase, and combine any immediately adjacent actions.
+Actions will not include a references to the actor or include "I [action]", e.g. {action_delim}I raise an eyebrow{action_delim} must instead be written as {action_delim}raises an eyebrow{action_delim}.
+Words spoken by the character must be differentiated from actions and general narration.
+Words spoken must therefore be in quotes, i.e. "[words spoken]"
+General narration, that isn't a specific action or spoken word, must not be quoted or surrounded by {action_delim}.
+General narration formatting should be used for general descriptions of the scene/backstory/etc, but not actions or spoken words.
+"""
+ADD_NEXT = """
+After your response, you must add "NEXT: " plus the name of the character who would likely speak next, from the following list: {next_names}
+"""
+CONTINUE = """
+Keep the conversation going, naturally.
+If it would be natural as the next part of the conversation, and fit with your character, {conv_turn}.
+"""
+CONV_TURNS = [
     "become completely fascinated and entirely absorbed by the topic",
     "dive deep into the subject, with extraordinary detail; be immersive",
     "ask a follow-up question or ask for elaboration",
@@ -53,20 +64,32 @@ RESPONSE_TYPES = [
     "use a metaphor or analogy to explain a point",
     "express confusion or ask for clarification",
     "remain silent, offering a moment of pause or contemplation",
+    "ask about one of the other character's past, interests, or other personal information",
 ]
 
 
-def get_next_name(response):
+def get_next_name(response, current_name, user_name, names):
     """ "Extract the next character from the response."""
     # We'll also take this opportunity to remove any disclaimers.
     response = response.split("REMINDER:")[0].strip()
     response = response.split("RULES:")[0].strip()
-    match = re.search(r"(NEXT:\s*\"?([^\n]+)\"?\s*?)", response)
+    match = re.search(r"(NEXT:\s*([^\n]+))", response)
     if not match:
         logger.warning(f"Didn't generate NEXT target: {response}")
         return None, None
     response = response.replace(match.group(1), "").strip()
-    return response, match.group(2).strip()
+    name = match.group(2).strip().replace('"', "")
+    if response.startswith(f"{current_name}:"):
+        response = response[len(current_name) + 1 :].lstrip()
+
+    # Handle any misspellings or 's, etc. in case the name doesn't match.
+    if name == user_name:
+        name = "USER"
+    elif name not in names:
+        matches = get_close_matches(name, names)
+        if not matches:
+            name = random.choice(names)
+    return response, name
 
 
 async def generate_cards(instructor):
@@ -98,7 +121,7 @@ async def generate_cards(instructor):
             filename = hashlib.md5(description.encode()).hexdigest() + ".json"
             card = {
                 "description": description,
-                "stay_on_topic": item["response"],
+                "stay_in_character": item["response"],
                 "name": name,
             }
             with open(os.path.join(cards_dir, filename), "w") as outfile:
@@ -142,7 +165,8 @@ async def generate_first_message(
         instructor.instructors.get("chat", {}).get("flesch")
         or instructor.default_flesch
     )
-    action_delim = random.choice(["*", "~", "`"])
+    # action_delim = random.choice(["*", "~", "`", None])
+    action_delim = "~"
     first_name = None
     all_names = list(characters) + ["USER"]
     setting = await generate_setting(
@@ -150,32 +174,40 @@ async def generate_first_message(
     )
     character_block = "\n\n".join(
         [
-            f'{name}: {card["description"]}'
+            f'{name}: {card["description"].strip()}'
             for name, card in {**characters, **{user_card["name"]: user_card}}.items()
         ]
     )
     training = [
         {
             "role": "system",
-            "content": "\n".join(
+            "content": "\n\n".join(
                 [
-                    f"This is a chat between {len(all_names)} characters:",
-                    ", ".join(all_names),
+                    f"This is a chat between {len(all_names)} characters: "
+                    + ", ".join(all_names),
                     character_block,
                     f"USER is also known as {user_card['name']}, and must be referred to with that name.",
-                    "\n",
-                    setting,
+                    f"Setting for the chat:\n{setting}\nEnd of setting.",
                 ]
             ),
         }
     ]
     logger.success(f"Generated the chat card:\n{training[0]['content']}")
+    formatting = ""
+    if action_delim:
+        formatting = FORMATTING.format(action_delim=action_delim)
+
     for name in all_names:
         if not first_name:
             first_name = name
         others = list(set(all_names) - set([name]))
 
         # Create the OpenAI messages to use for generating responses, which require some extra rules.
+        hint = (
+            characters[name]["stay_in_character"]
+            if name != "USER"
+            else user_card["stay_in_character"]
+        )
         messages[name].append(
             {
                 "role": "system",
@@ -188,14 +220,16 @@ async def generate_first_message(
                             flesch=flesch,
                             name=user_card["name"] if name == "USER" else name,
                         ),
-                        ""
-                        if name == "USER"
-                        else NON_USER_RULES.format(user_name=user_card["name"]),
-                        ""
-                        if name == "USER"
-                        else FORMATTING.format(action_delim=action_delim),
+                        formatting,
+                        (
+                            ""
+                            if name == "USER"
+                            else NON_USER_RULES.format(user_name=user_card["name"])
+                        ),
                         ADD_NEXT.format(next_names=json.dumps(others)),
                         DISCLAIMERS,
+                        hint,
+                        "Remember to always follow the specified formatting rules, regarding differentiation between spoken words, actions, and general narration.",
                     ]
                 ),
             }
@@ -213,9 +247,9 @@ async def generate_first_message(
         **api_params,
     )
     messages[first_name].append({"role": "user", "content": prompt})
-    example_message, next_name = get_next_name(example_message)
-    if next_name == user_card["name"]:
-        next_name = "USER"
+    example_message, next_name = get_next_name(
+        example_message, first_name, user_card["name"], all_names
+    )
     if not example_message or not example_message.strip():
         return None
 
@@ -249,7 +283,6 @@ async def generate_chat(instructor, cards, topic, **api_params):
     training, messages, first_name, next_name = await generate_first_message(
         instructor, user_card, characters, topic
     )
-    messages["USER"][0]["content"] += "\n" + USER_FORMAT
 
     # Iterate until we've reached our target turn count.
     current_name = next_name
@@ -268,7 +301,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
             [
                 "RULES:\nRemember, you must always stay in character.",
                 RULES.format(flesch=flesch, name=current_name),
-                CONTINUE.format(response_type=random.choice(RESPONSE_TYPES)),
+                CONTINUE.format(conv_turn=random.choice(CONV_TURNS)),
                 ADD_NEXT.format(next_names=json.dumps(others)),
             ]
         )
@@ -280,9 +313,9 @@ async def generate_chat(instructor, cards, topic, **api_params):
             filter_response=False,
             **api_params,
         )
-        response, next_name = get_next_name(response)
-        if next_name == user_card["name"]:
-            next_name = "USER"
+        response, next_name = get_next_name(
+            response, current_name, user_card["name"], all_names
+        )
         if not response or not response.strip():
             logger.error("No chat continuation resonse!")
             break
@@ -316,12 +349,15 @@ async def generate_chat(instructor, cards, topic, **api_params):
         ):
             logger.success(f"Reached {len(training)}, finished.")
             break
-    merged_training = []
+
+    # Squash non-user responses.
+    merged_training = [training[0]]
     for idx in range(1, len(training)):
-        if training[idx]["name"] != "USER":
-            merged_training[-1][
-                "content"
-            ] += "\n{training[idx]['name']}: {training[idx]['content']}"
+        if (
+            training[idx]["role"] == "assistant"
+            and training[idx - 1]["role"] == "assistant"
+        ):
+            merged_training[-1]["content"] += "\n" + training[idx]["content"]
         else:
             merged_training.append(training[idx])
     return merged_training
@@ -354,13 +390,18 @@ async def generate(instructor):
 
     # Start generating some chats.
     while instructor.instructor_counts["chat"] < target_count:
-        card_count = random.choice([2, 2, 2, 2, 2, 3, 3, 4, 5])
+        # Select a random number of characters.
+        count_options = [2, 3, 4, 5]
+        count_weights = [0.7, 0.15, 0.1, 0.05]
+        card_count = random.choices(count_options, count_weights)[0]
+
         chat = await generate_chat(
             instructor,
             random.sample(cards, card_count),
             topics[topic_index],
             **api_params,
         )
+
         print(json.dumps(chat, indent=2))
         break
         yield chat

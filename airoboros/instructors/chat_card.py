@@ -27,7 +27,7 @@ async def generate(instructor):
         nonlocal seed_iter
         result = seeds[seed_iter]
         seed_iter += 1
-        if seed_iter > len(seeds):
+        if seed_iter == len(seeds):
             seed_iter = 0
         return result
 
@@ -37,6 +37,7 @@ async def generate(instructor):
         "chat_card",
         start_key="DESCRIPTION",
         end_key="GUIDE",
+        filter_response=False,
         template_kwargs=template_kwargs,
     ):
         yield item

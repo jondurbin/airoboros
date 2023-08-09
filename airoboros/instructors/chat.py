@@ -15,12 +15,15 @@ Avoid any and all warnings, disclaimers, reminders, etc. that this is only rolep
 If you absolutely cannot avoid adding some type of warning/disclaimer/reminder/etc., it must be at the end of the output, prefixed with "REMINDER:"
 """
 RULES = """
-You will only ever speak, emote, or narrate as {name}.
-Don't be too aggreable - act as the character, hold to their beliefs, don't just abruptly change your entire existence.
+The output must read like a roleplay chat, not a novel.
+Give interesting, detailed, loquacious responses with several sentences, unless you are asked a simple, direct question.
+Use normal ascii punctuation/special characters instead of utf-8.
+You are {name}.  You will only ever speak, emote, or narrate as {name}.  You will never add responses, actions, etc. on behalf of other characters.
+Don't be too aggreable - act as the character, hold to their beliefs, don't just abruptly change your entire philosophy.
 If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply.
 Don't be repetitive.  Make sure you never repeat questions, or points already made.
-Keep it intelligent and on track.
 Avoid making toasts, cheering, etc., or other type of verbiage that could indicate an attempt to wrap up the conversation.
+Never start your response with an acknowedgement of the input, such as "Indeed, the idea of [..] is intriguing."
 Never start any sentence with "Ah, ".
 Never start by complementing or acknowleding the message, e.g. "That\'s an interesting ..."
 Never start any response with "Indeed...".
@@ -29,14 +32,16 @@ It is clear that you are the one performing the action/speaking, so you must nev
 {flesch}
 """
 NON_USER_RULES = """
+All characters should speak in roughly equal quantities, however be sure to include USER slightly more often.
 When the character refers to USER, USER's name is actually {user_name}.
 """
 FORMATTING = """
-The output must read like a roleplay chat, not a novel.
 Actions the character performs must be differentiated from spoken words and general narration.
 Actions must therefore be surround by {action_delim}, e.g. {action_delim}she slowly lifts her gaze{action_delim}
 Keep the actions fairly succint and lowercase, and combine any immediately adjacent actions.
-Actions will not include a references to the actor or include "I [action]", e.g. {action_delim}I raise an eyebrow{action_delim} must instead be written as {action_delim}raises an eyebrow{action_delim}.
+Actions will not include any references to the actor or include "I [some action]".
+For example, instead of {action_delim}I raise an eyebrow{action_delim}, the action would be {action_delim}raises an eyebrow{action_delim}.
+Never start the action with "I ..."
 Words spoken by the character must be differentiated from actions and general narration.
 Words spoken must therefore be in quotes, i.e. "[words spoken]"
 General narration, that isn't a specific action or spoken word, must not be quoted or surrounded by {action_delim}.
@@ -44,27 +49,25 @@ General narration formatting should be used for general descriptions of the scen
 """
 ADD_NEXT = """
 After your response, you must add "NEXT: " plus the name of the character who would likely speak next, from the following list: {next_names}
+Be sure to actually include a response too, not just the NEXT token.
 """
 CONTINUE = """
-Keep the conversation going, naturally.
-If it would be natural as the next part of the conversation, and fit with your character, {conv_turn}.
+Keep the conversation going in a natural, flowing way; {conv_turn}."
 """
 CONV_TURNS = [
-    "become completely fascinated and entirely absorbed by the topic",
+    "become completely fascinated and entirely absorbed by topic being discussed",
     "dive deep into the subject, with extraordinary detail; be immersive",
     "ask a follow-up question or ask for elaboration",
     "disagree, and argue with a counter-point",
-    "agree with the sentiment",
-    "change the subject, don't ask to change the subject just do so",
+    "change the subject to {topic} - don't ask to change the subject, just do it",
+    "discuss or question how the current conversation might relate to {topic}",
     "offer an anecdote or personal experience",
     "make a joke or use humor to lighten the mood",
     "provide information or clarify a point",
-    "reflect on the topic, sharing a new perspective",
-    "compliment or praise the speaker",
+    "share a new, personal perspective on the subject at hand",
     "use a metaphor or analogy to explain a point",
     "express confusion or ask for clarification",
-    "remain silent, offering a moment of pause or contemplation",
-    "ask about one of the other character's past, interests, or other personal information",
+    "ask about one of the other character's history/story, interests, or other personal information",
 ]
 
 
@@ -74,13 +77,27 @@ def get_next_name(response, current_name, user_name, names):
     response = response.split("REMINDER:")[0].strip()
     response = response.split("RULES:")[0].strip()
     match = re.search(r"(NEXT:\s*([^\n]+))", response)
+    name = "USER"
     if not match:
         logger.warning(f"Didn't generate NEXT target: {response}")
-        return None, None
-    response = response.replace(match.group(1), "").strip()
-    name = match.group(2).strip().replace('"', "")
+        if current_name == "USER":
+            name = random.choice(list(set(names) - set(["USER"])))
+    else:
+        response = response.replace(match.group(1), "").strip()
+        name = match.group(2).strip().replace('"', "")
     if response.startswith(f"{current_name}:"):
         response = response[len(current_name) + 1 :].lstrip()
+    response = response.replace("USER", user_name)
+
+    # Clean up any hallucinated responses on behalf of other names.
+    other_names = set(names) - set([current_name])
+    if current_name not in ("USER", user_name):
+        other_names.add(user_name)
+        other_names.add("USER")
+    other_names_re = (
+        "\n(" + "|".join([str(re.escape(name)) for name in other_names]) + "):.*"
+    )
+    response = re.sub(other_names_re, "", response, re.DOTALL)
 
     # Handle any misspellings or 's, etc. in case the name doesn't match.
     if name == user_name:
@@ -106,6 +123,9 @@ async def generate_cards(instructor):
             with open(str(path)) as infile:
                 cards.append(json.loads(infile.read()))
 
+    # Prevent duplicate names.
+    names = set([card["name"] for card in cards])
+
     # Generate until we reach the target count.
     card_count = card_config.get("count", 100)
     if len(cards) < card_count:
@@ -117,6 +137,10 @@ async def generate_cards(instructor):
                 logger.warning("No name generated in card!")
                 continue
             name = match.group(2)
+            if name in names:
+                logger.warning(f"Skipping duplicate name: {name}")
+                continue
+            names.add(name)
             description = description.replace(match.group(1), "").strip()
             filename = hashlib.md5(description.encode()).hexdigest() + ".json"
             card = {
@@ -254,7 +278,9 @@ async def generate_first_message(
         return None
 
     # Add the example/first message, to the training data.
-    training[0]["content"] += "\n\n" + f"{first_name}: {example_message}"
+    training[0]["content"] += (
+        "\n\nStart of the conversation:\n" + f"{first_name}: {example_message}"
+    )
 
     # Update all of the other characters' messages with the first response.
     logger.success(
@@ -265,7 +291,7 @@ async def generate_first_message(
         messages[name].append(
             {
                 "role": "user",
-                "content": example_message,
+                "content": f"{first_name}: {example_message}",
             }
         )
     return training, messages, first_name, next_name
@@ -287,16 +313,23 @@ async def generate_chat(instructor, cards, topic, **api_params):
     # Iterate until we've reached our target turn count.
     current_name = next_name
     all_names = list(characters) + ["USER"]
-    full_chat = [f"{first_name}: {messages[first_name][-1]['content']}"]
     flesch = (
         instructor.instructors.get("chat", {}).get("flesch")
         or instructor.default_flesch
     )
-    target_turns = instructor.instructors.get("chat", {}).get("turn_count", 50)
+    target_turns = instructor.instructors["chat"].get("turn_count") or 50
+    topics = instructor.get_instructor_topics(instructor.instructors["chat"])
     while True:
         others = list(set(all_names) - set([current_name]))
 
-        # Re-iterate the continuation and NEXT: instructions.
+        # Continue the conversation, occasionally injecting random turns and topic changes.
+        next_turn = random.choice(CONV_TURNS)
+        if "{topic}" in next_turn:
+            change_topic = random.choice(topics)
+            while topic == change_topic:
+                change_topic = random.choice(topics)
+            next_turn = next_turn.format(topic=json.dumps(change_topic))
+
         messages[current_name][-1]["content"] += "\n" + "\n".join(
             [
                 "RULES:\nRemember, you must always stay in character.",
@@ -309,17 +342,22 @@ async def generate_chat(instructor, cards, topic, **api_params):
         # Generate the response with the accumulated content from other responses.
         response = await instructor.generate_response(
             None,
-            messages[current_name],
+            messages=messages[current_name],
             filter_response=False,
             **api_params,
         )
+
+        # We'll remove the re-iterated rules from the prompt to reduce token usage.
+        messages[current_name][-1]["content"] = (
+            messages[current_name][-1]["content"].split("RULES:")[0].strip()
+        )
+
         response, next_name = get_next_name(
             response, current_name, user_card["name"], all_names
         )
         if not response or not response.strip():
             logger.error("No chat continuation resonse!")
             break
-        full_chat.append(f"{current_name}: {response}")
 
         # Update the current character's message history.
         messages[current_name].append(
@@ -330,18 +368,21 @@ async def generate_chat(instructor, cards, topic, **api_params):
         )
 
         # Update training data.
-        training.append(
-            {
-                "role": "assistant" if current_name != "USER" else "user",
-                "content": f"{current_name}: {response}"
-                if current_name != "USER"
-                else response,
-            }
-        )
+        if current_name != "USER" and training[-1]["role"] in ("system", "assistant"):
+            training[-1]["content"] += f"\n\n{current_name}: {response}"
+        else:
+            training.append(
+                {
+                    "role": "assistant" if current_name != "USER" else "user",
+                    "content": f"{current_name}: {response}"
+                    if current_name != "USER"
+                    else response,
+                }
+            )
 
         # Append this output to the other character's message history.
         for name in others:
-            messages[name][-1]["content"] += f"\n\n{response}"
+            messages[name][-1]["content"] += f"\n\n{current_name}: {response}"
         logger.success(f"{current_name}: {response}")
         current_name = next_name
         if len(training) >= target_turns or (
@@ -349,18 +390,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
         ):
             logger.success(f"Reached {len(training)}, finished.")
             break
-
-    # Squash non-user responses.
-    merged_training = [training[0]]
-    for idx in range(1, len(training)):
-        if (
-            training[idx]["role"] == "assistant"
-            and training[idx - 1]["role"] == "assistant"
-        ):
-            merged_training[-1]["content"] += "\n" + training[idx]["content"]
-        else:
-            merged_training.append(training[idx])
-    return merged_training
+    return training
 
 
 async def generate(instructor):
@@ -394,7 +424,6 @@ async def generate(instructor):
         count_options = [2, 3, 4, 5]
         count_weights = [0.7, 0.15, 0.1, 0.05]
         card_count = random.choices(count_options, count_weights)[0]
-
         chat = await generate_chat(
             instructor,
             random.sample(cards, card_count),
@@ -402,9 +431,8 @@ async def generate(instructor):
             **api_params,
         )
 
-        print(json.dumps(chat, indent=2))
-        break
-        yield chat
-        # topic_index += 1
-        # if topic_index >= len(topics):
-        #    topic_index = 0
+        # And finally, we'll need to convert our chat into individual training instructions.
+        yield {"category": "chat", "chat": chat}
+        topic_index += 1
+        if topic_index >= len(topics):
+            topic_index = 0

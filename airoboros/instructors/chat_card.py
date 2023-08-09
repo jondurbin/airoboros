@@ -3,7 +3,7 @@ import os
 from airoboros.instructors.inline_qa import generate as generate_inline
 
 
-async def generate(instructor):
+async def generate(instructor, skip):
     """Generator for chat card training data."""
     config = instructor.instructors.get("chat_card", {})
     if not config:
@@ -31,7 +31,7 @@ async def generate(instructor):
             seed_iter = 0
         return result
 
-    template_kwargs = {"example": get_example}
+    template_kwargs = {"example": get_example, "skip": skip}
     async for item in generate_inline(
         instructor,
         "chat_card",

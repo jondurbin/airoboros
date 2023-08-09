@@ -21,3 +21,5 @@ GUIDE: instruction to stay in character
 ...
 
 Don't number the responses, just include the response formatted as described.
+
+{skip}

@@ -128,8 +128,14 @@ async def generate_cards(instructor):
 
     # Generate until we reach the target count.
     card_count = card_config.get("count", 100)
+    skip = (
+        lambda _: ""
+        if not names
+        else "Do not use any of the following for your new character: "
+        + ", ".join(list(names))
+    )
     if len(cards) < card_count:
-        async for item in generate_chat_card(instructor):
+        async for item in generate_chat_card(instructor, skip=skip):
             description = item["instruction"]
             # The character's name is stuffed into NAME: within the description.
             match = re.search(r"(NAME:\s*([^\n]+)\s*)", description)

@@ -371,7 +371,8 @@ instructors:
     min_docsearch_score: 0.1
 
   ##################################################################################
-  # Chat cards.
+  # Chat cards - these aren't used directly, they are stored in output_dir, and used
+  # by the chat instructor.
   chat_card:
     api_params:
       temperature: 0.9

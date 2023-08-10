@@ -19,9 +19,11 @@ The output must read like a roleplay chat, not a novel.
 Give interesting, detailed, loquacious responses with several sentences, unless you are asked a simple, direct question.
 Use normal ascii punctuation/special characters instead of utf-8.
 You are {name}.  You will only ever speak, emote, or narrate as {name}.  You will never add responses, actions, etc. on behalf of other characters.
-Don't be too aggreable - act as the character, hold to their beliefs, don't just abruptly change your entire philosophy.
+Don't be too aggreable - act as the character, hold to their beliefs, mood, etc., don't just abruptly change your entire philosophy.
+Tune down your normal sunny disposition - not every conversation is cheery and fun.
 If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply.
 Don't be repetitive.  Make sure you never repeat questions, or points already made.
+You must not repeat phrases or actions that have already appeared in the conversation.
 Avoid making toasts, cheering, etc., or other type of verbiage that could indicate an attempt to wrap up the conversation.
 Never start your response with an acknowedgement of the input, such as "Indeed, the idea of [..] is intriguing."
 Never start any sentence with "Ah, ".
@@ -34,6 +36,7 @@ It is clear that you are the one performing the action/speaking, so you must nev
 NON_USER_RULES = """
 All characters should speak in roughly equal quantities, however be sure to include USER slightly more often.
 When the character refers to USER, USER's name is actually {user_name}.
+Your response should be a minimum of 200 words - give long, detailed, immersive, colorful, insightful, and intelligent responses, and be sure to re-read the system prompt and follow the guidance and chat setting provided therein.
 """
 FORMATTING = """
 Actions the character performs must be differentiated from spoken words and general narration.
@@ -72,7 +75,7 @@ CONV_TURNS = [
 ]
 
 
-def get_next_name(response, current_name, user_name, names):
+def parse_response(response, current_name, user_name, names, action_delim):
     """ "Extract the next character from the response."""
     # We'll also take this opportunity to remove any disclaimers.
     response = response.split("REMINDER:")[0].strip()
@@ -96,9 +99,16 @@ def get_next_name(response, current_name, user_name, names):
         other_names.add(user_name)
         other_names.add("USER")
     other_names_re = (
-        "\n(" + "|".join([str(re.escape(name)) for name in other_names]) + "):.*"
+        "\n(" + "|".join([str(re.escape(name)) for name in other_names]) + "):"
     )
-    response = re.sub(other_names_re, "", response, re.DOTALL)
+    response = re.split(other_names_re, response)[0]
+
+    # Cleanup stray action delimiters.
+    response = re.sub(
+        f'({re.escape(action_delim)})([\\.,\\s-]*){re.escape(action_delim)}\\s*"',
+        r'\1 "',
+        response,
+    )
 
     # Handle any misspellings or 's, etc. in case the name doesn't match.
     if name == user_name:
@@ -196,8 +206,7 @@ async def generate_first_message(
         instructor.instructors.get("chat", {}).get("flesch")
         or instructor.default_flesch
     )
-    # action_delim = random.choice(["*", "~", "`", None])
-    action_delim = "~"
+    action_delim = random.choice(["*", "~", "`"])
     first_name = None
     all_names = list(characters) + ["USER"]
     setting = await generate_setting(
@@ -224,10 +233,7 @@ async def generate_first_message(
         }
     ]
     logger.success(f"Generated the chat card:\n{training[0]['content']}")
-    formatting = ""
-    if action_delim:
-        formatting = FORMATTING.format(action_delim=action_delim)
-
+    formatting = FORMATTING.format(action_delim=action_delim)
     for name in all_names:
         if not first_name:
             first_name = name
@@ -249,7 +255,9 @@ async def generate_first_message(
                         "RULES:",
                         RULES.format(
                             flesch=flesch,
-                            name=user_card["name"] if name == "USER" else name,
+                            name=user_card["name"] + " AKA USER"
+                            if name == "USER"
+                            else name,
                         ),
                         formatting,
                         (
@@ -278,11 +286,11 @@ async def generate_first_message(
         **api_params,
     )
     messages[first_name].append({"role": "user", "content": prompt})
-    example_message, next_name = get_next_name(
-        example_message, first_name, user_card["name"], all_names
+    example_message, next_name = parse_response(
+        example_message, first_name, user_card["name"], all_names, action_delim
     )
     if not example_message or not example_message.strip():
-        return None
+        raise RuntimeError("Failed to generate example message")
 
     # Add the example/first message, to the training data.
     training[0]["content"] += (
@@ -301,7 +309,7 @@ async def generate_first_message(
                 "content": f"{first_name}: {example_message}",
             }
         )
-    return training, messages, first_name, next_name
+    return training, messages, first_name, next_name, action_delim
 
 
 async def generate_chat(instructor, cards, topic, **api_params):
@@ -313,9 +321,16 @@ async def generate_chat(instructor, cards, topic, **api_params):
 
     # Generate the first (example) message - this shows how we want the messages formatted as far
     # as actions vs speech, etc.
-    training, messages, first_name, next_name = await generate_first_message(
-        instructor, user_card, characters, topic
-    )
+    try:
+        (
+            training,
+            messages,
+            first_name,
+            next_name,
+            action_delim,
+        ) = await generate_first_message(instructor, user_card, characters, topic)
+    except RuntimeError:
+        return None
 
     # Iterate until we've reached our target turn count.
     current_name = next_name
@@ -326,6 +341,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
     )
     target_turns = instructor.instructors["chat"].get("turn_count") or 50
     topics = instructor.get_instructor_topics(instructor.instructors["chat"])
+    user_name = user_card["name"]
     while True:
         others = list(set(all_names) - set([current_name]))
 
@@ -340,7 +356,12 @@ async def generate_chat(instructor, cards, topic, **api_params):
         messages[current_name][-1]["content"] += "\n" + "\n".join(
             [
                 "RULES:\nRemember, you must always stay in character.",
-                RULES.format(flesch=flesch, name=current_name),
+                RULES.format(
+                    flesch=flesch,
+                    name=current_name
+                    if current_name != "USER"
+                    else f"{current_name} AKA {user_name}",
+                ),
                 CONTINUE.format(conv_turn=random.choice(CONV_TURNS)),
                 ADD_NEXT.format(next_names=json.dumps(others)),
             ]
@@ -353,18 +374,21 @@ async def generate_chat(instructor, cards, topic, **api_params):
             filter_response=False,
             **api_params,
         )
+        if not response or not response.strip():
+            logger.warning("No response, rerolling!")
+            continue
 
         # We'll remove the re-iterated rules from the prompt to reduce token usage.
         messages[current_name][-1]["content"] = (
             messages[current_name][-1]["content"].split("RULES:")[0].strip()
         )
 
-        response, next_name = get_next_name(
-            response, current_name, user_card["name"], all_names
+        response, next_name = parse_response(
+            response, current_name, user_card["name"], all_names, action_delim
         )
         if not response or not response.strip():
-            logger.error("No chat continuation resonse!")
-            break
+            logger.warning("No chat continuation resonse, rerolling!")
+            continue
 
         # Update the current character's message history.
         messages[current_name].append(
@@ -375,13 +399,14 @@ async def generate_chat(instructor, cards, topic, **api_params):
         )
 
         # Update training data.
+        prefix = "" if len(characters) == 1 else f"{current_name}: "
         if current_name != "USER" and training[-1]["role"] in ("system", "assistant"):
-            training[-1]["content"] += f"\n\n{current_name}: {response}"
+            training[-1]["content"] += f"\n\n{prefix}{response}"
         else:
             training.append(
                 {
                     "role": "assistant" if current_name != "USER" else "user",
-                    "content": f"{current_name}: {response}"
+                    "content": f"{prefix}{response}"
                     if current_name != "USER"
                     else response,
                 }
@@ -389,6 +414,8 @@ async def generate_chat(instructor, cards, topic, **api_params):
 
         # Append this output to the other character's message history.
         for name in others:
+            if messages[name][-1]["role"] == "assistant":
+                messages[name].append({"role": "user", "content": ""})
             messages[name][-1]["content"] += f"\n\n{current_name}: {response}"
         logger.success(f"{current_name}: {response}")
         current_name = next_name
@@ -437,9 +464,38 @@ async def generate(instructor):
             topics[topic_index],
             **api_params,
         )
+        if not chat:
+            continue
 
-        # And finally, we'll need to convert our chat into individual training instructions.
+        # We'll convert each round into a row of training data, i.e.:
+        # instruction 0 = system + user, response 0 = assistant response 0
+        # instruction 1 = system + user + assistant + user, response 1 = assistant response 1
+        # This way all of our existing training scripts should work without any changes.
+        system, user, assistant = [], [], []
+        for item in chat:
+            if item["role"] == "system":
+                system.append(item["content"])
+            elif item["role"] == "assistant":
+                instruction = "\n".join(system)
+                for idx in range(len(user)):
+                    instruction += f"\nUSER: {user[idx]}"
+                    if idx < len(assistant):
+                        instruction += f"\nASSISTANT: {assistant[idx]}"
+                instruction += "\nASSISTANT: "
+                yield {
+                    "instruction": instruction,
+                    "response": item["content"],
+                    "category": "chat",
+                    "skip_counting": True,
+                    "skip_prompt_formatting": True,
+                }
+                assistant.append(item["content"])
+            else:
+                user.append(item["content"])
+
+        # We'll also yield the complete chat object, to save it as-is.
         yield {"category": "chat", "chat": chat}
+
         topic_index += 1
         if topic_index >= len(topics):
             topic_index = 0

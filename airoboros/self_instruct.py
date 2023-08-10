@@ -389,6 +389,7 @@ class SelfInstructor:
 
     def persist(self, item):
         """Persist a single item to the output file and docstore."""
+        skip_counting = item.pop("skip_counting", False)
         self.outfile.write(json.dumps(item) + "\n")
         self.outfile.flush()
         if item["category"] != "chat":
@@ -400,7 +401,8 @@ class SelfInstructor:
                     Chroma.from_texts(["__initialize__"], self.embeddings)
                 )
                 self.docstore_size = 0
-        self.instructor_counts[item["category"]] += 1
+        if not skip_counting:
+            self.instructor_counts[item["category"]] += 1
 
     async def run_instructor(self, category, method_map):
         """Run a single instructor, as an async task."""
@@ -417,10 +419,12 @@ class SelfInstructor:
             if category != "chat":
                 preview = item["instruction"][:100]
             else:
-                preview = item["chat"][0]["content"].splitlines()[0]
-            logger.success(
-                f"Generated unique instruction [{category}, total={running_total}]: {preview}"
-            )
+                if not item.get("skip_prompt_formatting"):
+                    preview = item["chat"][0]["content"].splitlines()[0]
+            if preview:
+                logger.success(
+                    f"Generated unique instruction [{category}, total={running_total}]: {preview}"
+                )
         delta = (datetime.datetime.now() - started_at).total_seconds()
         logger.success(
             f"Finished generating {running_total} instructions [{category}] in {delta} seconds."

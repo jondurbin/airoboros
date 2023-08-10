@@ -1,10 +1,11 @@
 import asyncio
 import json
 import os
+import random
 import re
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for generic/general training data."""
     config = instructor.instructors.get("general")
     if not config:
@@ -25,9 +26,7 @@ async def generate(instructor):
 
     # Load the topics.
     topics = instructor.get_instructor_topics(config)
-    topic_index = instructor.instructor_counts.get("general", 0)
-    if topic_index >= len(topics):
-        topic_index = topic_index % len(topics)
+    topic_index = random.randint(0, len(topics) - 1)
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}
@@ -85,7 +84,11 @@ async def generate(instructor):
             ):
                 continue
             instructions.append(instruction)
-            futures.append(instructor.generate_response(instruction, **api_params))
+            futures.append(
+                instructor.generate_response(
+                    instruction, messages=kwargs.get("messages", []), **api_params
+                )
+            )
         if not futures:
             continue
         responses = await asyncio.gather(*futures)

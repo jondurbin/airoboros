@@ -4,7 +4,7 @@ import re
 import random
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for coding training data."""
     config = instructor.instructors.get("coding")
     if not config:

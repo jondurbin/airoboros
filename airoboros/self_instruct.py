@@ -404,7 +404,7 @@ class SelfInstructor:
         if not skip_counting:
             self.instructor_counts[item["category"]] += 1
 
-    async def run_instructor(self, category, method_map):
+    async def run_instructor(self, category, method_map, **kwargs):
         """Run a single instructor, as an async task."""
         if category not in method_map:
             logger.warning(f"Unknown category: {category}, skipping...")
@@ -412,7 +412,7 @@ class SelfInstructor:
         logger.info(f"Generating instructions for {category}...")
         started_at = datetime.datetime.now()
         running_total = self.instructor_counts.get(category, 0)
-        async for item in method_map[category](self):
+        async for item in method_map[category](self, **kwargs):
             self.persist(item)
             running_total += 1
             preview = None
@@ -455,6 +455,9 @@ class SelfInstructor:
         from airoboros.instructors.riddle import generate as riddle_generator
         from airoboros.instructors.roleplay import generate as roleplay_generator
         from airoboros.instructors.song import generate as song_generator
+        from airoboros.instructors.stylized_response import (
+            generate as stylized_response_generator,
+        )
         from airoboros.instructors.trivia import generate as trivia_generator
         from airoboros.instructors.wordgame import generate as wordgame_generator
         from airoboros.instructors.writing import generate as writing_generator
@@ -497,6 +500,26 @@ class SelfInstructor:
                 await task
         finally:
             self.outfile.close()
+
+        # After we have a sampling of instructions, we can also generate a list of responses
+        # based on character cards that were generated during the chat instructor run.
+        if self.instructor_counts.get("chat_card"):
+            logger.info(
+                "Re-generating a sampling of responses using character cards..."
+            )
+            with open(self.output_path) as infile:
+                existing = [json.loads(line) for line in infile.readlines()]
+            method_map["stylized_response"] = stylized_response_generator
+            self.outfile = open(self.output_path, "a+")
+            try:
+                await self.run_instructor(
+                    "stylized_response",
+                    method_map,
+                    existing=existing,
+                )
+            finally:
+                self.outfile.close()
+
         delta = (datetime.datetime.now() - started_at).total_seconds()
         logger.success(
             f"Finished generating all instructions in {delta} seconds, enjoy!"

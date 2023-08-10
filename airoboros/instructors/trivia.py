@@ -3,9 +3,9 @@ from loguru import logger
 from airoboros.instructors.inline_qa import generate as generate_inline
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for trivia training data."""
-    async for item in generate_inline(instructor, "trivia"):
+    async for item in generate_inline(instructor, "trivia", **kwargs):
         # Double check some wordgame style questions.
         match = re.search(
             r"(start|end)(?:s|ing) with ['\"]([^'\"]+)['\"]", item["instruction"]
@@ -31,4 +31,7 @@ async def generate(instructor):
                 f"Validation failure: {item['instruction']} -- {item['response']}"
             )
             continue
+        item[
+            "system"
+        ] = "You are a world class trivia bot - generate accurate, succint responses."
         yield item

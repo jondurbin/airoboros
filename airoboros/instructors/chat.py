@@ -171,6 +171,7 @@ async def generate_cards(instructor):
             logger.success(f"Generated chat character card {filename}")
             if len(cards) >= card_count:
                 break
+    instructor.instructor_counts["chat_card"] = len(cards)
     return cards
 
 
@@ -427,7 +428,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
     return training
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for chat training data."""
     config = instructor.instructors.get("chat", {})
     if not config:

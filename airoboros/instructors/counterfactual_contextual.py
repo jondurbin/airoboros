@@ -19,7 +19,7 @@ ADD_SOURCES = [
 ]
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for contextual training data."""
     config = instructor.instructors.get("counterfactual_contextual")
     if not config:

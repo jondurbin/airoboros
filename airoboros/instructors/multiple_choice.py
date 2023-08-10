@@ -13,7 +13,7 @@ CONTEXTUAL = (
 )
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for multiple choice training data."""
     config = instructor.instructors.get("multiple_choice")
     if not config:

@@ -139,7 +139,7 @@ def generate_prompt(instructor, config, template, topic_iter):
     )
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for contextual training data."""
     config = instructor.instructors.get("contextual")
     if not config:

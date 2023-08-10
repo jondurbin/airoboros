@@ -1,5 +1,7 @@
 import asyncio
+import json
 import os
+import random
 import re
 
 
@@ -9,6 +11,7 @@ async def generate(
     filter_response=True,
     only_instructions=False,
     template_kwargs={},
+    **kwargs,
 ):
     """Generator for simple instruction response tasks (e.g. roleplay, wordgames)."""
     config = instructor.instructors.get(category)
@@ -46,6 +49,10 @@ async def generate(
         min_score = instructor.min_docsearch_score
     min_score = float(min_score)
 
+    # Load the topics.
+    topics = instructor.get_instructor_topics(config)
+    topic_index = random.randint(0, len(topics) - 1)
+
     # Generate the instruction/response pairs until we reach the target count.
     batch_size = config.get("batch_size")
     if batch_size is None:
@@ -63,6 +70,21 @@ async def generate(
             format_args[key] = val(instructor)
         if "{topic_avoidance}" in template:
             format_args["topic_avoidance"] = instructor.topic_avoidance
+        if "{topics}" in template:
+            # Inject the topics to use for this batch.
+            current_topics = []
+            for _ in range(batch_size):
+                current_topics.append(topics[topic_index])
+                topic_index += 1
+                if topic_index >= len(topics):
+                    topic_index = 0
+            topics_str = "\n".join(
+                [
+                    f" * TSK {idx + 1} must be related to topic: {json.dumps(topic)}"
+                    for idx, topic in enumerate(current_topics)
+                ]
+            )
+            format_args["topics"] = topics_str
 
         # Get a batch of instructions.
         prompt = template.format(**format_args)
@@ -93,7 +115,10 @@ async def generate(
                     )
                 futures.append(
                     instructor.generate_response(
-                        full_prompt, filter_response=filter_response, **api_params
+                        full_prompt,
+                        messages=kwargs.get("messages", []),
+                        filter_response=filter_response,
+                        **api_params,
                     )
                 )
         if not futures:

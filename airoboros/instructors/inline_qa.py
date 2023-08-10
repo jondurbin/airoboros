@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 
 
@@ -10,6 +11,7 @@ async def generate(
     end_key="ANSWER",
     filter_response=True,
     template_kwargs={},
+    **kwargs,
 ):
     """Generator for generic inline question answer pair training data."""
     config = instructor.instructors.get(category)
@@ -31,9 +33,7 @@ async def generate(
 
     # Topics included in template?
     topics = instructor.get_instructor_topics(config)
-    topic_index = instructor.instructor_counts.get(category, 0)
-    if topic_index >= len(topics):
-        topic_index = topic_index % len(topics)
+    topic_index = random.randint(0, len(topics) - 1)
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}
@@ -83,7 +83,10 @@ async def generate(
 
         prompt = template.format(**prompt_args)
         response = await instructor.generate_response(
-            prompt, filter_response=filter_response, **api_params
+            prompt,
+            messages=kwargs.get("messages", []),
+            filter_response=filter_response,
+            **api_params,
         )
         if not response:
             continue

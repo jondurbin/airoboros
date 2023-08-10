@@ -24,7 +24,7 @@ COMBINE = (
 )
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for detailed writing training data."""
     config = instructor.instructors.get("detailed_writing", {})
     if not config:
@@ -60,8 +60,7 @@ async def generate(instructor):
 
     # Load the topics.
     topics = instructor.get_instructor_topics(config)
-    random.shuffle(topics)
-    topic_index = 0
+    topic_index = random.randint(0, len(topics) - 1)
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}

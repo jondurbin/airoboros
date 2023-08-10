@@ -25,7 +25,7 @@ def generate_style_extra(instructor):
     )
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for writing training data."""
     conf = instructor.instructors.get("writing", {})
     if not conf:
@@ -37,6 +37,6 @@ async def generate(instructor):
     else:
         template_kwargs["style_extra"] = lambda _: ""
     async for item in generate_simple_task(
-        instructor, "writing", template_kwargs=template_kwargs
+        instructor, "writing", template_kwargs=template_kwargs, **kwargs
     ):
         yield item

@@ -3,7 +3,7 @@ import os
 import re
 
 
-async def generate(instructor):
+async def generate(instructor, **kwargs):
     """Generator for experiences."""
     config = instructor.instructors.get("experience")
     if not config:
@@ -43,6 +43,7 @@ async def generate(instructor):
         futures.append(
             instructor.generate_response(
                 prompt.format(language=language, flesch=flesch),
+                messages=kwargs.get("messages", []),
                 filter_response=False,
                 **api_params
             )

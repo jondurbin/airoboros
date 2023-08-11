@@ -5,6 +5,8 @@ import backoff
 import datetime
 import os
 import json
+import math
+import numpy as np
 import random
 import re
 import requests
@@ -361,6 +363,86 @@ class SelfInstructor:
                 return None
         return text
 
+    async def is_decent_response(self, item):
+        """Filter the responses by having the LLM score based on a set of rules."""
+        config = self.raw_config.get("scoring", {})
+        template = self.load_template(config.get("prompt_path") or "filter.txt")
+        api_params = {**self.api_params, **config.get("api_params", {})}
+        system_prompt = ""
+        if item.get("system"):
+            system_prompt = "\n".join(
+                [
+                    "- did the response respect the system prompt that was used?",
+                    "SYSTEM PROMPT:",
+                    item["system"],
+                ]
+            )
+        result = await self.generate_response(
+            template.format(
+                instruction=item["instruction"],
+                response=item["response"],
+                threshold=config.get("threshold") or "100",
+                system_prompt=system_prompt,
+                filter_response=False,
+            ),
+            **api_params,
+        )
+        preview = item["instruction"].splitlines()[0][0:100]
+        if len(preview) == 100:
+            preview += "..."
+        if not result:
+            logger.error(
+                f"Error evaluating response, assuming decent [{item['category']}]: {preview}"
+            )
+            return True
+        if "GOOD" in result:
+            logger.success(f"Good response [{item['category']}]: {preview}")
+            return True
+        logger.warning(f"Bad response [{item['category']}]: {preview}")
+        return False
+
+    async def cull(self, input_path: str, output_path: str) -> None:
+        """Use the LLM to filter bad responses based on a set of rules.
+
+        :param input_path: Path to the input JSONL file to filter.
+        :type input_path: str
+
+        :param output_path: Path to save the "good" instructions to.
+        :type output_path: str
+
+        """
+        with open(input_path) as infile:
+            original = [json.loads(line) for line in infile.readlines()]
+        output_file = open(output_path, "w")
+        instructions = []
+        for instruction in original:
+            if instruction.get("category") in [
+                "chat",
+                "detailed_writing",
+                "contextual",
+                "counterfactual_contextual",
+            ]:
+                output_file.write(json.dumps(instruction) + "\n")
+            else:
+                instructions.append(instruction)
+        try:
+            batch_size = (
+                self.raw_config.get("scoring", {}).get("batch_size") or 5
+            )  # self.default_batch_size
+            batches = np.array_split(
+                instructions, math.ceil(len(instructions) / batch_size)
+            )
+            for batch in batches:
+                results = await asyncio.gather(
+                    *[self.is_decent_response(item) for item in batch]
+                )
+                for idx in range(len(batch)):
+                    if results[idx]:
+                        output_file.write(json.dumps(batch[idx]) + "\n")
+                        output_file.flush()
+        finally:
+            output_file.close()
+
     async def is_too_similar(self, instruction: str, min_score: float = None):
         """Check the similarity of a new instruction to the existing set.
 
@@ -541,6 +623,31 @@ def generate_topics(args):
         parser.add_argument(arg, **kwargs)
     instructor = SelfInstructor(**vars(parser.parse_args(args)))
     asyncio.run(instructor.initialize_topics())
+
+
+def cull_instructions(args):
+    random.seed(secrets.randbelow(1000000000))
+    parser = argparse.ArgumentParser()
+    for arg, kwargs in SelfInstructor.CLI_ARGS.items():
+        parser.add_argument(arg, **kwargs)
+    parser.add_argument(
+        "--input",
+        **{
+            "type": str,
+            "help": "path to the file containing instructions to cull",
+        },
+    )
+    parser.add_argument(
+        "--output",
+        **{
+            "type": str,
+            "default": "culled.jsonl",
+            "help": "path to save the culled instructions to",
+        },
+    )
+    all_args = vars(parser.parse_args(args))
+    instructor = SelfInstructor(config_path=all_args["config_path"])
+    asyncio.run(instructor.cull(all_args["input"], all_args["output"]))
 
 
 if __name__ == "__main__":

@@ -6,13 +6,13 @@ import random
 from loguru import logger
 
 INNER_PART = (
-    "Now, generate the {index} part, which must include a minimum of {quarter} words. "
+    "Now, generate the {index} part, which must include a minimum of {third} words. "
     "Remember, this is only the {index} part, and the remaining sections will be asked for later. "
     "Don't try to add some sort of conclusion or wrap-up sentence or paragraph, because this is only the {index} part. "
     'The output for this section should end in such a way as to be easily and fluidly continued by a subsequent prompt, i.e. don\'t end with "And so, ... " '
     "Don't include any indication that this is only one part, e.g. 'to be continued..', etc., just output the {index} part."
 )
-FINAL_PART = "Generate the final part, which must include a mimimum of {quarter} words."
+FINAL_PART = "Generate the final part, which must include a mimimum of {third} words."
 COMBINE = (
     "Below is an instruction, and the response to the instruction. "
     "Please read the instruction very carefully, then read the response. "
@@ -22,6 +22,17 @@ COMBINE = (
     "Most importantly, don't shorten the overall length.  The output must be at least as long as the original response.\n\n"
     "Instruction: {instruction}\n\nResponse: {response}"
 )
+
+
+async def gen_with_retry(instructor, prompt, messages=[], attempt=0, **api_params):
+    result = await instructor.generate_response(prompt, messages=messages, **api_params)
+    if result and result.strip():
+        return result
+    if attempt > 5:
+        return None
+    return await gen_with_retry(
+        instructor, prompt, messages=messages, attempt=attempt + 1, **api_params
+    )
 
 
 async def generate(instructor, **kwargs):
@@ -123,7 +134,7 @@ async def generate(instructor, **kwargs):
                 flesch=flesch,
                 language=language,
                 word_count=int(word_count * 1.3),  # words != tokens, add buffer
-                quarter=int((word_count * 1.3) / 4),
+                third=int((word_count * 1.3) / 3),
             )
             for instruction in instructions
         ]
@@ -154,47 +165,13 @@ async def generate(instructor, **kwargs):
                 ]
             )
             futures.append(
-                instructor.generate_response(
+                gen_with_retry(
+                    instructor,
                     INNER_PART.format(
-                        index="second", quarter=int((word_count * 1.3) / 4)
+                        index="second", third=int((word_count * 1.3) / 3)
                     ),
                     messages=messages[-1],
-                    **api_params,
-                )
-            )
-        if not futures:
-            continue
-
-        # Generate the next part.
-        responses = await asyncio.gather(*futures)
-        messages_next = []
-        futures = []
-        successful_instructions = []
-        for idx in range(len(responses)):
-            if not responses[idx] or not responses[idx].strip():
-                continue
-            successful_instructions.append(original_instructions[idx])
-            messages_next.append(
-                messages[idx]
-                + [
-                    {
-                        "role": "user",
-                        "content": INNER_PART.format(
-                            index="second", quarter=int((word_count * 1.3) / 4)
-                        ),
-                    },
-                    {
-                        "role": "assistant",
-                        "content": responses[idx],
-                    },
-                ]
-            )
-            futures.append(
-                instructor.generate_response(
-                    INNER_PART.format(
-                        index="third", quarter=int((word_count * 1.3) / 4)
-                    ),
-                    messages=messages_next[-1],
+                    attempt=0,
                     **api_params,
                 )
             )
@@ -211,12 +188,12 @@ async def generate(instructor, **kwargs):
                 continue
             successful_instructions.append(original_instructions[idx])
             messages_final.append(
-                messages_next[idx]
+                messages[idx]
                 + [
                     {
                         "role": "user",
                         "content": INNER_PART.format(
-                            index="third", quarter=int((word_count * 1.3) / 4)
+                            index="second", third=int((word_count * 1.3) / 3)
                         ),
                     },
                     {
@@ -226,9 +203,11 @@ async def generate(instructor, **kwargs):
                 ]
             )
             futures.append(
-                instructor.generate_response(
-                    FINAL_PART.format(quarter=int((word_count * 1.3) / 4)),
+                gen_with_retry(
+                    instructor,
+                    FINAL_PART.format(third=int((word_count * 1.3) / 3)),
                     messages=messages_final[-1],
+                    attempt=0,
                     **api_params,
                 )
             )
@@ -250,11 +229,14 @@ async def generate(instructor, **kwargs):
             full_response.append(response)
             fluid_instructions.append(successful_instructions[idx].strip())
             futures.append(
-                instructor.generate_response(
+                gen_with_retry(
+                    instructor,
                     COMBINE.format(
                         instruction=successful_instructions[idx],
                         response="\n\n".join(full_response),
                     ),
+                    messages=[],
+                    attempt=0,
                     **api_params,
                 )
             )

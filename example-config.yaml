@@ -19,6 +19,12 @@ overwrite: false
 # Append to the output file.
 append: true
 
+# Embedding model, for calculating similarity between documents; probably best left as-is since the code is fairly specific to this one.
+embedding_model: thenlper/gte-small
+embedding_device: cpu
+# If you have a GPU, set this to "cuda", e.g.:
+# embedding_device: cuda
+
 # Topic avoidance prompt string.
 topic_avoidance: Avoid any tasks that would be related to climate change, green tech, renewable energy, DEI (diversity, equity, inclusion), sex and/or gender, religion, politics, social issues, race, ethnicity, artificial intelligence, baking/cooking, urban development, or any topic that you would likely not respond to, or any task which a language model would not be able to respond to, e.g. tasks about emotions, feelings, physical senses, etc.
 
@@ -379,6 +385,7 @@ instructors:
     count: 25
     batch_size: 1
     min_docsearch_score: 0.1
+    seed_path: chat_card_seeds
     output_dir: chat_cards
 
   ##################################################################################

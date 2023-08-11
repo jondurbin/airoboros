@@ -3,6 +3,7 @@ import argparse
 import asyncio
 import backoff
 import datetime
+import faiss
 import os
 import json
 import math
@@ -16,8 +17,10 @@ import yaml
 from collections import defaultdict
 from loguru import logger
 from time import sleep
+from tqdm import tqdm
 from typing import List, Dict, Any
 from uuid import uuid4
+from airoboros.embeddings import calculate_embeddings
 from airoboros.exceptions import (
     RateLimitError,
     TooManyRequestsError,
@@ -27,8 +30,9 @@ from airoboros.exceptions import (
     ContextLengthExceededError,
     BadResponseError,
 )
-from langchain.vectorstores import Chroma
-from langchain.embeddings import HuggingFaceEmbeddings
+from fast_sentence_transformers import FastSentenceTransformer
+from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer
 
 # Defaults and constants.
 MAX_DOCSTORE_SIZE = 15000
@@ -55,7 +59,6 @@ class SelfInstructor:
         self.config_path = config_path
         self.load_config()
         self.instructor_counts = defaultdict(int)
-        self.docstore_lock = asyncio.Semaphore(1)
 
     def load_config(self):
         """Load an advanced configuration from a YAML file."""
@@ -101,6 +104,20 @@ class SelfInstructor:
         self.language = raw_config.get("language") or "English"
         self.default_flesch = raw_config.get("default_flesch") or READABILITY_HINT
 
+        # Embedding model.
+        model_name = raw_config.get("embedding_model") or "thenlper/gte-small"
+
+        # Hacky, but we'll load this twice, the first time to get dimension, since
+        # it's not accessible in the Fast (cpu) version.
+        model = SentenceTransformer(model_name)
+        self.embedding_dimension = model.get_sentence_embedding_dimension()
+        model = None
+        if raw_config.get("embedding_device") == "cuda":
+            self.embedding_model = SentenceTransformer(model_name, device="cuda")
+        else:
+            self.embedding_model = FastSentenceTransformer(model_name, device="cpu")
+        self.embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+
         # Validate the model for each generator.
         self.instructors = raw_config.get("instructors")
         self.validate_model(self.model)
@@ -110,8 +127,8 @@ class SelfInstructor:
                 self.validate_model(config["model"])
                 valid_models[config["model"]] = True
 
-    def initialize_docstores(self):
-        """Initialize the in-memory vector databases used to check prompt uniqueness."""
+    def initialize_index(self):
+        """Initialize the in-memory faiss index to check prompt uniqueness."""
         docs = []
         if os.path.exists(self.output_path):
             if self.overwrite:
@@ -124,7 +141,9 @@ class SelfInstructor:
                 with open(self.output_path, "r") as infile:
                     for line in infile.readlines():
                         task = json.loads(line)
-                        self.instructor_counts[task.get("category", "general")] += 1
+                        category = task.get("category", "general")
+                        if category != "chat" or "chat" in category:
+                            self.instructor_counts[category] += 1
                         if task["category"] != "chat":
                             docs.append(task["instruction"])
                 logger.info(
@@ -136,26 +155,17 @@ class SelfInstructor:
                 raise RuntimeError(
                     f"{self.output_path} already exists, but overwrite and append are false!"
                 )
-        logger.info(
-            "Initializing in-memory document store for similarity comparison..."
-        )
+        logger.info("Initializing faiss index similarity comparison...")
         if not docs:
             docs = ["__initialize__"]
-        self.embeddings = HuggingFaceEmbeddings()
-        batches = [
-            docs[i * MAX_DOCSTORE_SIZE : (i + 1) * MAX_DOCSTORE_SIZE]
-            for i in range((len(docs) + MAX_DOCSTORE_SIZE - 1) // MAX_DOCSTORE_SIZE)
-        ]
-        logger.info(f"Need to create {len(batches)} unique docstores...")
-        self.docstores = [
-            Chroma.from_texts(batch, self.embeddings) for batch in batches
-        ]
-        self.docstore_size = len(batches[-1])
-        if self.docstore_size >= MAX_DOCSTORE_SIZE:
-            logger.info("Initializing fresh docstore due to doc count...")
-            self.docstore_size = 0
-            self.docstores.append(
-                Chroma.from_texts(["__initialize__"], self.embeddings)
+
+        # This is a bit slow.
+        self.index = faiss.IndexFlatL2(self.embedding_dimension)
+        for doc in docs:
+            self.index.add(
+                calculate_embeddings(
+                    doc, self.embedding_model, self.embedding_tokenizer
+                )
             )
 
     def validate_model(self, model):
@@ -396,93 +406,224 @@ class SelfInstructor:
             )
             return True
         if "GOOD" in result:
-            logger.success(f"Good response [{item['category']}]: {preview}")
+            logger.info(f"Judge: good [{item['category']}]: {preview}")
             return True
-        logger.warning(f"Bad response [{item['category']}]: {preview}")
+        logger.info(f"Judge: bad [{item['category']}]: {preview}")
         return False
 
-    async def cull(self, input_path: str, output_path: str) -> None:
+    async def judge(self, instructions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Filter only the "good" instructions, as determined by an LLM."""
+        batch_size = (
+            self.raw_config.get("judge", {}).get("batch_size")
+            or self.default_batch_size
+        )
+        batches = np.array_split(
+            instructions, math.ceil(len(instructions) / batch_size)
+        )
+        quality = []
+        for batch in batches:
+            results = await asyncio.gather(
+                *[self.is_decent_response(item) for item in batch]
+            )
+            for idx in range(len(batch)):
+                if results[idx]:
+                    quality.append(batch[idx])
+        return quality
+
+    async def cull(self, input_paths: List[str], output_path: str) -> None:
         """Use the LLM to filter bad responses based on a set of rules.
 
-        :param input_path: Path to the input JSONL file to filter.
-        :type input_path: str
+        :param input_paths: List of paths to the input JSONL file(s) to filter.
+        :type input_paths: List[str]
 
         :param output_path: Path to save the "good" instructions to.
         :type output_path: str
 
         """
-        with open(input_path) as infile:
-            original = [json.loads(line) for line in infile.readlines()]
+        original = []
+        categories = defaultdict(list)
+        for path in input_paths:
+            with open(path) as infile:
+                for line in infile.readlines():
+                    item = json.loads(line)
+                    original.append(item)
+                    category = item.get("category", "general")
+                    if category == "reasoning_or_math":
+                        category = "orca"
+                    categories[category].append(item)
+
+        # Deduplicate and select best items.
         output_file = open(output_path, "w")
-        instructions = []
-        for instruction in original:
-            if instruction.get("category") in [
+        max_k = self.raw_config.get("cull_max_k")
+        if max_k is None:
+            max_k = 100
+        for category, items in categories.items():
+            # Skip categories that are too weird/cumbersome to score properly.
+            if category in [
+                "orca",
                 "chat",
                 "detailed_writing",
                 "contextual",
                 "counterfactual_contextual",
             ]:
-                output_file.write(json.dumps(instruction) + "\n")
-            else:
-                instructions.append(instruction)
-        try:
-            batch_size = (
-                self.raw_config.get("scoring", {}).get("batch_size") or 5
-            )  # self.default_batch_size
-            batches = np.array_split(
-                instructions, math.ceil(len(instructions) / batch_size)
+                for item in items:
+                    output_file.write(json.dumps(item) + "\n")
+                output_file.flush()
+                continue
+
+            # Add all of the items in this category to a faiss index.
+            logger.info(
+                f"Initializing faiss index for {category} with {len(items)} documents..."
             )
-            for batch in batches:
-                results = await asyncio.gather(
-                    *[self.is_decent_response(item) for item in batch]
+            index = faiss.IndexFlatL2(self.embedding_dimension)
+            all_embeddings = []
+            for item in tqdm(items):
+                all_embeddings.append(
+                    np.array(
+                        [
+                            calculate_embeddings(
+                                "\n".join([item["instruction"], item["response"]]),
+                                self.embedding_model,
+                                self.embedding_tokenizer,
+                                truncate=False,
+                            )
+                        ]
+                    )
                 )
-                for idx in range(len(batch)):
-                    if results[idx]:
-                        output_file.write(json.dumps(batch[idx]) + "\n")
-                        output_file.flush()
-        finally:
-            output_file.close()
+                index.add(all_embeddings[-1])
 
-    async def is_too_similar(self, instruction: str, min_score: float = None):
-        """Check the similarity of a new instruction to the existing set.
+            # Here's where it's tricky...
+            #
+            # We need to iterate through the objects, finding all matches that are under are
+            # specified similarity score for this category.
+            #
+            # Once we've found all of the matches, we can select the "best" by first using
+            # the LLM to judge whether the response is high quality or not, but only if it's
+            # a category that we can score well.
+            #
+            # If multiple instructions remain that are high quality, we can use other metrics,
+            # such as length and complexity of speech to select the best.
+            #
+            # If none of the matching instructions are high quality, I guess we just remove
+            # all of them?
+            purged = set([])
+            saved = set([])
+            min_score = (
+                self.instructors.get(category, {}).get("min_docsearch_score")
+                or self.min_docsearch_score
+            )
+            for idx in range(len(items)):
+                if idx in purged or idx in saved:
+                    continue
+                distances, indices = index.search(
+                    all_embeddings[idx], k=min(len(items), max_k)
+                )
+                distances = distances[0].tolist()[1:]
+                indices = indices[0].tolist()[1:]
+                batch = [items[idx]]
+                batch_idx = [idx]
+                for check_idx in range(len(distances)):
+                    # Don't check items before this one (since they would have already been checked).
+                    if indices[check_idx] < idx:
+                        continue
 
-        :param instruction: The instruction string to compare.
-        :type instruction: str
+                    # Don't check items we've judged as duplicate or low-quality.
+                    if indices[check_idx] in purged:
+                        continue
+
+                    # Ignore and stop checking if we exceed the min score.
+                    if distances[check_idx] > min_score:
+                        break
+                    batch.append(items[indices[check_idx]])
+                    batch_idx.append(indices[check_idx])
+
+                # Score the batch.
+                quality = await self.judge(batch)
+                if not quality:
+                    for purge_idx in range(len(batch)):
+                        purged.add(batch_idx[purge_idx])
+                        preview = items[batch_idx[purge_idx]][
+                            "instruction"
+                        ].splitlines()[0][0:100]
+                        logger.warning(f"Removing low-quality instruction: {preview}")
+                    continue
+
+                # Only one high-quality result, keep it.
+                if len(quality) == 1:
+                    preview = quality[0]["instruction"].splitlines()[0][0:100]
+                    logger.success(f"Saving high-quality instruction: {preview}")
+                    output_file.write(json.dumps(quality[0]) + "\n")
+                    output_file.flush()
+                    found = False
+                    for save_idx in range(len(batch)):
+                        if batch[save_idx] == quality[0]:
+                            if not found:
+                                saved.add(batch_idx[save_idx])
+                                found = True
+                            else:
+                                purged.add(batch_idx[save_idx])
+                    continue
+
+                # This is kind of a hacky fallback, but it's fast and easy.
+                longest = sorted(
+                    quality, key=lambda x: len(x["instruction"] + x["response"])
+                )[-1]
+                found = False
+                for purge_idx in range(len(batch)):
+                    if batch[purge_idx] == longest and not found:
+                        found = True
+                        saved.add(batch_idx[purge_idx])
+                    if batch[purge_idx] != longest or found:
+                        purged.add(batch_idx[purge_idx])
+                        found = True
+                preview = longest["instruction"].splitlines()[0][0:100]
+                logger.success(f"Saving high-quality, longest instruction: {preview}")
+                output_file.write(json.dumps(longest) + "\n")
+                output_file.flush()
+        output_file.close()
+
+    async def is_too_similar(
+        self, input_text: str, min_score: float = None, index=None
+    ):
+        """Check the similarity of an input string against an index.
+
+        :param input_text: The input string to calculate similarity of.
+        :type input_text: str
 
         :param min_score: Minimum document similarity score to consider unique.
         :type min_score: float
 
-        :return: Boolean indicating if the instruction is too similar or not.
+        :param index: Optional faiss index to query against, defaults to main index.
+        :type index: failss index
+
+        :return: Boolean indicating if the text is too similar or not.
         :rtype: bool
         """
-        async with self.docstore_lock:
-            min_ = 1.0
-            for docstore in self.docstores:
-                similar = docstore.similarity_search_with_score(instruction, k=1)
-                for _, score in similar:
-                    if score < min_:
-                        min_ = score
-            if min_ <= min_score:
-                logger.warning(
-                    f"Skipping instruction, too similar [{min_}]: {instruction}"
-                )
-                return True
-            return False
+        index = index or self.index
+        distance, _ = index.search(
+            calculate_embeddings(
+                input_text, self.embedding_model, self.embedding_tokenizer
+            ),
+            1,
+        )
+        if min_score is None:
+            min_score = self.min_docsearch_score
+        if distance <= min_score:
+            logger.warning(f"Too similar [{distance}]: {input_text}")
+            return True
+        return False
 
     def persist(self, item):
-        """Persist a single item to the output file and docstore."""
+        """Persist a single item to the output file and add it to the index."""
         skip_counting = item.pop("skip_counting", False)
         self.outfile.write(json.dumps(item) + "\n")
         self.outfile.flush()
         if item["category"] != "chat":
-            self.docstores[-1].add_texts([item["instruction"]])
-            self.docstore_size += 1
-            if self.docstore_size >= MAX_DOCSTORE_SIZE:
-                logger.info("Initializing new docstore...")
-                self.docstores.append(
-                    Chroma.from_texts(["__initialize__"], self.embeddings)
+            self.index.add(
+                calculate_embeddings(
+                    item["instruction"], self.embedding_model, self.embedding_tokenizer
                 )
-                self.docstore_size = 0
+            )
         if not skip_counting:
             self.instructor_counts[item["category"]] += 1
 
@@ -568,7 +709,7 @@ class SelfInstructor:
         }
 
         await self.initialize_topics()
-        self.initialize_docstores()
+        self.initialize_index()
 
         # Generate instructions for each category.
         self.outfile = open(self.output_path, "a+")
@@ -635,6 +776,7 @@ def cull_instructions(args):
         **{
             "type": str,
             "help": "path to the file containing instructions to cull",
+            "nargs": "+",
         },
     )
     parser.add_argument(

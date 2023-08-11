@@ -6,7 +6,6 @@ Details to pay attention to:
 - did the response follow the instruction precisely?
 - did the response include hallucinated details, not asked for in the instruction?
 - was the response correct?
-- could the response be written in a more intelligent or interesting way?
 - was the response written in an intelligent, interesting way?
 {system_prompt}
 

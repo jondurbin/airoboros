@@ -616,7 +616,7 @@ class SelfInstructor:
         if not distance:
             return False
         if distance[0] <= min_score:
-            logger.warning(f"Too similar [{distance}]: {input_text}")
+            logger.warning(f"Too similar [{distance[0]}]: {input_text}")
             return True
         return False
 
@@ -631,7 +631,6 @@ class SelfInstructor:
                     [
                         calculate_embeddings(
                             item["instruction"],
-                            "\n".join([item["instruction"], item["response"]]),
                             self.embedding_model,
                             self.embedding_tokenizer,
                         )
@@ -651,13 +650,14 @@ class SelfInstructor:
         running_total = self.instructor_counts.get(category, 0)
         async for item in method_map[category](self, **kwargs):
             self.persist(item)
-            running_total += 1
             preview = None
-            if category != "chat":
-                preview = item["instruction"][:100]
+            if category == "chat":
+                if "chat" in item:
+                    running_total += 1
+                    preview = item["chat"][0]["content"].splitlines()[0][:100]
             else:
-                if not item.get("skip_prompt_formatting"):
-                    preview = item["chat"][0]["content"].splitlines()[0]
+                running_total += 1
+                preview = item["instruction"].splitlines()[0][0:100]
             if preview:
                 logger.success(
                     f"Generated unique instruction [{category}, total={running_total}]: {preview}"

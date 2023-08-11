@@ -24,17 +24,13 @@ def calculate_fragment_embeddings(model: Any, fragment: str) -> List[float]:
         return model.encode(fragment, normalize_embeddings=True)
 
 
-def calculate_embeddings(
-    input_text: str, model: Any, tokenizer: Any, truncate=True
-) -> List[float]:
+def calculate_embeddings(input_text: str, model: Any, tokenizer: Any) -> List[float]:
     """Calculate the vector embeddings for the specified input text.
 
     1. split the text based on the model's max sequence length
     2. calculate the embeddings for each chunk
     3. calculate the average embedding across all chunks
     """
-    if truncate:
-        return calculate_fragment_embeddings(model, input_text)
 
     # Tokenize the input, and convert tokens into chunks based on max model size.
     inputs = tokenizer(input_text, padding=False, truncation=False, return_tensors="pt")

@@ -117,6 +117,7 @@ class SelfInstructor:
         else:
             self.embedding_model = FastSentenceTransformer(model_name, device="cpu")
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.index = faiss.IndexFlatL2(self.embedding_dimension)
 
         # Validate the model for each generator.
         self.instructors = raw_config.get("instructors")
@@ -160,11 +161,14 @@ class SelfInstructor:
             docs = ["__initialize__"]
 
         # This is a bit slow.
-        self.index = faiss.IndexFlatL2(self.embedding_dimension)
         for doc in docs:
             self.index.add(
-                calculate_embeddings(
-                    doc, self.embedding_model, self.embedding_tokenizer
+                np.array(
+                    [
+                        calculate_embeddings(
+                            doc, self.embedding_model, self.embedding_tokenizer
+                        )
+                    ]
                 )
             )
 
@@ -485,7 +489,6 @@ class SelfInstructor:
                                 "\n".join([item["instruction"], item["response"]]),
                                 self.embedding_model,
                                 self.embedding_tokenizer,
-                                truncate=False,
                             )
                         ]
                     )
@@ -600,15 +603,19 @@ class SelfInstructor:
         :rtype: bool
         """
         index = index or self.index
-        distance, _ = index.search(
-            calculate_embeddings(
-                input_text, self.embedding_model, self.embedding_tokenizer
-            ),
-            1,
+        input_embeddings = np.array(
+            [
+                calculate_embeddings(
+                    input_text, self.embedding_model, self.embedding_tokenizer
+                )
+            ]
         )
-        if min_score is None:
-            min_score = self.min_docsearch_score
-        if distance <= min_score:
+        min_score = min_score or self.min_docsearch_score
+        distance, _ = index.search(input_embeddings, k=1)
+        distance = distance[0].tolist()
+        if not distance:
+            return False
+        if distance[0] <= min_score:
             logger.warning(f"Too similar [{distance}]: {input_text}")
             return True
         return False
@@ -620,8 +627,15 @@ class SelfInstructor:
         self.outfile.flush()
         if item["category"] != "chat":
             self.index.add(
-                calculate_embeddings(
-                    item["instruction"], self.embedding_model, self.embedding_tokenizer
+                np.array(
+                    [
+                        calculate_embeddings(
+                            item["instruction"],
+                            "\n".join([item["instruction"], item["response"]]),
+                            self.embedding_model,
+                            self.embedding_tokenizer,
+                        )
+                    ]
                 )
             )
         if not skip_counting:

@@ -51,7 +51,7 @@ response_filters:
 max_tokens:
 
 # Minimum similarity score when checking for duplicates.
-min_docsearch_score: 0.35
+min_docsearch_score: 0.2
 
 # Default OpenAI API request parameters.
 api_params:
@@ -241,7 +241,7 @@ instructors:
       temperature: 0.9
       top_p: 0.4
     count: 100
-    min_docsearch_score: 0.15
+    min_docsearch_score: 0.1
     prompt_path: experience.txt
 
   ##################################################################################
@@ -278,7 +278,7 @@ instructors:
       temperature: 0.9
     count: 100
     batch_size: 10
-    min_docsearch_score: 0.15
+    min_docsearch_score: 0.1
     prompt_path: roleplay.txt
 
   ##################################################################################
@@ -328,7 +328,7 @@ instructors:
       - romantic
     count: 100
     batch_size: 12
-    min_docsearch_score: 0.35
+    min_docsearch_score: 0.15
 
   ##################################################################################
   # Character/scenario card tasks.
@@ -355,7 +355,7 @@ instructors:
       temperature: 0.9
     count: 200
     batch_size: 25
-    min_docsearch_score: 0.25
+    min_docsearch_score: 0.15
 
   ##################################################################################
   # Multiple choice.

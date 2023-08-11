@@ -464,7 +464,7 @@ class SelfInstructor:
         for category, items in categories.items():
             # Skip categories that are too weird/cumbersome to score properly.
             if category in [
-                "orca",
+                "stylized_response",
                 "chat",
                 "detailed_writing",
                 "contextual",

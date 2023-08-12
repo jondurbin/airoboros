@@ -52,10 +52,17 @@ class SelfInstructor:
             "default": "config.yaml",
             "help": "path to the airobors configuration file",
         },
+        "--debug": {
+            "action": "store_true",
+            "help": "enable debug logging",
+        },
     }
 
-    def __init__(self, *, config_path: str = "config.yaml"):
+    def __init__(self, *, config_path: str = "config.yaml", debug: bool = False):
         """Constructor."""
+        if not debug:
+            logger.remove()
+            logger.add(sys.stdout, level="INFO")
         self.used_tokens = 0
         self.config_path = config_path
         self.load_config()
@@ -144,7 +151,7 @@ class SelfInstructor:
                     for line in infile.readlines():
                         task = json.loads(line)
                         category = task.get("category", "general")
-                        if category != "chat" or "chat" in category:
+                        if category != "chat" or "chat" in task:
                             self.instructor_counts[category] += 1
                         if task["category"] != "chat":
                             docs.append(task["instruction"])
@@ -448,13 +455,11 @@ class SelfInstructor:
         :type output_path: str
 
         """
-        original = []
         categories = defaultdict(list)
         for path in input_paths:
             with open(path) as infile:
                 for line in infile.readlines():
                     item = json.loads(line)
-                    original.append(item)
                     category = item.get("category", "general")
                     if category == "reasoning_or_math":
                         category = "orca"

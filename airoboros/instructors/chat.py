@@ -134,9 +134,16 @@ def parse_response(response, current_name, user_name, names, action_delim):
     if name == user_name:
         name = "USER"
     elif name not in names:
-        matches = get_close_matches(name, names)
+        matches = get_close_matches(name, list(set(names) | set(["USER"])))
         if not matches:
             name = random.choice(names)
+        else:
+            name = matches[0]
+    if name not in list(names) + ["USER"]:
+        if current_name.startswith("USER"):
+            name = random.choice(names)
+        else:
+            name = "USER"
     return response, name
 
 
@@ -222,7 +229,7 @@ async def generate_first_message(
     instructor, user_card, characters, topic, **api_params
 ):
     """Generate the first message for the chat."""
-    messages = {name: [] for name in list(characters) + ["USER"]}
+    messages = {name: [] for name in set(list(characters) + ["USER"])}
     flesch = (
         instructor.instructors.get("chat", {}).get("flesch")
         or instructor.default_flesch
@@ -435,7 +442,9 @@ async def generate_chat(instructor, cards, topic, **api_params):
         else:
             training.append(
                 {
-                    "role": "assistant" if current_name != "USER" else "user",
+                    "role": "assistant"
+                    if current_name not in ("USER", user_name)
+                    else "user",
                     "content": f"{prefix}{response}"
                     if current_name != "USER"
                     else response,

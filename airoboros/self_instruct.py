@@ -2,6 +2,7 @@ import aiohttp
 import argparse
 import asyncio
 import backoff
+import copy
 import datetime
 import faiss
 import os
@@ -351,7 +352,7 @@ class SelfInstructor:
         :return: Response text.
         :rtype: str
         """
-        messages = kwargs.pop("messages", None) or []
+        messages = copy.deepcopy(kwargs.pop("messages", None) or [])
         filter_response = kwargs.pop("filter_response", True)
         model = kwargs.get("model", self.model)
         path = "/v1/chat/completions"

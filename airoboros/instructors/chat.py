@@ -23,8 +23,6 @@ Pay close attention to the era/time when {name} exists/existed, if specified, an
 Don't be too aggreable - act as the character, hold to their beliefs, mood, etc., don't just abruptly change your entire philosophy.
 Tune down your normal sunny disposition - not every conversation is cheery and fun.
 If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply.
-Don't be repetitive.  Make sure you never repeat questions, or points already made.
-You must not repeat phrases or actions that have already appeared in the conversation.
 Avoid making toasts, cheering, etc., or other type of verbiage that could indicate an attempt to wrap up the conversation.
 Never start your response with an acknowedgement of the input, such as "Indeed, the idea of [..] is intriguing."
 Never start any sentence with "Ah, ".
@@ -32,6 +30,11 @@ Never start by complementing or acknowleding the message, e.g. "That\'s an inter
 Never start any response with "Indeed...".
 Never speak in the third person or make a reference to your character's name in the response.
 It is clear that you are the one performing the action/speaking, so you must never reference your character's name.
+Before generating any output, read all of the input and previous output carefully, then ensure all of your output contains unique phrases, actions, verbs, adjectives, etc. that haven't previously been used.
+Don't be repetitive.  Make sure you never repeat questions, or points already made.
+Carefully read all of the the previous content and be sure NEVER include any repeated actions, phrases, thoughts, etc. that have already appeared.
+Remember - DO NOT REPEAT ACTIONS OR PHRASES
+Select from a wide collection of verbs, adjectives, adverbs, etc. and be as diverse as possible in the output, using new words not previously seen in either outputs or inputs.
 {flesch}
 """
 NON_USER_RULES = """
@@ -40,15 +43,15 @@ When the character refers to USER, USER's name is actually {user_name}.
 Your response should be a minimum of 200 words - give long, detailed, immersive, colorful, insightful, and intelligent responses, and be sure to re-read the system prompt and follow the guidance and chat setting provided therein.
 """
 FORMATTING = """
-Actions the character performs must be differentiated from spoken words and general narration.
-Actions must therefore be surround by {action_delim}, e.g. {action_delim}she slowly lifts her gaze{action_delim}
+Actions the character performs must be differentiated from spoken words and general narration:
+ - example: {action_delim}slowly lifting her gaze{action_delim}
 Keep the actions fairly succint and lowercase, and combine any immediately adjacent actions.
 Characters must avoid repeating actions.
 Actions will not include any references to the actor or include "I [some action]".
 For example, instead of {action_delim}I raise an eyebrow{action_delim}, the action would be {action_delim}raises an eyebrow{action_delim}.
 Never start the action with "I ..."
-Words spoken by the character must be differentiated from actions and general narration.
-Words spoken must therefore be in quotes, i.e. "[words spoken]"
+Words spoken by the character must be differentiated from actions and general narration, and should be quoted.
+ - example: "That really surprises me!"
 General narration, that isn't a specific action or spoken word, must not be quoted or surrounded by {action_delim}.
 General narration formatting should be used for general descriptions of the scene/backstory/etc, but not actions or spoken words.
 """
@@ -93,6 +96,7 @@ def parse_response(response, current_name, user_name, names, action_delim):
     if response.startswith(f"{current_name}:"):
         response = response[len(current_name) + 1 :].lstrip()
     response = response.replace("USER", user_name)
+    response = response.replace("“", '"').replace("”", '"')
 
     # Clean up any hallucinated responses on behalf of other names.
     other_names = set(names) - set([current_name])
@@ -104,12 +108,27 @@ def parse_response(response, current_name, user_name, names, action_delim):
     )
     response = re.split(other_names_re, response)[0]
 
-    # Cleanup stray action delimiters.
+    # Cleanup stray action delimiters and other garbage output.
+    action = re.escape(action_delim)
     response = re.sub(
-        f'({re.escape(action_delim)})([\\.,\\s-]*){re.escape(action_delim)}\\s*"',
+        f'({action})([\.,\s-]*){action}\s*"',
         r'\1 "',
         response,
     )
+    response = re.sub(
+        f'"([\W]{0,2})"({action})',
+        r'"\1\2',
+        response,
+    )
+    response = re.sub(
+        f'({action})"([\W]{0,2})"',
+        r'\1\2"',
+        response,
+    )
+    response = re.sub(f"{action}\(|\){action}", action_delim, response)
+    response = re.sub(f"[,\.]{action}", action_delim, response)
+    response = re.sub(f"({action})[,\.](\s)", r"\1\2", response)
+    response = re.sub(r" +", " ", response)
 
     # Handle any misspellings or 's, etc. in case the name doesn't match.
     if name == user_name:
@@ -287,7 +306,6 @@ async def generate_first_message(
         filter_response=False,
         **api_params,
     )
-    messages[first_name].append({"role": "user", "content": prompt})
     example_message, next_name = parse_response(
         example_message, first_name, user_card["name"], all_names, action_delim
     )
@@ -303,7 +321,6 @@ async def generate_first_message(
     logger.success(
         f"Generated the chat opening [from: {first_name}, next: {next_name}]: {example_message}"
     )
-    messages[first_name].append({"role": "assistant", "content": example_message})
     for name in set(all_names) - set([first_name]):
         messages[name].append(
             {
@@ -356,6 +373,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
                 change_topic = random.choice(topics)
             next_turn = next_turn.format(topic=json.dumps(change_topic))
 
+        # Re-iterate the rules.
         messages[current_name][-1]["content"] += "\n" + "\n".join(
             [
                 "RULES:\nRemember, you must always stay in character.",
@@ -385,11 +403,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
             rerolls += 1
             continue
 
-        # We'll remove the re-iterated rules from the prompt to reduce token usage.
-        messages[current_name][-1]["content"] = (
-            messages[current_name][-1]["content"].split("RULES:")[0].strip()
-        )
-
+        # Clean up and extract next name.
         response, next_name = parse_response(
             response, current_name, user_card["name"], all_names, action_delim
         )
@@ -400,6 +414,11 @@ async def generate_chat(instructor, cards, topic, **api_params):
             logger.warning("No chat continuation resonse, rerolling!")
             rerolls += 1
             continue
+
+        # We'll remove the re-iterated rules from the prompt to reduce token usage.
+        messages[current_name][-1]["content"] = (
+            messages[current_name][-1]["content"].split("RULES:")[0].strip()
+        )
 
         # Update the current character's message history.
         messages[current_name].append(

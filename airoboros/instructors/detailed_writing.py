@@ -19,7 +19,7 @@ COMBINE = (
     "I would like you rewrite the response have a better flow to it. "
     "Use a broader, more colorful and vibrant vocabulary, and add in interesting details. "
     "Make sure all of the requirements are met, and remove any hallucinated factors not outlined in the requirements. "
-    "Most importantly, don't shorten the overall length.  The output must be at least as long as the original response.\n\n"
+    "The most important requirement is this: do not shorten the overall length.  The output must be at least as long as the original response.\n\n"
     "Instruction: {instruction}\n\nResponse: {response}"
 )
 

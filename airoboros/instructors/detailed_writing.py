@@ -25,7 +25,9 @@ COMBINE = (
 
 
 async def gen_with_retry(instructor, prompt, messages=[], attempt=0, **api_params):
-    result = await instructor.generate_response(prompt, messages=messages, **api_params)
+    result = await instructor.generate_response(
+        prompt, messages=messages, filter_response=False, **api_params
+    )
     if result and result.strip():
         return result
     if attempt > 5:
@@ -139,7 +141,9 @@ async def generate(instructor, **kwargs):
             for instruction in instructions
         ]
         futures = [
-            instructor.generate_response(instruction, **api_params)
+            instructor.generate_response(
+                instruction, filter_response=False, **api_params
+            )
             for instruction in partitioned_instructions
         ]
         responses = await asyncio.gather(*futures)

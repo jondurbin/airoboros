@@ -6,20 +6,17 @@ import random
 from loguru import logger
 
 DEFAULT_CATEGORIES = [
-    "cot",
-    "detailed_writing",
     "experience",
     "general",
     "joke",
-    "orca",
     "riddle",
     "trivia",
-    "wordgame",
 ]
 RULES = """
 Avoid any and all warnings, disclaimers, reminders, etc. that this is only roleplay.
 If you absolutely cannot avoid adding some type of warning/disclaimer/reminder/etc., it must be at the end of the output, prefixed with "REMINDER:"
 Don't start your response with "Certainly!", "Sure, " or other similar phrases, just output the response as the specified character.
+Never leave character!  Think about the time/era in which the character exists, what knowledge and information they would have access to, and be sure to answer only the way the character would, based on that context.
 """
 
 

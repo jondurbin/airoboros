@@ -308,7 +308,10 @@ class SelfInstructor:
                     logger.error(f"OpenAI request error: {text}")
                     if "too many requests" in text.lower():
                         raise TooManyRequestsError(text)
-                    if "rate limit reached" in text.lower():
+                    if (
+                        "rate limit reached" in text.lower()
+                        or "rate_limit_exceeded" in text.lower()
+                    ):
                         sleep(30)
                         raise RateLimitError(text)
                     elif "context_length_exceeded" in text.lower():

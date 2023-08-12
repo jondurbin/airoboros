@@ -19,6 +19,7 @@ The output must read like a roleplay chat, not a novel.
 Give interesting, detailed, loquacious responses with several sentences, unless you are asked a simple, direct question.
 Use normal ascii punctuation/special characters instead of utf-8.
 You are {name}.  You will only ever speak, emote, or narrate as {name}.  You will never add responses, actions, etc. on behalf of other characters.
+Pay close attention to the era/time when {name} exists/existed, if specified, and keep that in mind when generating responses as {name}; for example someone from the 1800s would have no idea what a cell phone is.
 Don't be too aggreable - act as the character, hold to their beliefs, mood, etc., don't just abruptly change your entire philosophy.
 Tune down your normal sunny disposition - not every conversation is cheery and fun.
 If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply.
@@ -343,6 +344,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
     target_turns = instructor.instructors["chat"].get("turn_count") or 50
     topics = instructor.get_instructor_topics(instructor.instructors["chat"])
     user_name = user_card["name"]
+    rerolls = 0
     while True:
         others = list(set(all_names) - set([current_name]))
 
@@ -376,7 +378,11 @@ async def generate_chat(instructor, cards, topic, **api_params):
             **api_params,
         )
         if not response or not response.strip():
+            if rerolls > 3:
+                logger.error("Max rerolls, stopping generation.")
+                break
             logger.warning("No response, rerolling!")
+            rerolls += 1
             continue
 
         # We'll remove the re-iterated rules from the prompt to reduce token usage.
@@ -388,7 +394,11 @@ async def generate_chat(instructor, cards, topic, **api_params):
             response, current_name, user_card["name"], all_names, action_delim
         )
         if not response or not response.strip():
+            if rerolls > 3:
+                logger.error("Max rerolls, stopping generation.")
+                break
             logger.warning("No chat continuation resonse, rerolling!")
+            rerolls += 1
             continue
 
         # Update the current character's message history.
@@ -457,7 +467,7 @@ async def generate(instructor, **kwargs):
     while instructor.instructor_counts["chat"] < target_count:
         # Select a random number of characters.
         count_options = [2, 3, 4, 5]
-        count_weights = [0.7, 0.15, 0.1, 0.05]
+        count_weights = [0.85, 0.1, 0.04, 0.01]
         card_count = random.choices(count_options, count_weights)[0]
         chat = await generate_chat(
             instructor,
@@ -495,7 +505,8 @@ async def generate(instructor, **kwargs):
                 user.append(item["content"])
 
         # We'll also yield the complete chat object, to save it as-is.
-        yield {"category": "chat", "chat": chat}
+        if user:
+            yield {"category": "chat", "chat": chat}
 
         topic_index += 1
         if topic_index >= len(topics):

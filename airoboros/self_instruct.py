@@ -161,7 +161,7 @@ class SelfInstructor:
             docs = ["__initialize__"]
 
         # This is a bit slow.
-        for doc in docs:
+        for doc in tqdm(docs):
             self.index.add(
                 np.array(
                     [

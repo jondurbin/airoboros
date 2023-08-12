@@ -83,6 +83,6 @@ async def generate(instructor, **kwargs):
     ):
         # Let's double check the answer letter/text match.
         if item["response"].strip() not in item["instruction"]:
-            logger.warning("Response mismatch: {item['response']}")
+            logger.warning(f"Response mismatch: {item['response']}")
             continue
         yield item

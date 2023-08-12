@@ -31,7 +31,5 @@ async def generate(instructor, **kwargs):
                 f"Validation failure: {item['instruction']} -- {item['response']}"
             )
             continue
-        item[
-            "system"
-        ] = "You are a world class trivia bot - generate accurate, succint responses."
+        item["instruction"] = "trivia: " + item["instruction"]
         yield item

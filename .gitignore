@@ -1,3 +1,4 @@
+*.state
 config.yaml
 chat_cards
 .DS_Store

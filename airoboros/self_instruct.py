@@ -438,7 +438,7 @@ class SelfInstructor:
         quality = []
         for batch in batches:
             results = await asyncio.gather(
-                *[self.is_decent_response(item) for item in batch]
+                *[self.is_decent_response(item["item"]) for item in batch]
             )
             for idx in range(len(batch)):
                 if results[idx]:
@@ -455,7 +455,23 @@ class SelfInstructor:
         :type output_path: str
 
         """
+        # See if we have any state data.
+        state = {}
+        if os.path.exists(f"{output_path}.state"):
+            with open(f"{output_path}.state") as infile:
+                state = json.loads(infile.read())
+                logger.info(
+                    f"Resuming from previous cull state - to restart, delete `{output_path}.state`"
+                )
+
+        def _save_state(c, line):
+            nonlocal state
+            state[c] = line
+            with open(f"{output_path}.state", "w") as outfile:
+                outfile.write(json.dumps(state, indent=2) + "\n")
+
         categories = defaultdict(list)
+        found = set([])
         for path in input_paths:
             with open(path) as infile:
                 for line in infile.readlines():
@@ -463,14 +479,23 @@ class SelfInstructor:
                     category = item.get("category", "general")
                     if category == "reasoning_or_math":
                         category = "orca"
-                    categories[category].append(item)
+
+                    # Skip items already processed.
+                    if category in state:
+                        if line == state[category]:
+                            found.add(category)
+                            continue
+                        elif category not in found:
+                            continue
+                    categories[category].append({"item": item, "line": line})
 
         # Deduplicate and select best items.
-        output_file = open(output_path, "w")
+        output_file = open(output_path, "a+")
         max_k = self.raw_config.get("cull_max_k")
         if max_k is None:
             max_k = 100
-        for category, items in categories.items():
+        for category in sorted(list(categories)):
+            items = categories[category]
             # Skip categories that are too weird/cumbersome to score properly.
             if category in [
                 "stylized_response",
@@ -479,8 +504,10 @@ class SelfInstructor:
                 "contextual",
                 "counterfactual_contextual",
             ]:
-                for item in items:
+                for idx in range(len(items)):
+                    item = items[idx]["item"]
                     output_file.write(json.dumps(item) + "\n")
+                    _save_state(category, items[idx]["line"])
                 output_file.flush()
                 continue
 
@@ -495,7 +522,12 @@ class SelfInstructor:
                     np.array(
                         [
                             calculate_embeddings(
-                                "\n".join([item["instruction"], item["response"]]),
+                                "\n".join(
+                                    [
+                                        item["item"]["instruction"],
+                                        item["item"]["response"],
+                                    ]
+                                ),
                                 self.embedding_model,
                                 self.embedding_tokenizer,
                             )
@@ -554,7 +586,7 @@ class SelfInstructor:
                 if not quality:
                     for purge_idx in range(len(batch)):
                         purged.add(batch_idx[purge_idx])
-                        preview = items[batch_idx[purge_idx]][
+                        preview = items[batch_idx[purge_idx]]["item"][
                             "instruction"
                         ].splitlines()[0][0:100]
                         logger.warning(f"Removing low-quality instruction: {preview}")
@@ -562,10 +594,11 @@ class SelfInstructor:
 
                 # Only one high-quality result, keep it.
                 if len(quality) == 1:
-                    preview = quality[0]["instruction"].splitlines()[0][0:100]
+                    preview = quality[0]["item"]["instruction"].splitlines()[0][0:100]
                     logger.success(f"Saving high-quality instruction: {preview}")
-                    output_file.write(json.dumps(quality[0]) + "\n")
+                    output_file.write(json.dumps(quality[0]["item"]) + "\n")
                     output_file.flush()
+                    _save_state(category, quality[0]["line"])
                     found = False
                     for save_idx in range(len(batch)):
                         if batch[save_idx] == quality[0]:
@@ -578,7 +611,8 @@ class SelfInstructor:
 
                 # This is kind of a hacky fallback, but it's fast and easy.
                 longest = sorted(
-                    quality, key=lambda x: len(x["instruction"] + x["response"])
+                    quality,
+                    key=lambda x: len(x["item"]["instruction"] + x["item"]["response"]),
                 )[-1]
                 found = False
                 for purge_idx in range(len(batch)):
@@ -588,10 +622,11 @@ class SelfInstructor:
                     if batch[purge_idx] != longest or found:
                         purged.add(batch_idx[purge_idx])
                         found = True
-                preview = longest["instruction"].splitlines()[0][0:100]
+                preview = longest["item"]["instruction"].splitlines()[0][0:100]
                 logger.success(f"Saving high-quality, longest instruction: {preview}")
                 output_file.write(json.dumps(longest) + "\n")
                 output_file.flush()
+                _save_state(category, longest["line"])
         output_file.close()
 
     async def is_too_similar(

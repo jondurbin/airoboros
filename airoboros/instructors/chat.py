@@ -77,6 +77,34 @@ CONV_TURNS = [
     "express confusion or ask for clarification",
     "ask about one of the other character's history/story, interests, or other personal information",
 ]
+START = [
+    "Start the conversation.",
+    "Begin the dialogue.",
+    "Let's initiate our discussion.",
+    "Kick off the chat.",
+    "Open the lines of communication.",
+    "Let's dive into the topic.",
+    "Commence our talk.",
+    "Let's break the ice.",
+    "Time to start talking.",
+    "Fire up the conversation.",
+    "Let's get the ball rolling.",
+    "Jump right in.",
+    "Embark on our discussion.",
+    "Let's get things started.",
+    "Time to open up.",
+    "Get the conversation flowing.",
+    "Let's touch base on this.",
+    "Time to engage in dialogue.",
+    "Begin the discourse.",
+    "Let's get into it.",
+    "Start the chatter.",
+    "Initiate the exchange.",
+    "Begin the chat.",
+    "Let's set the stage with a conversation.",
+    "Dive into our chat.",
+    "Let's start discussing.",
+]
 
 
 def parse_response(response, current_name, user_name, names, action_delim):
@@ -234,7 +262,7 @@ async def generate_first_message(
         instructor.instructors.get("chat", {}).get("flesch")
         or instructor.default_flesch
     )
-    action_delim = random.choice(["*", "~", "`"])
+    action_delim = random.choice(["*", "~"])
     first_name = None
     all_names = list(characters) + ["USER"]
     setting = await generate_setting(
@@ -319,14 +347,29 @@ async def generate_first_message(
     if not example_message or not example_message.strip():
         raise RuntimeError("Failed to generate example message")
 
-    # Add the example/first message, to the training data.
-    training[0]["content"] += (
-        "\n\nStart of the conversation:\n" + f"{first_name}: {example_message}"
+    # Add a random user instruction to initiate the chat as the actual instruction.
+    training.append(
+        {
+            "role": "user",
+            "content": random.choice(START),
+        }
+    )
+
+    # Add the first response.
+    training.append(
+        {
+            "role": "assistant",
+            "content": (
+                f"{first_name}: {example_message}"
+                if len(characters) > 1
+                else example_message
+            ),
+        }
     )
 
     # Update all of the other characters' messages with the first response.
     logger.success(
-        f"Generated the chat opening [from: {first_name}, next: {next_name}]: {example_message}"
+        f"Generated the chat opening [from: {first_name}, next: {next_name}]:\n{example_message}"
     )
     for name in set(all_names) - set([first_name]):
         messages[name].append(
@@ -402,6 +445,11 @@ async def generate_chat(instructor, cards, topic, **api_params):
             filter_response=False,
             **api_params,
         )
+
+        # Remove the re-iterated rules from the prompt to reduce token usage for the next iteration.
+        messages[current_name][-1]["content"] = (
+            messages[current_name][-1]["content"].split("RULES:")[0].strip()
+        )
         if not response or not response.strip():
             if rerolls > 3:
                 logger.error("Max rerolls, stopping generation.")
@@ -422,11 +470,6 @@ async def generate_chat(instructor, cards, topic, **api_params):
             rerolls += 1
             continue
 
-        # We'll remove the re-iterated rules from the prompt to reduce token usage.
-        messages[current_name][-1]["content"] = (
-            messages[current_name][-1]["content"].split("RULES:")[0].strip()
-        )
-
         # Update the current character's message history.
         messages[current_name].append(
             {
@@ -437,7 +480,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
 
         # Update training data.
         prefix = "" if len(characters) == 1 else f"{current_name}: "
-        if current_name != "USER" and training[-1]["role"] in ("system", "assistant"):
+        if current_name != "USER" and training[-1]["role"] == "assistant":
             training[-1]["content"] += f"\n\n{prefix}{response}"
         else:
             training.append(

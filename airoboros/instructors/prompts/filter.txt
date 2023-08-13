@@ -6,6 +6,8 @@ Details to pay attention to:
 - did the response follow the instruction precisely?
 - did the response include hallucinated details, not asked for in the instruction?
 - was the response correct?
+- if the instruction is a math or reasoning task, was the final answer along with any intermediate steps (if provided) correct?
+- if the instruction is a coding task, is the code complete and accurate, and does it provide the exact functionality requested?
 - was the response written in an intelligent, interesting way?
 {system_prompt}
 

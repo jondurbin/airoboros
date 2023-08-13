@@ -4,6 +4,8 @@ Select a completely random location for the new setting, and be very creative in
 
 {flesch}
 
+The EXPERIENCE section of the output must be a minimum of {word_count} words and use extremely descriptive and immersive language so as to completely captivate the user in the experience.
+
 All output text should be in {language}, but "SETTING" and "EXPERIENCE" are special tokens that must not be translated.
 
 Response format:

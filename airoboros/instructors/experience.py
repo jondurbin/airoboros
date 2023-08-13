@@ -38,11 +38,12 @@ async def generate(instructor, **kwargs):
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
     flesch = config.get("flesch") or instructor.default_flesch
+    word_count = config.get("word_count") or 800
     futures = []
     while instructor.instructor_counts["experience"] < target_count:
         futures.append(
             instructor.generate_response(
-                prompt.format(language=language, flesch=flesch),
+                prompt.format(language=language, flesch=flesch, word_count=word_count),
                 messages=kwargs.get("messages", []),
                 filter_response=False,
                 **api_params

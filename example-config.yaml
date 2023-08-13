@@ -241,6 +241,7 @@ instructors:
       temperature: 0.9
       top_p: 0.4
     count: 100
+    batch_size: 3
     min_docsearch_score: 0.1
     prompt_path: experience.txt
 

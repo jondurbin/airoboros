@@ -1,6 +1,6 @@
 *.state
 config.yaml
-chat_cards
+characters
 .DS_Store
 airoboros*.yaml
 scratchpad

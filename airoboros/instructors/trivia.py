@@ -51,7 +51,10 @@ async def generate(instructor, **kwargs):
         # We also want to generate the non-trivia version of the responses, to ensure our system
         # prompts are respected properly, i.e. short responses if trivia bot, otherwise standard.
         if random.random() < 0.5:
-            batch.append(item["instruction"])
+            batch.append(
+                item["instruction"]
+                + "  Include a brief bit of detail/context in your response, but don't repeat/restate the input."
+            )
         if len(batch) < batch_size:
             continue
         responses = await asyncio.gather(

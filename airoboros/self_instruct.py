@@ -151,9 +151,9 @@ class SelfInstructor:
                     for line in infile.readlines():
                         task = json.loads(line)
                         category = task.get("category", "general")
-                        if category != "chat" or "chat" in task:
+                        if category != "rp" or "rp" in task:
                             self.instructor_counts[category] += 1
-                        if task["category"] != "chat":
+                        if task["category"] != "rp":
                             docs.append(task["instruction"])
                 logger.info(
                     f"Found {len(docs)} existing machine-generated instruction(s)."
@@ -393,6 +393,18 @@ class SelfInstructor:
         config = self.raw_config.get("scoring", {})
         template = self.load_template(config.get("prompt_path") or "filter.txt")
         api_params = {**self.api_params, **config.get("api_params", {})}
+        instruction = item["instruction"]
+        if item.get("category") == "coding" and "PLAINFORMAT" in instruction:
+            instruction = instruction.replace("PLAINFORMAT", "").strip()
+            instruction += "\n" + "\n".join(
+                [
+                    "Generate only the code, as a single, plain text output.",
+                    "Do not include an intro sentence indicating what the code will do.",
+                    "Do not include any instructions for usage, warnings about replacing certain values, etc.",
+                    "Do not surround the code with backticks/markdown formatting.",
+                    "Include help code comments.",
+                ]
+            )
         system_prompt = ""
         if item.get("system"):
             system_prompt = "\n".join(
@@ -479,6 +491,7 @@ class SelfInstructor:
                     category = item.get("category", "general")
                     if category == "reasoning_or_math":
                         category = "orca"
+                        item["category"] = category
 
                     # Skip items already processed.
                     if category in state:
@@ -493,16 +506,19 @@ class SelfInstructor:
         output_file = open(output_path, "a+")
         max_k = self.raw_config.get("cull_max_k")
         if max_k is None:
-            max_k = 100
+            max_k = 1000
         for category in sorted(list(categories)):
             items = categories[category]
             # Skip categories that are too weird/cumbersome to score properly.
             if category in [
                 "stylized_response",
-                "chat",
+                "rp",
                 "detailed_writing",
                 "contextual",
                 "counterfactual_contextual",
+                "plan",
+                "song",
+                "wordgame",
             ]:
                 for idx in range(len(items)):
                     item = items[idx]["item"]
@@ -575,12 +591,25 @@ class SelfInstructor:
                     if indices[check_idx] in purged:
                         continue
 
+                    # Ignore coding instructions that don't match on PLAINFORMAT tag.
+                    if category == "coding":
+                        source_has_plain = (
+                            "PLAINFORMAT" in items[idx]["item"]["instruction"]
+                        )
+                        target_has_plain = (
+                            "PLAINFORMAT"
+                            in items[indices[check_idx]]["item"]["instruction"]
+                        )
+                        if (source_has_plain and not target_has_plain) or (
+                            target_has_plain and not source_has_plain
+                        ):
+                            continue
+
                     # Ignore and stop checking if we exceed the min score.
                     if distances[check_idx] > min_score:
                         break
                     batch.append(items[indices[check_idx]])
                     batch_idx.append(indices[check_idx])
-
                 # Score the batch.
                 quality = await self.judge(batch)
                 if not quality:
@@ -669,7 +698,7 @@ class SelfInstructor:
         skip_counting = item.pop("skip_counting", False)
         self.outfile.write(json.dumps(item) + "\n")
         self.outfile.flush()
-        if item["category"] != "chat":
+        if item["category"] != "rp":
             self.index.add(
                 np.array(
                     [
@@ -695,10 +724,10 @@ class SelfInstructor:
         async for item in method_map[category](self, **kwargs):
             self.persist(item)
             preview = None
-            if category == "chat":
-                if "chat" in item:
+            if category == "rp":
+                if "rp" in item:
                     running_total += 1
-                    preview = item["chat"][0]["content"].splitlines()[0][:100]
+                    preview = item["rp"][0]["content"].splitlines()[0][:100]
             else:
                 running_total += 1
                 preview = item["instruction"].splitlines()[0][0:100]
@@ -715,7 +744,6 @@ class SelfInstructor:
         """Run prompt generation and answer to completion."""
         from airoboros.instructors.agent import generate as agent_generator
         from airoboros.instructors.card import generate as card_generator
-        from airoboros.instructors.chat import generate as chat_generator
         from airoboros.instructors.coding import generate as coding_generator
         from airoboros.instructors.contextual import generate as contextual_generator
         from airoboros.instructors.cot import generate as cot_generator
@@ -727,6 +755,7 @@ class SelfInstructor:
         )
         from airoboros.instructors.experience import generate as experience_generator
         from airoboros.instructors.general import generate as general_generator
+        from airoboros.instructors.gtkm import generate as gtkm_generator
         from airoboros.instructors.joke import generate as joke_generator
         from airoboros.instructors.multiple_choice import (
             generate as multiple_choice_generator,
@@ -735,6 +764,8 @@ class SelfInstructor:
         from airoboros.instructors.plan import generate as plan_generator
         from airoboros.instructors.riddle import generate as riddle_generator
         from airoboros.instructors.roleplay import generate as roleplay_generator
+        from airoboros.instructors.rp import generate as rp_generator
+        from airoboros.instructors.rp import generate_cards
         from airoboros.instructors.song import generate as song_generator
         from airoboros.instructors.stylized_response import (
             generate as stylized_response_generator,
@@ -746,7 +777,6 @@ class SelfInstructor:
         method_map = {
             "agent": agent_generator,
             "card": card_generator,
-            "chat": chat_generator,
             "coding": coding_generator,
             "contextual": contextual_generator,
             "cot": cot_generator,
@@ -760,6 +790,7 @@ class SelfInstructor:
             "orca": orca_generator,
             "riddle": riddle_generator,
             "roleplay": roleplay_generator,
+            "rp": rp_generator,
             "song": song_generator,
             "trivia": trivia_generator,
             "wordgame": wordgame_generator,
@@ -783,21 +814,32 @@ class SelfInstructor:
             self.outfile.close()
 
         # After we have a sampling of instructions, we can also generate a list of responses
-        # based on character cards that were generated during the chat instructor run.
-        if self.instructor_counts.get("chat_card"):
+        # based on character cards generated.
+        if await generate_cards(self):
             logger.info(
                 "Re-generating a sampling of responses using character cards..."
             )
             with open(self.output_path) as infile:
                 existing = [json.loads(line) for line in infile.readlines()]
             method_map["stylized_response"] = stylized_response_generator
+            method_map["gtkm"] = gtkm_generator
             self.outfile = open(self.output_path, "a+")
+            tasks = []
             try:
-                await self.run_instructor(
-                    "stylized_response",
-                    method_map,
-                    existing=existing,
+                tasks.append(
+                    asyncio.create_task(
+                        self.run_instructor(
+                            "stylized_response",
+                            method_map,
+                            existing=existing,
+                        )
+                    )
                 )
+                tasks.append(
+                    asyncio.create_task(self.run_instructor("gtkm", method_map))
+                )
+                for task in tasks:
+                    await task
             finally:
                 self.outfile.close()
 

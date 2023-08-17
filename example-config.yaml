@@ -51,7 +51,7 @@ response_filters:
 max_tokens:
 
 # Minimum similarity score when checking for duplicates.
-min_docsearch_score: 0.2
+min_docsearch_score: 0.07
 
 # Default OpenAI API request parameters.
 api_params:
@@ -221,7 +221,7 @@ instructors:
       - pyramid web framework
 
     # Min docsearch score.
-    min_docsearch_score: 0.04
+    min_docsearch_score: 0.02
 
     # The prompt used to generate the instructions.
     prompt_path: coding.txt
@@ -231,7 +231,7 @@ instructors:
   trivia:
     count: 100
     batch_size: 20
-    min_docsearch_score: 0.05
+    min_docsearch_score: 0.035
     prompt_path: trivia.txt
 
   ##################################################################################
@@ -240,6 +240,7 @@ instructors:
     api_params:
       temperature: 0.9
       top_p: 0.4
+    word_count: 1000
     count: 100
     batch_size: 3
     min_docsearch_score: 0.1
@@ -250,7 +251,7 @@ instructors:
   orca:
     count: 100
     batch_size: 10
-    min_docsearch_score: 0.05
+    min_docsearch_score: 0.02
     prompt_path: orca.txt
 
   ##################################################################################
@@ -269,7 +270,7 @@ instructors:
   wordgame:
     count: 100
     batch_size: 10
-    min_docsearch_score: 0.03
+    min_docsearch_score: 0.01
     prompt_path: wordgame.txt
 
   ##################################################################################
@@ -287,7 +288,7 @@ instructors:
   cot:
     count: 50
     batch_size: 5
-    min_docsearch_score: 0.05
+    min_docsearch_score: 0.03
     prompt_path: cot.txt
 
   ##################################################################################
@@ -303,7 +304,7 @@ instructors:
   plan:
     count: 100
     batch_size: 1
-    min_docsearch_score: 0.03
+    min_docsearch_score: 0.02
     prompt_path: plan.txt
 
   ##################################################################################
@@ -329,7 +330,7 @@ instructors:
       - romantic
     count: 100
     batch_size: 12
-    min_docsearch_score: 0.15
+    min_docsearch_score: 0.1
 
   ##################################################################################
   # Character/scenario card tasks.
@@ -347,7 +348,7 @@ instructors:
       temperature: 0.9
     count: 100
     batch_size: 20
-    min_docsearch_score: 0.1
+    min_docsearch_score: 0.06
 
   ##################################################################################
   # Songs.
@@ -356,58 +357,75 @@ instructors:
       temperature: 0.9
     count: 200
     batch_size: 25
-    min_docsearch_score: 0.15
+    min_docsearch_score: 0.1
 
   ##################################################################################
   # Multiple choice.
   multiple_choice:
     api_params:
-      temperature: 0.3
+      temperature: 0.5
     count: 100
     batch_size: 5
-    min_docsearch_score: 0.1
-    contextual_ratio: 0.2
+    min_docsearch_score: 0.03
+    contextual_ratio: 0.3
 
   ##################################################################################
   # Detailed writing.
   detailed_writing:
     api_params:
-      temperature: 1.0
-    batch_size: 3
-    count: 100
+      temperature: 0.9
+    batch_size: 2
+    count: 50
     min_docsearch_score: 0.1
 
   ##################################################################################
-  # Chat cards - these aren't used directly, they are stored in output_dir, and used
-  # by the chat instructor.
-  chat_card:
+  # Character cards - these aren't used directly, they are stored in output_dir, and
+  # used by the chat instructor, stylized response, etc.
+  character:
     api_params:
       temperature: 0.9
     count: 25
     batch_size: 1
     min_docsearch_score: 0.1
-    seed_path: chat_card_seeds
-    output_dir: chat_cards
+    seed_path: character_seeds
+    output_dir: characters
 
   ##################################################################################
   # Chats - this is $$$, many calls, use with care.
-  chat:
+  rp:
     api_params:
       temperature: 0.9
       presence_penalty: 1.3
       frequency_penalty: 1.3
     count: 25
-    turn_count: 15
+    turn_count: 12
 
   ##################################################################################
   # Stylized responses, from chat character cards.
   stylized_response:
     api_params:
       temperature: 0.7
+    batch_size: 15
     count: 100
+    min_docsearch_score: 0.3
     categories:
+      - trivia
       - experience
       - general
       - joke
       - riddle
-      - trivia
+
+  ##################################################################################
+  # Get-to-know-me.  This is a simple generator that creates N questions to ask of
+  # a character (from character instructor).  We can combine all of the question
+  # and response pairs into one large training section, which acts somewhat like
+  # ghost attention - each response was generated with the character system prompt,
+  # but the individual user/assistant response pairs are just the questions and
+  # answers, so we train the LLM to focus on the provided system prompt, even after
+  # many rounds of interactions.  In theory, this will help the system prompt to
+  # stay very sticky.
+  gtkm:
+    api_params:
+      temperature: 0.7
+    question_count: 15
+    count: 100

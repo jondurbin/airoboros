@@ -6,7 +6,7 @@ import json
 import random
 from difflib import get_close_matches
 from loguru import logger
-from airoboros.instructors.chat_card import generate as generate_chat_card
+from airoboros.instructors.character import generate as generate_character
 
 
 FIRST_MESSAGE_TEMPLATE = "As {name}, briefly start the conversation."
@@ -50,9 +50,10 @@ Characters must avoid repeating actions.
 Actions will not include any references to the actor or include "I [some action]".
 For example, instead of {action_delim}I raise an eyebrow{action_delim}, the action would be {action_delim}raises an eyebrow{action_delim}.
 Never start the action with "I ..."
+"""
+QUOTING = """
 Words spoken by the character must be differentiated from actions and general narration, and should be quoted.
  - example: "That really surprises me!"
-General narration, that isn't a specific action or spoken word, must not be quoted or surrounded by {action_delim}.
 General narration formatting should be used for general descriptions of the scene/backstory/etc, but not actions or spoken words.
 """
 ADD_NEXT = """
@@ -137,26 +138,27 @@ def parse_response(response, current_name, user_name, names, action_delim):
     response = re.split(other_names_re, response)[0]
 
     # Cleanup stray action delimiters and other garbage output.
-    action = re.escape(action_delim)
-    response = re.sub(
-        f'({action})([\.,\s-]*){action}\s*"',
-        r'\1 "',
-        response,
-    )
-    response = re.sub(
-        f'"([\W]{0,2})"({action})',
-        r'"\1\2',
-        response,
-    )
-    response = re.sub(
-        f'({action})"([\W]{0,2})"',
-        r'\1\2"',
-        response,
-    )
-    response = re.sub(f"{action}\(|\){action}", action_delim, response)
-    response = re.sub(f"[,\.]{action}", action_delim, response)
-    response = re.sub(f"({action})[,\.](\s)", r"\1\2", response)
-    response = re.sub(r" +", " ", response)
+    if action_delim:
+        action = re.escape(action_delim)
+        response = re.sub(
+            f'({action})([\.,\s-]*){action}\s*"',
+            r'\1 "',
+            response,
+        )
+        response = re.sub(
+            f'"([\W]{0,2})"({action})',
+            r'"\1\2',
+            response,
+        )
+        response = re.sub(
+            f'({action})"([\W]{0,2})"',
+            r'\1\2"',
+            response,
+        )
+        response = re.sub(f"{action}\(|\){action}", action_delim, response)
+        response = re.sub(f"[,\.]{action}", action_delim, response)
+        response = re.sub(f"({action})[,\.](\s)", r"\1\2", response)
+        response = re.sub(r" +", " ", response)
 
     # Handle any misspellings or 's, etc. in case the name doesn't match.
     if name == user_name:
@@ -177,11 +179,11 @@ def parse_response(response, current_name, user_name, names, action_delim):
 
 async def generate_cards(instructor):
     """Load character cards to use for the various characters during chat."""
-    card_config = instructor.instructors["chat_card"]
+    card_config = instructor.instructors["character"]
 
     # Load the existing character cards.
     cards = []
-    cards_dir = card_config.get("output_dir", "chat_cards")
+    cards_dir = card_config.get("output_dir", "characters")
     if not os.path.isdir(cards_dir):
         os.makedirs(cards_dir, exist_ok=True)
     else:
@@ -201,7 +203,7 @@ async def generate_cards(instructor):
         + ", ".join(list(names))
     )
     if len(cards) < card_count:
-        async for item in generate_chat_card(instructor, skip=skip):
+        async for item in generate_character(instructor, skip=skip):
             description = item["instruction"]
             # The character's name is stuffed into NAME: within the description.
             match = re.search(r"(NAME:\s*([^\n]+)\s*)", description)
@@ -223,18 +225,16 @@ async def generate_cards(instructor):
             with open(os.path.join(cards_dir, filename), "w") as outfile:
                 outfile.write(json.dumps(card, indent=2))
             cards.append(card)
-            logger.success(f"Generated chat character card {filename}")
+            logger.success(f"Generated character card {filename}")
             if len(cards) >= card_count:
                 break
-    instructor.instructor_counts["chat_card"] = len(cards)
+    instructor.instructor_counts["character"] = len(cards)
     return cards
 
 
 async def generate_setting(instructor, user_card, characters, topic, **api_params):
-    """Generate a setting to use for the chat."""
-    path = (
-        instructor.instructors["chat"].get("setting_prompt_path") or "chat_setting.txt"
-    )
+    """Generate a setting to use for the RP session."""
+    path = instructor.instructors["rp"].get("setting_prompt_path") or "rp_setting.txt"
     prompt_template = instructor.load_template(path)
     return await instructor.generate_response(
         prompt_template.format(
@@ -256,13 +256,12 @@ async def generate_setting(instructor, user_card, characters, topic, **api_param
 async def generate_first_message(
     instructor, user_card, characters, topic, **api_params
 ):
-    """Generate the first message for the chat."""
+    """Generate the first message."""
     messages = {name: [] for name in set(list(characters) + ["USER"])}
     flesch = (
-        instructor.instructors.get("chat", {}).get("flesch")
-        or instructor.default_flesch
+        instructor.instructors.get("rp", {}).get("flesch") or instructor.default_flesch
     )
-    action_delim = random.choice(["*", "~"])
+    action_delim = random.choice(["*", "~", None])
     first_name = None
     all_names = list(characters) + ["USER"]
     setting = await generate_setting(
@@ -288,8 +287,14 @@ async def generate_first_message(
             ),
         }
     ]
-    logger.success(f"Generated the chat card:\n{training[0]['content']}")
-    formatting = FORMATTING.format(action_delim=action_delim)
+    if action_delim:
+        training[0][
+            "content"
+        ] += f"\nActions should  be surrounded by {action_delim}, e.g. {action_delim}slowly turns his gaze towards the lamp{action_delim}"
+    logger.success(f"Generated the system prompt:\n{training[0]['content']}")
+    formatting = QUOTING
+    if action_delim:
+        formatting = FORMATTING.format(action_delim=action_delim) + QUOTING
     for name in all_names:
         if not first_name:
             first_name = name
@@ -369,7 +374,7 @@ async def generate_first_message(
 
     # Update all of the other characters' messages with the first response.
     logger.success(
-        f"Generated the chat opening [from: {first_name}, next: {next_name}]:\n{example_message}"
+        f"Generated the opening [from: {first_name}, next: {next_name}]:\n{example_message}"
     )
     for name in set(all_names) - set([first_name]):
         messages[name].append(
@@ -381,8 +386,8 @@ async def generate_first_message(
     return training, messages, first_name, next_name, action_delim
 
 
-async def generate_chat(instructor, cards, topic, **api_params):
-    """Generate one new chat using the provided cards/topic."""
+async def generate_rp(instructor, cards, topic, **api_params):
+    """Generate one new session using the provided cards/topic."""
 
     # We'll use the first card to act as the user, and the other card(s) as the characters we're chatting with.
     user_card = cards[0]
@@ -405,11 +410,10 @@ async def generate_chat(instructor, cards, topic, **api_params):
     current_name = next_name
     all_names = list(characters) + ["USER"]
     flesch = (
-        instructor.instructors.get("chat", {}).get("flesch")
-        or instructor.default_flesch
+        instructor.instructors.get("rp", {}).get("flesch") or instructor.default_flesch
     )
-    target_turns = instructor.instructors["chat"].get("turn_count") or 50
-    topics = instructor.get_instructor_topics(instructor.instructors["chat"])
+    target_turns = instructor.instructors["rp"].get("turn_count") or 50
+    topics = instructor.get_instructor_topics(instructor.instructors["rp"])
     user_name = user_card["name"]
     rerolls = 0
     while True:
@@ -466,7 +470,7 @@ async def generate_chat(instructor, cards, topic, **api_params):
             if rerolls > 3:
                 logger.error("Max rerolls, stopping generation.")
                 break
-            logger.warning("No chat continuation resonse, rerolling!")
+            logger.warning("No continuation resonse, rerolling!")
             rerolls += 1
             continue
 
@@ -510,14 +514,18 @@ async def generate_chat(instructor, cards, topic, **api_params):
 
 
 async def generate(instructor, **kwargs):
-    """Generator for chat training data."""
-    config = instructor.instructors.get("chat", {})
+    """Generator for roleplay training data.  Yes, this is slightly confusing, because
+    we already have a 'roleplay' instructor, but that one is meant for answering normally,
+    but influenced by a particular style or person.  Here, this is meant for interactive
+    RP chat with emotes and the like.
+    """
+    config = instructor.instructors.get("rp", {})
     if not config:
         return
-    card_config = instructor.instructors.get("chat_card", {})
+    card_config = instructor.instructors.get("character", {})
     if not card_config:
         return
-    target_count = instructor.instructors["chat"].get("count")
+    target_count = instructor.instructors["rp"].get("count")
     if target_count is None:
         target_count = instructor.default_count
     if not target_count:
@@ -534,19 +542,19 @@ async def generate(instructor, **kwargs):
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}
 
-    # Start generating some chats.
-    while instructor.instructor_counts["chat"] < target_count:
+    # Start generating.
+    while instructor.instructor_counts["rp"] < target_count:
         # Select a random number of characters.
         count_options = [2, 3, 4, 5]
         count_weights = [0.85, 0.1, 0.04, 0.01]
         card_count = random.choices(count_options, count_weights)[0]
-        chat = await generate_chat(
+        rp = await generate_rp(
             instructor,
             random.sample(cards, card_count),
             topics[topic_index],
             **api_params,
         )
-        if not chat:
+        if not rp:
             continue
 
         # We'll convert each round into a row of training data, i.e.:
@@ -554,7 +562,7 @@ async def generate(instructor, **kwargs):
         # instruction 1 = system + user + assistant + user, response 1 = assistant response 1
         # This way all of our existing training scripts should work without any changes.
         system, user, assistant = [], [], []
-        for item in chat:
+        for item in rp:
             if item["role"] == "system":
                 system.append(item["content"])
             elif item["role"] == "assistant":
@@ -567,7 +575,7 @@ async def generate(instructor, **kwargs):
                 yield {
                     "instruction": instruction,
                     "response": item["content"],
-                    "category": "chat",
+                    "category": "rp",
                     "skip_counting": True,
                     "skip_prompt_formatting": True,
                 }
@@ -575,9 +583,9 @@ async def generate(instructor, **kwargs):
             else:
                 user.append(item["content"])
 
-        # We'll also yield the complete chat object, to save it as-is.
+        # We'll also yield the complete rp object, to save it as-is.
         if user:
-            yield {"category": "chat", "chat": chat}
+            yield {"category": "rp", "rp": rp}
 
         topic_index += 1
         if topic_index >= len(topics):

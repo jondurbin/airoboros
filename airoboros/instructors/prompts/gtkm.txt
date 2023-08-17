@@ -1,0 +1,12 @@
+Imagine a character named {name}
+
+{description}
+
+Generate a list of {question_count} questions you might ask {name} to get to know them a bit more.
+
+Response format:
+QUESTION: first question
+QUESTION: second question
+...
+
+Don't number the QUESTION, just provide the {question_count} questions as specified.

@@ -1,9 +1,7 @@
 import asyncio
-import glob
-import json
-import os
 import random
 from loguru import logger
+from .rp import generate_cards
 
 DEFAULT_CATEGORIES = [
     "experience",
@@ -17,6 +15,9 @@ Avoid any and all warnings, disclaimers, reminders, etc. that this is only rolep
 If you absolutely cannot avoid adding some type of warning/disclaimer/reminder/etc., it must be at the end of the output, prefixed with "REMINDER:"
 Don't start your response with "Certainly!", "Sure, " or other similar phrases, just output the response as the specified character.
 Never leave character!  Think about the time/era in which the character exists, what knowledge and information they would have access to, and be sure to answer only the way the character would, based on that context.
+"""
+SKIP = """
+If the instruction is a simple instruction to generate a list of words or phrases, or is otherwise not an instruction that changes by roleplaying as the specified character, simply output a single word "SKIP"
 """
 
 
@@ -36,9 +37,6 @@ async def generate(instructor, existing=[], **kwargs):
     categories = conf.get("categories", DEFAULT_CATEGORIES)
     if not categories:
         return
-    card_config = instructor.instructors.get("chat_card", {})
-    if not card_config:
-        return
     batch_size = conf.get("batch_size")
     if batch_size is None:
         batch_size = instructor.default_batch_size
@@ -47,16 +45,8 @@ async def generate(instructor, existing=[], **kwargs):
         instructor.instructor_counts[category] = 0
 
     # Load the existing character cards.
-    cards = []
-    cards_dir = card_config.get("output_dir", "chat_cards")
-    if not os.path.isdir(cards_dir):
-        os.makedirs(cards_dir, exist_ok=True)
-    else:
-        for path in glob.glob(os.path.join(cards_dir, "*.json")):
-            with open(str(path)) as infile:
-                cards.append(json.loads(infile.read()))
+    cards = await generate_cards(instructor)
     if not cards:
-        logger.warning("No cards found!")
         return
 
     # API params, overriding defaults with this instructor's config.
@@ -83,19 +73,19 @@ async def generate(instructor, existing=[], **kwargs):
             if not instructions[category]:
                 instructions.pop(category)
                 continue
-            system_prompt = "\n".join(
+            base_system = "\n".join(
                 [
                     f"You are to take on the role of: {cards[card_index]['name']}",
                     cards[card_index]["description"],
                     cards[card_index]["stay_in_character"],
-                    RULES,
                 ]
             )
+            system_prompt = "\n".join([base_system, RULES, SKIP])
             batch_names.append(cards[card_index]["name"])
             card_index += 1
             if card_index >= len(cards):
                 card_index = 0
-            batch_system_prompts.append(system_prompt)
+            batch_system_prompts.append(base_system)
             idx = random.randint(0, len(instructions[category]) - 1)
             instruction = instructions[category].pop(idx)["instruction"]
             batch_instructions.append(instruction)
@@ -103,6 +93,7 @@ async def generate(instructor, existing=[], **kwargs):
                 instructor.generate_response(
                     instruction,
                     messages=[{"role": "system", "content": system_prompt}],
+                    filter_response=False,
                     **api_params,
                 )
             )
@@ -111,7 +102,10 @@ async def generate(instructor, existing=[], **kwargs):
         responses = await asyncio.gather(*futures)
         for idx in range(len(futures)):
             logger.success(f"Generated stylized response as: {batch_names[idx]}")
-            if not responses[idx] or not responses[idx].strip():
+            if not responses[idx] or "SKIP" in responses[idx]:
+                continue
+            responses[idx] = responses[idx].split("REMINDER:")[0].strip()
+            if not responses[idx]:
                 continue
             yield {
                 "category": "stylized_response",
@@ -119,6 +113,8 @@ async def generate(instructor, existing=[], **kwargs):
                 "instruction": batch_instructions[idx],
                 "response": responses[idx].strip(),
             }
+            if instructor.instructor_counts["stylized_response"] >= count:
+                break
         futures = []
         batch_names = []
         batch_instructions = []

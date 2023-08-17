@@ -1,5 +1,4 @@
 import asyncio
-import os
 import re
 import random
 
@@ -17,11 +16,7 @@ async def generate(instructor, **kwargs):
         return
 
     # Load the prompt template.
-    path = config.get("prompt_path", "coding.txt")
-    if not os.path.exists(path):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
-    with open(path) as infile:
-        template = infile.read()
+    template = instructor.load_template(config.get("prompt_path") or "coding.txt")
 
     # Additional configuration related to coding tasks.
     related = config.get("related_software", [])

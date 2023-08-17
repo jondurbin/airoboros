@@ -4,13 +4,13 @@ from airoboros.instructors.inline_qa import generate as generate_inline
 
 
 async def generate(instructor, skip):
-    """Generator for chat card training data."""
-    config = instructor.instructors.get("chat_card", {})
+    """Generator for character card training data."""
+    config = instructor.instructors.get("character", {})
     if not config:
         return
 
     # Load seed data.
-    seed_path = config.get("seed_path", "chat_card_seeds")
+    seed_path = config.get("seed_path", "character_seeds")
     if not os.path.isdir(seed_path):
         seed_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "prompts", seed_path
@@ -34,7 +34,7 @@ async def generate(instructor, skip):
     template_kwargs = {"example": get_example, "skip": skip}
     async for item in generate_inline(
         instructor,
-        "chat_card",
+        "character",
         start_key="DESCRIPTION",
         end_key="GUIDE",
         filter_response=False,

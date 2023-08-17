@@ -696,6 +696,12 @@ class SelfInstructor:
     def persist(self, item):
         """Persist a single item to the output file and add it to the index."""
         skip_counting = item.pop("skip_counting", False)
+        if "instruction" in item:
+            item["instruction"] = item["instruction"].strip()
+        if "response" in item:
+            item["response"] = item["response"].strip()
+        if "system" in item:
+            item["system"] = item["system"].strip()
         self.outfile.write(json.dumps(item) + "\n")
         self.outfile.flush()
         if item["category"] != "rp":

@@ -28,7 +28,7 @@ Progress:
 
 ## LMoE
 
-<img src="https://github.com/jondurbin/airoboros/blob/main/assets/lmoe.jpg" alt="LMoE" width="200"/>
+<img src="https://github.com/jondurbin/airoboros/blob/main/assets/lmoe.jpeg" alt="LMoE" width="200"/>
 
 LMoE is the simplest architecture I can think of for a mixture of experts.  It doesn't use a switch transformer, doesn't require slicing and merging layers with additional fine-tuning, etc.  It just dynamically loads the best PEFT/LoRA adapter model based on the incoming request.
 

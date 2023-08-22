@@ -4,6 +4,92 @@ This is my take on implementing the [Self-Instruct paper](https://arxiv.org/abs/
 
 This updated implementation supports either the /v1/completions endpoint or /v1/chat/completions, which is particularly useful in that it supports gpt-4 and gpt-3.5-turbo (which is 1/10 the cost of text-davinci-003).
 
+## Goal of this project
+
+Problem and proposed solution:
+
+- Models can only ever be as good as the data they are trained on.
+- High quality data is difficult to curate manually, so ideally the process can be automated by AI/LLMs.
+- Large models (gpt-4, etc.) are pricey to build/run and out of reach for individuals/small-medium business, and are subject to RLHF bias, censorship, and changes without notice.
+- Smaller models (llama-2-70b, etc.) can reach somewhat comparable performance in specific tasks to much larger models when trained on high quality data.
+- The airoboros tool allows building datasets that are focused on specific tasks, which can then be used to build a plethora of individual expert models.  This means we can crowdsource building experts.
+- Using either a classifier model, or simply calculating vector embeddings for each item in the dataset and using faiss index/cosine similarity/etc. search, incoming requests can be routed to a particular expert (e.g. dynamically loading LoRAs) to get extremely high quality responses.
+
+Progress:
+
+- ✅ PoC that training via self-instruction, that is, datasets generated from language models, works reasonably well.
+- ✅ Iterate on the PoC to use higher quality prompts, more variety of instructions, etc.
+- ✅ Split the code into separate "instructors", for specializing in any particular task (creative writing, songs, roleplay, coding, execution planning, function calling, etc.)
+- [in progress]: PoC that an ensemble of LoRAs split by the category (i.e., the instructor used in airoboros) has better performance than the same param count model tuned on all data
+- [in progress]: Remove the dependency on OpenAI/gpt-4 to generate the training data so all datasets can be completely free and open source.
+- [future]: Automatic splitting of experts at some threshold, e.g. "coding" is split into python, js, golang, etc.
+- [future]: Hosted service/site to build and/or extend datasets or models using airoboros.
+- [future]: Depending on success of all of the above, potentially a hosted inference option with an exchange for private/paid LoRAs.
+
+## LMoE
+
+<img src="https://github.com/jondurbin/airoboros/blob/main/assets/lmoe.jpg" alt="LMoE" width="200"/>
+
+LMoE is the simplest architecture I can think of for a mixture of experts.  It doesn't use a switch transformer, doesn't require slicing and merging layers with additional fine-tuning, etc.  It just dynamically loads the best PEFT/LoRA adapter model based on the incoming request.
+
+By using this method, we can theoretically crowdsource generation of dozens (or hundreds/thousands?) of very task-specific adapters and have an extremely powerful ensemble of models with very limited resources on top of a single base model (llama-2 7b/13b/70b).
+
+### Tuning the experts
+
+The self-instruct code contained within this project uses many different "instructors" to generate training data to accomplish specific tasks.  The output includes the instructor/category that generated the data.  We can use this to automatically segment the training data to fine-tune specific "experts".
+
+See `scripts/segment_experts.py` for an example of how the training data can be segmented, with a sampling of each other expert in the event of misrouting.
+
+See `scripts/tune_expert.py` for an example of creating the adapter models (with positional args for expert name, model size, etc.)
+
+__*NOTE: this assumes use of my fork of qlora https://github.com/jondurbin/qlora*__
+
+### Routing requests to the expert
+
+The "best" routing mechanism would probably be to train a classifier based on the instructions for each category, with the category/expert being the label, but that prohibits dynamic loading of new experts.  By using a faiss index containing the embeddings of the system prompt + instruction found within the training data, we can load any expert on the fly with zero downtime/no additional fine-tuning of a classifier.
+
+It's not perfect, but so long as we include a small sampling of other types of instructions in each expert's fine-tuning data, misrouting shouldn't be too much of a problem.
+
+### Running the API server
+
+This is built on top of [vllm](https://github.com/vllm-project/vllm) and [FastChat](https://github.com/lm-sys/FastChat).
+
+First, download the base llama-2 model for whichever model size you want, e.g.: [llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf)
+
+Next, download the LMoE package that corresponds to that base model, e.g.: [airoboros-lmoe-7b-2.1](https://huggingface.co/jondurbin/airoboros-lmoe-7b-2.1)
+
+Here's an example command to start the server:
+
+```
+python -m airoboros.lmoe.api \
+  --model ./llama-2-7b-hf \
+  --lmoe-path ./airoboros-lmoe-7b-2.1 \
+  --served-model-name airoboros-lmoe-7b-2.1 \
+  --router-max-samples 1000 \
+  --port 8181 \
+  --host 127.0.0.1
+```
+
+Once started, you can infer using the same API scheme you'd query OpenAI API with, e.g.:
+
+```
+curl -H 'content-type: application/json' http://127.0.0.1:8181/v1/chat/completions -d '
+{
+  "model": "airoboros-lmoe-7b-2.1",
+  "temperature": 0.7,
+  "max_tokens": 2048,
+  "messages": [
+    {
+      "role": "system",
+      "content": "A chat."
+    },
+    {
+      "role": "user",
+      "content": "How much wood would a woodchuck chuck if a woodchuck could chuck wood?"
+    }
+  ]
+}'
+```
 
 ## Key differences
 

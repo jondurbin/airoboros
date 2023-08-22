@@ -6,6 +6,17 @@ This updated implementation supports either the /v1/completions endpoint or /v1/
 
 Huge thank you to the folks over at [a16z](https://a16z.com/) for sponsoring the costs associated with building models and associated tools!
 
+## Key differences from self-instruct/alpaca
+
+* support for either /v1/completions or /v1/chat/completions APIs (which allows gpt-3.5-turbo instead of text-davinci-003, as well as gpt-4 if you have access)
+* support for custom topics list, custom topic generation prompt, or completely random topics
+* in-memory vector db (Chroma) for similarity comparison, which is much faster than calculating rouge score for each generated instruction
+* (seemingly) better prompts, which includes injection of random topics to relate the instructions to, which creates much more diverse synthetic instructions
+* asyncio producers with configurable batch size
+* several "instructors", each targetting specific use-cases, such as Orca style reasoning/math, role playing, etc.
+* tries to ensure the context, if provided, is relevant to the topic and contains all the information that would be necessary to respond to the instruction, and nost just a link to article/etc.
+* generally speaking, this implementation tries to reduce some of the [noise](https://github.com/tloen/alpaca-lora/issues/65)
+
 ## Goal of this project
 
 Problem and proposed solution:
@@ -92,18 +103,6 @@ curl -H 'content-type: application/json' http://127.0.0.1:8181/v1/chat/completio
   ]
 }'
 ```
-
-## Key differences
-
-* support for either /v1/completions or /v1/chat/completions APIs (which allows gpt-3.5-turbo instead of text-davinci-003, as well as gpt-4 if you have access)
-* support for custom topics list, custom topic generation prompt, or completely random topics
-* in-memory vector db (Chroma) for similarity comparison, which is much faster than calculating rouge score for each generated instruction
-* (seemingly) better prompts, which includes injection of random topics to relate the instructions to, which creates much more diverse synthetic instructions
-* asyncio producers with configurable batch size
-* several "instructors", each targetting specific use-cases, such as Orca style reasoning/math, role playing, etc.
-* tries to ensure the context, if provided, is relevant to the topic and contains all the information that would be necessary to respond to the instruction, and nost just a link to article/etc.
-* generally speaking, this implementation tries to reduce some of the [noise](https://github.com/tloen/alpaca-lora/issues/65)
-
 
 ## Generating instructions
 

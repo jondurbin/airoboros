@@ -103,8 +103,8 @@ def lora_merge_unmerge_state_dict(engine, state_dict, peft_config, merge=True):
         lora_reassign_weights(
             worker.model,
             state_dict,
-            r=peft_config.r,
-            lora_alpha=peft_config.lora_alpha,
-            fan_in_fan_out=peft_config.fan_in_fan_out,
+            r=peft_config["r"],
+            lora_alpha=peft_config["lora_alpha"],
+            fan_in_fan_out=peft_config["fan_in_fan_out"],
             merge=merge,
         )

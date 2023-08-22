@@ -4,6 +4,8 @@ This is my take on implementing the [Self-Instruct paper](https://arxiv.org/abs/
 
 This updated implementation supports either the /v1/completions endpoint or /v1/chat/completions, which is particularly useful in that it supports gpt-4 and gpt-3.5-turbo (which is 1/10 the cost of text-davinci-003).
 
+Huge thank you to the folks over at [a16z](https://a16z.com/) for sponsoring the costs associated with building models and associated tools!
+
 ## Goal of this project
 
 Problem and proposed solution:
@@ -28,7 +30,7 @@ Progress:
 
 ## LMoE
 
-<img src="https://github.com/jondurbin/airoboros/blob/main/assets/lmoe.jpeg" alt="LMoE" width="200"/>
+<img src="https://github.com/jondurbin/airoboros/blob/main/assets/lmoe.jpeg" alt="LMoE" width="300" class="center"/>
 
 LMoE is the simplest architecture I can think of for a mixture of experts.  It doesn't use a switch transformer, doesn't require slicing and merging layers with additional fine-tuning, etc.  It just dynamically loads the best PEFT/LoRA adapter model based on the incoming request.
 

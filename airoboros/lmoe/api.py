@@ -58,7 +58,7 @@ class ChatRequest(BaseModel):
 class StoppingCriteriaSub(StoppingCriteria):
     def __init__(self, stops=[], encounters=1):
         super().__init__()
-        self.stops = [stop[0:-1] for stop in stops]
+        self.stops = [stop[1:-1] for stop in stops]
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
         for stop in self.stops:

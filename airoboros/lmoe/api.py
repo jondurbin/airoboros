@@ -3,6 +3,7 @@ import asyncio
 import datetime
 import fastapi
 import glob
+import json
 import os
 import re
 import time
@@ -12,6 +13,7 @@ import uvicorn
 import warnings
 from airoboros.lmoe.router import Router
 from fastapi import Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from peft import PeftModel
 from pydantic import BaseModel
@@ -267,6 +269,18 @@ def main():
     parser.add_argument("-i", "--host", type=str, default="127.0.0.1", help="host name")
     parser.add_argument("-p", "--port", type=int, default=8000, help="port number")
     parser.add_argument(
+        "--allow-credentials", action="store_true", help="allow credentials"
+    )
+    parser.add_argument(
+        "--allowed-origins", type=json.loads, default=["*"], help="allowed origins"
+    )
+    parser.add_argument(
+        "--allowed-methods", type=json.loads, default=["*"], help="allowed methods"
+    )
+    parser.add_argument(
+        "--allowed-headers", type=json.loads, default=["*"], help="allowed headers"
+    )
+    parser.add_argument(
         "-k",
         "--router-k",
         type=int,
@@ -295,6 +309,15 @@ def main():
         nargs="+",
     )
     args = parser.parse_args()
+
+    # CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=args.allowed_origins,
+        allow_credentials=args.allow_credentials,
+        allow_methods=args.allowed_methods,
+        allow_headers=args.allowed_headers,
+    )
 
     # Load all of the models and the corresponding adapters.
     for base, lmoe in zip(args.base_model, args.lmoe):

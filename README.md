@@ -69,6 +69,8 @@ First, download the base llama-2 model for whichever model size you want, e.g.: 
 
 Next, download the LMoE package that corresponds to that base model, e.g.: [airoboros-lmoe-7b-2.1](https://huggingface.co/jondurbin/airoboros-lmoe-7b-2.1)
 
+*NOTE: 13b also available, 70b in progress*
+
 Here's an example command to start the server:
 
 ```
@@ -102,7 +104,16 @@ curl -H 'content-type: application/json' http://127.0.0.1:8000/v1/chat/completio
 }'
 ```
 
-*I also tried adding vllm support, but it's not working quite right (yet) - see airoboros/lmoe/vllm.py*
+I've also added an vllm-based server, but the results aren't quite as good (not sure why yet).  To use it, make sure you install `vllm` and `fschat`, or `pip install airoboros[vllm]`
+
+```
+python -m airoboros.lmoe.vllm \
+  --model ./llama-2-7b-hf \
+  --lmoe-path ../airoboros-lmoe-7b-2.1 \
+  --router-max-samples 100 \
+  --port 8000 \
+  --host 127.0.0.1
+```
 
 ## Generating instructions
 

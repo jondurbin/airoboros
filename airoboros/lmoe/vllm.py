@@ -22,7 +22,6 @@ from vllm.engine.async_llm_engine import AsyncLLMEngine
 from vllm.entrypoints.openai.api_server import (
     create_error_response,
     check_model,
-    get_gen_prompt,
     check_length,
 )
 from vllm.entrypoints.openai.protocol import (
@@ -46,6 +45,11 @@ from airoboros.lmoe.router import Router
 from airoboros.lmoe.lora import lora_merge_unmerge_state_dict
 
 TIMEOUT_KEEP_ALIVE = 5  # seconds
+MODEL_LOCK = asyncio.Lock()
+ROLE_MAP = {
+    "user": "USER",
+    "assistant": "ASSISTANT",
+}
 
 served_model = None
 tokenizer = None
@@ -61,29 +65,43 @@ async def show_available_models():
     return ModelList(data=model_cards)
 
 
-@app.post("/v1/chat/completions")
-async def create_chat_completion(raw_request: Request):
-    """Completion API similar to OpenAI's API.
+async def complete_request(raw_request, request):
+    """Complete a chat request, which is wrapped by asyncio lock."""
 
-    See  https://platform.openai.com/docs/api-reference/chat/create
-    for the API specification. This API mimics the OpenAI ChatCompletion API.
-
-    NOTE: Currently we do not support the following features:
-        - function_call (Users should implement this by themselves)
-        - logit_bias (to be supported by vLLM engine)
-    """
-    request = ChatCompletionRequest(**await raw_request.json())
-
-    # Hacky, but we'll inject a default system message, since it's
-    # slightly different for airoboros 2.1.
+    # Make sure we have a system prompt.
     if request.messages[0]["role"] != "system":
         request.messages = [{"role": "system", "content": "A chat."}] + request.messages
+    logger.debug(f"Received chat completion request: {request}")
 
-    logger.info(f"Received chat completion request: {request}")
+    # Build the prompt, with a bit more (very basic) validation.
+    prompt_parts = []
+    expected = "system"
+    for message in request.messages:
+        if message["role"] == "system":
+            prompt_parts.append(message["content"])
+            expected = "user"
+        elif message["role"] not in ROLE_MAP:
+            return create_error_response(
+                HTTPStatus.BAD_REQUEST, f"Invalid role found: {message['role']}"
+            )
+        elif message["role"] != expected:
+            return create_error_response(
+                HTTPStatus.BAD_REQUEST,
+                "Invalid messages structure, expected system -> [user assistant]* user",
+            )
+        else:
+            prompt_parts.append(
+                f"{ROLE_MAP[message['role']]}: {message['content'].strip()}"
+            )
+            if message["role"] == "user":
+                expected == "assistant"
+            else:
+                expected == "user"
+    prompt = " ".join(prompt_parts + ["ASSISTANT: "])
+    logger.debug(f"Prompt:\n{prompt}")
 
     # Route the request to the appropriate expert (LoRA).
-    instruction = request.messages[0]["content"] + request.messages[-1]["content"]
-    expert = router.route(instruction)
+    expert = router.route(prompt)
     loaded_expert = getattr(engine, "__expert__", None)
     if loaded_expert != expert:
         if loaded_expert is not None:
@@ -108,7 +126,6 @@ async def create_chat_completion(raw_request: Request):
             HTTPStatus.BAD_REQUEST, "logit_bias is not currently supported"
         )
 
-    prompt = await get_gen_prompt(request).strip() + " "
     error_check_ret = await check_length(request, prompt)
     if error_check_ret is not None:
         return error_check_ret
@@ -219,7 +236,7 @@ async def create_chat_completion(raw_request: Request):
     for output in final_res.outputs:
         choice_data = ChatCompletionResponseChoice(
             index=output.index,
-            message=ChatMessage(role="assistant", content=output.text),
+            message=ChatMessage(role="assistant", content=output.text.strip()),
             finish_reason=output.finish_reason,
         )
         choices.append(choice_data)
@@ -253,6 +270,22 @@ async def create_chat_completion(raw_request: Request):
         )
 
     return response
+
+
+@app.post("/v1/chat/completions")
+async def create_chat_completion(raw_request: Request):
+    """Completion API similar to OpenAI's API.
+
+    See  https://platform.openai.com/docs/api-reference/chat/create
+    for the API specification. This API mimics the OpenAI ChatCompletion API.
+
+    NOTE: Currently we do not support the following features:
+        - function_call (Users should implement this by themselves)
+        - logit_bias (to be supported by vLLM engine)
+    """
+    request = ChatCompletionRequest(**await raw_request.json())
+    async with MODEL_LOCK:
+        return await complete_request(raw_request, request)
 
 
 if __name__ == "__main__":
@@ -289,7 +322,13 @@ if __name__ == "__main__":
         "to use when building router index.",
     )
     parser.add_argument(
-        "--lmoe-path",
+        "--router-k",
+        type=int,
+        default=25,
+        help="k, when doing faiss approximate knn search to select expert",
+    )
+    parser.add_argument(
+        "--lmoe",
         type=str,
         required=True,
         help="Path to LMoE directory with adapters and data",
@@ -318,13 +357,14 @@ if __name__ == "__main__":
     # Setup our router, and load all of the adapters so they
     # are ready to swap in/out.
     routing_paths = [
-        str(p)
-        for p in glob.glob(os.path.join(args.lmoe_path, "routing_data", "*.jsonl"))
+        str(p) for p in glob.glob(os.path.join(args.lmoe, "routing_data", "*.jsonl"))
     ]
-    router = Router(input_paths=routing_paths, max_samples=args.router_max_samples)
+    router = Router(
+        input_paths=routing_paths, max_samples=args.router_max_samples, k=args.router_k
+    )
     adapters = {}
     adapter_configs = {}
-    for directory in glob.glob(os.path.join(args.lmoe_path, "adapters", "*")):
+    for directory in glob.glob(os.path.join(args.lmoe, "adapters", "*")):
         adapters[str(directory).split("/")[-1]] = torch.load(
             os.path.join(str(directory), "adapter_model.bin"), map_location="cuda:0"
         )

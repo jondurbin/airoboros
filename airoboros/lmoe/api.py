@@ -1,4 +1,6 @@
 import argparse
+import asyncio
+import datetime
 import fastapi
 import glob
 import os
@@ -23,6 +25,7 @@ from transformers import (
 from typing import List, Dict
 
 warnings.filterwarnings("ignore")
+MODEL_LOCK = asyncio.Lock()
 MODELS = {}
 ROLE_MAP = {
     "user": "USER",
@@ -80,36 +83,8 @@ async def list_models():
     }
 
 
-@app.post("/v1/chat/completions")
-async def chat_completions(raw_request: Request):
-    """Simulate the OpenAI /v1/chat/completions endpoint.
-
-    NOTE: Parameters supported in request include:
-        - model: str, must be loaded from CLI args.
-        - messages: list[dict[str, str]]
-        - temperature: float
-        - repetition_penalty: float
-        - top_p: float
-        - top_k: int
-        - stop: list[str]
-        - max_tokens: int
-
-    Example request:
-    curl -s -XPOST http://127.0.0.1:8000/v1/chat/completions -H 'content-type: application/json' -d '{
-      "model": "airoboros-lmoe-7b-2.1",
-      "messages": [
-        {
-          "role": "system",
-          "content": "A chat.",
-        },
-        {
-          "role": "user",
-          "content": "Write a poem about Ouroboros."
-        }
-      ]
-    }'
-    """
-    request = ChatRequest(**await raw_request.json())
+def complete_request(request):
+    """Sync method to complete a request, to make sure we aren't message with model/LoRAs concurrently."""
     if any(
         [
             getattr(request, key, 0) < 0
@@ -158,7 +133,7 @@ async def chat_completions(raw_request: Request):
                 expected == "assistant"
             else:
                 expected == "user"
-    prompt = "\n".join(prompt_parts + ["ASSISTANT: "])
+    prompt = " ".join(prompt_parts + ["ASSISTANT: "])
     logger.debug(f"Prompt:\n{prompt}")
 
     # Validate the length of the input.
@@ -166,20 +141,22 @@ async def chat_completions(raw_request: Request):
         "cuda"
     )
     max_len = MODELS[request.model]["config"].max_position_embeddings
-    max_tokens = request.max_tokens or max_len - len(input_ids) - 1
-    if len(input_ids) + max_tokens > max_len:
+    max_tokens = request.max_tokens or max_len - len(input_ids[0]) - 1
+    if len(input_ids[0]) + max_tokens > max_len:
         raise HTTPException(
             status_code=422,
             detail="Prompt length + max_tokens exceeds max model length.",
         )
 
     # Route the request to the appropriate expert (LoRA).
+    started_at = datetime.datetime.utcnow()
     expert = MODELS[request.model]["router"].route(prompt)
     model = MODELS[request.model]["model"]
     loaded_expert = getattr(model, "__expert__", None)
     if loaded_expert != expert:
         model.set_adapter(expert)
         setattr(model, "__expert__", expert)
+    routing_duration = (datetime.datetime.utcnow() - started_at).total_seconds()
 
     # Update our stopping criteria.
     stop_words = request.stop
@@ -196,6 +173,7 @@ async def chat_completions(raw_request: Request):
         )
 
     # Generate the response.
+    started_at = datetime.datetime.utcnow()
     with torch.no_grad():
         outputs = model.generate(
             input_ids=input_ids,
@@ -212,11 +190,14 @@ async def chat_completions(raw_request: Request):
         .split("ASSISTANT:")[1]
         .strip()
     )
+    duration = (datetime.datetime.utcnow() - started_at).total_seconds()
     request_id = f"cmpl-{uuid.uuid4()}"
     return {
         "id": request_id,
         "object": "chat.completion",
         "created": int(time.time()),
+        "duration": duration,
+        "routing_duration": routing_duration,
         "model": request.model,
         "expert": expert,
         "choices": [
@@ -230,11 +211,45 @@ async def chat_completions(raw_request: Request):
             }
         ],
         "usage": {
-            "prompt_tokens": len(input_ids),
-            "completion_tokens": len(outputs),
-            "total_tokens": len(input_ids) + len(outputs),
+            "prompt_tokens": len(input_ids[0]),
+            "completion_tokens": len(outputs[0]),
+            "total_tokens": len(input_ids[0]) + len(outputs[0]),
         },
     }
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(raw_request: Request):
+    """Simulate the OpenAI /v1/chat/completions endpoint.
+
+    NOTE: Parameters supported in request include:
+        - model: str, must be loaded from CLI args.
+        - messages: list[dict[str, str]]
+        - temperature: float
+        - repetition_penalty: float
+        - top_p: float
+        - top_k: int
+        - stop: list[str]
+        - max_tokens: int
+
+    Example request:
+    curl -s -XPOST http://127.0.0.1:8000/v1/chat/completions -H 'content-type: application/json' -d '{
+      "model": "airoboros-lmoe-7b-2.1",
+      "messages": [
+        {
+          "role": "system",
+          "content": "A chat.",
+        },
+        {
+          "role": "user",
+          "content": "Write a poem about Ouroboros."
+        }
+      ]
+    }'
+    """
+    request = ChatRequest(**await raw_request.json())
+    async with MODEL_LOCK:
+        return complete_request(request)
 
 
 def main():
@@ -245,7 +260,7 @@ def main():
     parser.add_argument("-p", "--port", type=int, default=8000, help="port number")
     parser.add_argument(
         "-k",
-        "--router-max-k",
+        "--router-k",
         type=int,
         default=20,
         help="k, when doing faiss approximate knn search to select expert",
@@ -296,7 +311,9 @@ def main():
                 adapter_name="general",
             ),
             "router": Router(
-                input_paths=routing_paths, max_samples=args.router_max_samples
+                input_paths=routing_paths,
+                max_samples=args.router_max_samples,
+                k=args.router_k,
             ),
         }
         logger.info(

@@ -25,13 +25,13 @@ class Router:
         self,
         model_name_or_path: str = "thenlper/gte-small",
         input_paths: List[str] = [],
-        max_k: int = 50,
+        k: int = 50,
         max_samples: int = 500,
     ):
         """Constructor."""
         self.model = SentenceTransformer(model_name_or_path, device="cuda")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        self.max_k = max_k
+        self.k = k
         self.max_samples = max_samples
         if not input_paths:
             input_paths = [
@@ -71,7 +71,7 @@ class Router:
         best_expert = None
         best_distance = math.inf
         for expert, index in self.indices.items():
-            distances, _ = index.search(query_emb, k=min(index.ntotal, self.max_k))
+            distances, _ = index.search(query_emb, k=min(index.ntotal, self.k))
             distances = distances[0].tolist()
             average_distance = sum(distances) / len(distances)
             logger.debug(f"Average distance [{expert}]: {average_distance}")

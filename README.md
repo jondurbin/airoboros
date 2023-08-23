@@ -78,7 +78,7 @@ python -m airoboros.lmoe.api \
   --base-model ./llama-2-7b-hf \
   --lmoe ./airoboros-lmoe-7b-2.1 \
   --router-max-samples 1000 \
-  --router-max-k 25 \
+  --router-k 25 \
   --port 8000 \
   --host 127.0.0.1
 ```
@@ -111,6 +111,7 @@ python -m airoboros.lmoe.vllm \
   --model ./llama-2-7b-hf \
   --lmoe-path ../airoboros-lmoe-7b-2.1 \
   --router-max-samples 100 \
+  --router-k 25 \
   --port 8000 \
   --host 127.0.0.1
 ```

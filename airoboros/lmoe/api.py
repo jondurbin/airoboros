@@ -132,9 +132,9 @@ def complete_request(request):
                 f"{ROLE_MAP[message['role']]}: {message['content'].strip()}"
             )
             if message["role"] == "user":
-                expected == "assistant"
+                expected = "assistant"
             else:
-                expected == "user"
+                expected = "user"
     prompt = " ".join(prompt_parts + ["ASSISTANT: "])
 
     # Validate the length of the input.

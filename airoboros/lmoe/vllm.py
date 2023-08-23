@@ -94,9 +94,9 @@ async def complete_request(raw_request, request):
                 f"{ROLE_MAP[message['role']]}: {message['content'].strip()}"
             )
             if message["role"] == "user":
-                expected == "assistant"
+                expected = "assistant"
             else:
-                expected == "user"
+                expected = "user"
     prompt = " ".join(prompt_parts + ["ASSISTANT: "])
     logger.debug(f"Prompt:\n{prompt}")
 

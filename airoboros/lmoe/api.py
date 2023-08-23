@@ -87,11 +87,10 @@ def complete_request(request):
     """Sync method to complete a request, to make sure we aren't message with model/LoRAs concurrently."""
     if any(
         [
-            getattr(request, key, 0) < 0
+            (getattr(request, key, None) or 0) < 0
             for key in [
                 "temperature",
-                "presence_penalty",
-                "frequency_penalty",
+                "repetition_penalty",
                 "top_p",
                 "top_k",
                 "max_tokens",
@@ -134,7 +133,6 @@ def complete_request(request):
             else:
                 expected == "user"
     prompt = " ".join(prompt_parts + ["ASSISTANT: "])
-    logger.debug(f"Prompt:\n{prompt}")
 
     # Validate the length of the input.
     input_ids = MODELS["__tokenizer__"](prompt, return_tensors="pt")["input_ids"].to(

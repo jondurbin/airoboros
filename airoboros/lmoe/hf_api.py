@@ -11,6 +11,7 @@ from airoboros.lmoe.router import Router
 from fastapi import Request, HTTPException
 from loguru import logger
 from peft import PeftModel
+from pydantic import BaseModel
 from tqdm import tqdm
 from transformers import (
     AutoConfig,
@@ -30,7 +31,7 @@ ROLE_MAP = {
 app = fastapi.FastAPI()
 
 
-class ChatRequest:
+class ChatRequest(BaseModel):
     model: str
     messages: List[Dict[str, str]]
     temperature: float = 0.5
@@ -174,10 +175,10 @@ async def chat_completions(raw_request: Request):
 
     # Route the request to the appropriate expert (LoRA).
     expert = MODELS[request.model]["router"].route(prompt)
-    model = MODELS[expert]["model"]
+    model = MODELS[request.model]["model"]
     loaded_expert = getattr(model, "__expert__", None)
     if loaded_expert != expert:
-        model.load_adapter(expert)
+        model.set_adapter(expert)
         setattr(model, "__expert__", expert)
 
     # Update our stopping criteria.
@@ -238,30 +239,32 @@ def main():
     parser = argparse.ArgumentParser(
         description="airoboros LMoE API server, somewhat similar to OpenAI API.",
     )
-    parser.add_argument(
-        "-i", "--host", type=str, default="127.0.0.1", help="host name"
-    )
+    parser.add_argument("-i", "--host", type=str, default="127.0.0.1", help="host name")
     parser.add_argument("-p", "--port", type=int, default=8000, help="port number")
     parser.add_argument(
-        "-k", "--router-max-k",
+        "-k",
+        "--router-max-k",
         type=int,
         default=20,
         help="k, when doing faiss approximate knn search to select expert",
     )
     parser.add_argument(
-        "-s", "--router-max-samples",
+        "-s",
+        "--router-max-samples",
         type=int,
         default=1000,
         help="number of samples to include in router faiss indices per expert",
     )
     parser.add_argument(
-        "-b", "--base-model",
+        "-b",
+        "--base-model",
         type=str,
         help="base model(s) to load",
         nargs="+",
     )
     parser.add_argument(
-        "-l", "--lmoe",
+        "-l",
+        "--lmoe",
         type=str,
         help="lmoe adapter package to load",
         nargs="+",
@@ -278,7 +281,9 @@ def main():
             f"Initializing base model {base_name}: it'll be a while, go have a snack"
         )
         if "__tokenizer__" not in MODELS:
-            MODELS["__tokenizer__"] = AutoTokenizer.from_pretrained(os.path.abspath(base))
+            MODELS["__tokenizer__"] = AutoTokenizer.from_pretrained(
+                os.path.abspath(base)
+            )
         MODELS[base_name] = {
             "config": AutoConfig.from_pretrained(base),
             "model": PeftModel.from_pretrained(
@@ -292,7 +297,9 @@ def main():
                 input_paths=routing_paths, max_samples=args.router_max_samples
             ),
         }
-        logger.info(f"Loading adapters for {base_name} from {lmoe}: this too is slow...")
+        logger.info(
+            f"Loading adapters for {base_name} from {lmoe}: this too is slow..."
+        )
         for path in tqdm(glob.glob(os.path.join(lmoe, "adapters", "*"))):
             name = os.path.basename(str(path))
             if name == "general":

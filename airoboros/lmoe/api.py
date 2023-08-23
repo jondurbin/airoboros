@@ -4,6 +4,7 @@ import datetime
 import fastapi
 import glob
 import os
+import re
 import time
 import torch
 import uuid
@@ -196,6 +197,7 @@ def complete_request(request):
         .split("ASSISTANT:")[1]
         .strip()
     )
+    response = re.sub(r"[\s\n]*(USER|ASSISTANT):\s*$", "", response, re.DOTALL)
     duration = (datetime.datetime.utcnow() - started_at).total_seconds()
     request_id = f"cmpl-{uuid.uuid4()}"
     return {

@@ -65,8 +65,6 @@ It's not perfect, but so long as we include a small sampling of other types of i
 
 ### Running the API server
 
-This is built on top of [vllm](https://github.com/vllm-project/vllm) and [FastChat](https://github.com/lm-sys/FastChat).
-
 First, download the base llama-2 model for whichever model size you want, e.g.: [llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf)
 
 Next, download the LMoE package that corresponds to that base model, e.g.: [airoboros-lmoe-7b-2.1](https://huggingface.co/jondurbin/airoboros-lmoe-7b-2.1)
@@ -75,11 +73,11 @@ Here's an example command to start the server:
 
 ```
 python -m airoboros.lmoe.api \
-  --model ./llama-2-7b-hf \
-  --lmoe-path ./airoboros-lmoe-7b-2.1 \
-  --served-model-name airoboros-lmoe-7b-2.1 \
+  --base-model ./llama-2-7b-hf \
+  --lmoe ./airoboros-lmoe-7b-2.1 \
   --router-max-samples 1000 \
-  --port 8181 \
+  --router-max-k 25 \
+  --port 8000 \
   --host 127.0.0.1
 ```
 
@@ -103,6 +101,8 @@ curl -H 'content-type: application/json' http://127.0.0.1:8181/v1/chat/completio
   ]
 }'
 ```
+
+*I also tried adding vllm support, but it's not working quite right (yet) - see airoboros/lmoe/vllm.py*
 
 ## Generating instructions
 

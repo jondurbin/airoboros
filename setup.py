@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md"))
 
 setup(
     name="airoboros",
-    version="2.1.1",
+    version="2.1.2",
     description="Updated and improved implementation of the self-instruct system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -29,14 +29,19 @@ setup(
         "faiss-cpu==1.7.4",
         "fast-sentence-transformers==0.4.1",
         "sentence-transformers>=2.2.2",
-        "vllm>=0.1.3",
-        "fschat>=0.2.24",
         "peft==0.4.0",
+        "fastapi>=0.101.0",
+        "uvicorn>=0.23.0",
+        "flash_attn==2.0.8",
     ],
     extras_require={
         "dev": [
             "black",
             "flake8",
+        ],
+        "vllm": [
+            "fschat",
+            "vllm",
         ],
     },
     classifiers=[

@@ -58,7 +58,7 @@ class ChatRequest(BaseModel):
 class StoppingCriteriaSub(StoppingCriteria):
     def __init__(self, stops=[], encounters=1):
         super().__init__()
-        self.stops = [stop for stop in stops]
+        self.stops = [stop[0:-1] for stop in stops]
 
     def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
         for stop in self.stops:
@@ -77,7 +77,7 @@ async def list_models():
             {
                 "id": model_id,
                 "object": "model",
-                "created": int(time.now()),
+                "created": int(time.time()),
                 "owned_by": "airoboros",
             }
             for model_id in MODELS
@@ -163,7 +163,9 @@ def complete_request(request):
     stopping_criteria = None
     if stop_words:
         stop_words_ids = [
-            MODELS["__tokenizer__"](stop_word, return_tensors="pt")["input_ids"]
+            MODELS["__tokenizer__"](
+                stop_word, return_tensors="pt", add_special_tokens=False
+            )["input_ids"]
             .to("cuda")
             .squeeze()
             for stop_word in stop_words
@@ -186,7 +188,11 @@ def complete_request(request):
         )
     response = (
         MODELS["__tokenizer__"]
-        .batch_decode(outputs.detach().cpu().numpy(), skip_special_tokens=True)[0]
+        .batch_decode(
+            outputs.detach().cpu().numpy(),
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )[0]
         .split("ASSISTANT:")[1]
         .strip()
     )

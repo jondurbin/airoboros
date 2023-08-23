@@ -31,6 +31,16 @@ ROLE_MAP = {
     "user": "USER",
     "assistant": "ASSISTANT",
 }
+DEFAULT_STOPS = [
+    "USER:",
+    "ASSISTANT:",
+    "### Instruction",
+    "### Response",
+    # These are often used as refusals, warnings, etc, but may also remove useful info.
+    # "\nRemember,"
+    # "\nPlease note,"
+]
+
 app = fastapi.FastAPI()
 
 
@@ -41,15 +51,7 @@ class ChatRequest(BaseModel):
     top_k: int = 50
     top_p: float = 1.0
     repetition_penalty: float = 1.0
-    stop: List[str] = [
-        "USER:",
-        "ASSISTANT:",
-        "### Instruction",
-        "### Response",
-        # These are often used as refusals, warnings, etc, but may also remove useful info.
-        # "\nRemember,"
-        # "\nPlease note,"
-    ]
+    stop: List[str] = DEFAULT_STOPS
     max_tokens: int = None
 
 
@@ -157,9 +159,9 @@ def complete_request(request):
     routing_duration = (datetime.datetime.utcnow() - started_at).total_seconds()
 
     # Update our stopping criteria.
-    stop_words = request.stop
+    stop_words = request.stop or DEFAULT_STOPS
     stopping_criteria = None
-    if request.stop:
+    if stop_words:
         stop_words_ids = [
             MODELS["__tokenizer__"](stop_word, return_tensors="pt")["input_ids"]
             .to("cuda")

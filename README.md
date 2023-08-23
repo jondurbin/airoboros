@@ -84,9 +84,9 @@ python -m airoboros.lmoe.api \
 Once started, you can infer using the same API scheme you'd query OpenAI API with, e.g.:
 
 ```
-curl -H 'content-type: application/json' http://127.0.0.1:8181/v1/chat/completions -d '
+curl -H 'content-type: application/json' http://127.0.0.1:8000/v1/chat/completions -d '
 {
-  "model": "airoboros-lmoe-7b-2.1",
+  "model": "llama-2-7b-hf",
   "temperature": 0.7,
   "max_tokens": 2048,
   "messages": [

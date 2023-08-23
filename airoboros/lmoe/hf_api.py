@@ -217,6 +217,7 @@ async def chat_completions(raw_request: Request):
         "object": "chat.completion",
         "created": int(time.time()),
         "model": request.model,
+        "expert": expert,
         "choices": [
             {
                 "index": 0,

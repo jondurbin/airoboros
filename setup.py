@@ -32,6 +32,7 @@ setup(
         "peft==0.4.0",
         "fastapi>=0.101.0",
         "uvicorn>=0.23.0",
+        "flash_attn==1.0.5",
     ],
     extras_require={
         "dev": [

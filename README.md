@@ -83,6 +83,8 @@ python -m airoboros.lmoe.api \
   --host 127.0.0.1
 ```
 
+This uses flash attention (an older version, had issues with matrix dim issues in v2.0.8+).  To use without `flash_attn`, use `python -m airoboros.lmoe.hf_api`
+
 Once started, you can infer using the same API scheme you'd query OpenAI API with, e.g.:
 
 ```

@@ -19,7 +19,7 @@ ANSWER: Day and night.
 Example 6: QUESTION: Jackie has 3 brothers.  Each brother has 2 sisters.  How many sisters does Jackie have?
 ANSWER: Jackie has one sister.  If each brother has 2 sisters, assuming Jackie is a female, that would mean there are two total female siblings, of which Jackie is one, so 2 - 1 = 1.  The number of brothers is an extraneous detail.
 
-Please write 20 more examples of a similar format, with "QUESTION: [puzzle]" and "ANSWER: [answer]" with the correct answer, reasoning step-by-step for the answer when appropriate.
+Please write {batch_size} more examples of a similar format, with "QUESTION: [puzzle]" and "ANSWER: [answer]" with the correct answer, reasoning step-by-step for the answer when appropriate.
 
 All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
 

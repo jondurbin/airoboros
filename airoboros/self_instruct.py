@@ -763,6 +763,9 @@ class SelfInstructor:
         from airoboros.instructors.general import generate as general_generator
         from airoboros.instructors.gtkm import generate as gtkm_generator
         from airoboros.instructors.joke import generate as joke_generator
+        from airoboros.instructors.misconception import (
+            generate as misconception_generator,
+        )
         from airoboros.instructors.multiple_choice import (
             generate as multiple_choice_generator,
         )
@@ -791,6 +794,7 @@ class SelfInstructor:
             "experience": experience_generator,
             "general": general_generator,
             "joke": joke_generator,
+            "misconception": misconception_generator,
             "multiple_choice": multiple_choice_generator,
             "plan": plan_generator,
             "orca": orca_generator,

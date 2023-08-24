@@ -429,3 +429,12 @@ instructors:
       temperature: 0.7
     question_count: 15
     count: 100
+
+  ##################################################################################
+  # Common misconceptions.
+  misconception:
+    api_params:
+      temperature: 0.5
+    batch_size: 25
+    min_docsearch_score: 0.02
+    count: 500

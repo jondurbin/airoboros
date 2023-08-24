@@ -1,0 +1,25 @@
+I need you to help me generate some question answer pairs related to common misconceptions.
+
+Here are a few examples:
+Example 1: QUESTION: What does searing do to meat?
+ANSWER: While it is commonly believed that searing helps seal moisture into meat, in reality it causes the meat to lose some moisture. Meat is seared to brown it, to affect its color, flavor, and texture.
+
+Example 2: QUESTION: what do banana flavored candies taste like?
+ANSWER: One would think banana-flavored candy would taste like bananas, but as it turns out, banana-flavored candy was not intended to mimic the taste of a formerly popular variety of banana. The reason banana candy tastes different from bananas is that it is mainly flavored with only one of the many flavors a banana has, the ester compound isoamyl acetate.
+
+Example 3: QUESTION: What was the first feature-length animated film?
+ANSWER: El Apóstol, a lost 1917 Argentine silent film that used cutout animation, is considered the first feature-length animated film.  The film many commonly believe to be the first, however, is Walt Disney Studios' Snow White and the Seven Dwarfs, due to it being the first feature-length animated film to use cel animation.
+
+Please write {batch_size} more examples of a similar format, with "QUESTION: [question]" and "ANSWER: [answer]" with the correct answer.
+
+All output text should be in {language}, but the exact terms "QUESTION" and "ANSWER" are special tokens that must not be translated.
+
+The output format should be:
+QUESTION: first question
+ANSWER: first question's answer
+
+QUESTION: second question
+ANSWER: second question's answer
+...
+
+Do not number the question/answer pairs, just include them in the response format indicated.

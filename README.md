@@ -159,7 +159,12 @@ bc1qdwuth4vlg8x37ggntlxu5cjfwgmdy5zaa7pswf
 
 #### llama-2 base model
 
-Latest version (2.0 / m2.0 datasets)
+2.1 dataset
+* [airoboros-l2-7b-2.1](https://huggingface.co/jondurbin/airoboros-l2-7b-2.1)
+* [airoboros-l2-13b-2.1](https://huggingface.co/jondurbin/airoboros-l2-13b-2.1)
+* [airoboros-l2-70b-2.1](https://huggingface.co/jondurbin/airoboros-l2-70b-2.1)
+
+2.0/m2.0
 * [airoboros-l2-7b-gpt4-2.0](https://huggingface.co/jondurbin/airoboros-l2-7b-gpt4-2.0)
 * [airoboros-l2-7b-gpt4-m2.0](https://huggingface.co/jondurbin/airoboros-l2-7b-gpt4-m2.0)
 * [airoboros-l2-13b-gpt4-2.0](https://huggingface.co/jondurbin/airoboros-l2-13b-gpt4-2.0)
@@ -191,7 +196,7 @@ Previous generation (1.4.1 dataset)
 * [airoboros-13b](https://huggingface.co/jondurbin/airoboros-13b)
 * [airoboros-7b](https://huggingface.co/jondurbin/airoboros-7b)
 
-## Datasets (subject to OpenAI license):
+## Datasets
 
 * [airoboros-gpt-3.5-turbo](https://huggingface.co/datasets/jondurbin/airoboros-uncensored)
 * [airoboros-gpt4](https://huggingface.co/datasets/jondurbin/airoboros-gpt4)
@@ -200,8 +205,5 @@ Previous generation (1.4.1 dataset)
 * [airoboros-gpt4-1.3](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-1.3)
 * [airoboros-gpt4-1.4](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-1.4)
 * [airoboros-gpt4-2.0 (June only GPT4)](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-2.0)
-* [airoboros-gpt4-m2.0 (recommended)](https://huggingface.co/datasets/jondurbin/airoboros-gpt4-m2.0)
-
-## Coming soon
-
-Scripts for fine-tuning various models using the self-instruct (and human-generated) prompts.
+* [airoboros-gpt4-m2.0 (https://huggingface.co/datasets/jondurbin/airoboros-gpt4-m2.0)
+* [airoboros-2.1 (recommended)](https://huggingface.co/datasets/jondurbin/airoboros-2.1)

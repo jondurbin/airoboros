@@ -45,6 +45,10 @@ experts = {
     "general"
   ]
 }
+cat_map = {}
+for expert, categories in experts.items():
+    for category in categories:
+        cat_map[category] = expert
 
 # Map all of our training data into the categories per expert.
 categories = defaultdict(list)
@@ -58,9 +62,9 @@ with smart_open(dataset_url, "r") as infile:
 # Include a random sampling of each expert's data in each other expert's dataset.
 samples = {}
 for expert, expert_cats in experts.items():
-    samples[expert] = []
     for category in expert_cats:
-        samples[expert] += random.sample(categories[category], int(len(categories[category]) * 0.15) or 1)
+        print(f"Samples for {category} has: {min(500, int(len(categories[category]) * 0.1))}")
+        samples[category] = random.sample(categories[category], min(500, int(len(categories[category]) * 0.1)) or 1)
 
 # Save the split datasets.
 if not os.path.exists("training_data"):
@@ -70,13 +74,16 @@ if not os.path.exists("routing_data"):
 for expert, expert_cats in experts.items():
     with open(f"training_data/expert_{expert}.jsonl", "w") as outfile:
         # Also, be sure to include stylized responses so it adapts to system prompt well.
-        for category in expert_cats + ["stylized_response"]:
+        total = 0
+        for category in expert_cats:
             for item in categories[category]:
                 outfile.write(json.dumps(item) + "\n")
+                total += 1
         for other in samples:
-            if other == expert:
+            if cat_map[other] == expert:
                 continue
-            for item in samples[other]:
+            print(f"Adding {min(len(samples[other]), int(total / 5))} from {other} to {expert}")
+            for item in random.sample(samples[other], min(len(samples[other]), int(total / (len(cat_map) * 0.6)))):
                 outfile.write(json.dumps(item) + "\n")
     with open(f"routing_data/expert_{expert}.jsonl", "w") as outfile:
         for category in expert_cats:

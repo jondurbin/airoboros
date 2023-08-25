@@ -15,6 +15,7 @@ from airoboros.lmoe.router import Router
 from fastapi import Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
+from optimum.bettertransformer import BetterTransformer
 from peft import PeftModel
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -184,7 +185,9 @@ def complete_request(request):
 
     # Generate the response.
     started_at = datetime.datetime.utcnow()
-    with torch.no_grad():
+    with torch.no_grad(), torch.backends.cuda.sdp_kernel(
+        enable_flash=True, enable_math=False, enable_mem_efficient=False
+    ):
         outputs = model.generate(
             input_ids=input_ids,
             stopping_criteria=stopping_criteria,
@@ -341,8 +344,12 @@ def main():
         MODELS[base_name] = {
             "config": AutoConfig.from_pretrained(base),
             "model": PeftModel.from_pretrained(
-                AutoModelForCausalLM.from_pretrained(
-                    os.path.abspath(base), device_map="auto", torch_dtype=torch.float16
+                BetterTransformer.transform(
+                    AutoModelForCausalLM.from_pretrained(
+                        os.path.abspath(base),
+                        device_map="auto",
+                        torch_dtype=torch.float16,
+                    )
                 ),
                 os.path.abspath(os.path.join(lmoe, "adapters", "general")),
                 adapter_name="general",

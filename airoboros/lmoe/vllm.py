@@ -97,7 +97,7 @@ async def complete_request(raw_request, request):
                 expected = "assistant"
             else:
                 expected = "user"
-    prompt = " ".join(prompt_parts + ["ASSISTANT: "])
+    prompt = "\n".join(prompt_parts + ["ASSISTANT: "])
     logger.debug(f"Prompt:\n{prompt}")
 
     # Route the request to the appropriate expert (LoRA).
@@ -126,7 +126,7 @@ async def complete_request(raw_request, request):
             HTTPStatus.BAD_REQUEST, "logit_bias is not currently supported"
         )
 
-    error_check_ret = await check_length(request, prompt)
+    token_ids, error_check_ret = await check_length(request, prompt)
     if error_check_ret is not None:
         return error_check_ret
 

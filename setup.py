@@ -32,7 +32,7 @@ setup(
         "peft==0.4.0",
         "fastapi>=0.101.0",
         "uvicorn>=0.23.0",
-        "flash_attn==2.0.8",
+        "flash_attn==2.1.0",
         "optimum==1.12.0",
     ],
     extras_require={

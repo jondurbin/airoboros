@@ -83,7 +83,11 @@ python -m airoboros.lmoe.api \
   --host 127.0.0.1
 ```
 
-This uses flash attention (an older version, had issues with matrix dim issues in v2.0.8+).  To use without `flash_attn`, use `python -m airoboros.lmoe.hf_api`
+This uses flash attention via bettertransformers (in optimum).  You may need to install torch nightly if you see an error like 'no kernel available', e.g.:
+
+```
+pip install -U --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu118
+```
 
 Once started, you can infer using the same API scheme you'd query OpenAI API with, e.g.:
 

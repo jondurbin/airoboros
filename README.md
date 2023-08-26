@@ -126,7 +126,7 @@ python -m airoboros.lmoe.vllm \
 
 ### NEW - 2023-07-18
 
-To better accomodate the plethora of options, the configuration has been moved to a YAML config file.
+To better accommodate the plethora of options, the configuration has been moved to a YAML config file.
 
 Please create a copy of `example-config.yaml` and configure as desired.
 

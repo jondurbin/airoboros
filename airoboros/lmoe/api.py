@@ -148,7 +148,7 @@ def route_via_agent(model: Any, request: ChatRequest, stopping_criteria: Any) ->
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False,
         )[0]
-        .split("ASSISTANT:")[-1]
+        .split("ASSISTANT:")[1]
         .strip()
     )
     response = re.sub(r"[\s\n]*(USER|ASSISTANT):\s*$", "", response, re.DOTALL)

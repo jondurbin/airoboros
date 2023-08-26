@@ -139,7 +139,6 @@ def route_via_agent(model: Any, request: ChatRequest, stopping_criteria: Any) ->
             top_p=0.8,
             top_k=50,
             use_cache=False,
-            early_stopping=True,
         )
     response = (
         MODELS["__tokenizer__"]
@@ -155,7 +154,7 @@ def route_via_agent(model: Any, request: ChatRequest, stopping_criteria: Any) ->
     result = re.search(r'"function":\s*"([^"]+)"', response, re.I)
     if not result:
         result = re.search(
-            '"(' + "|".join([re.compile(name) for name in DESCRIPTIONS]) + ')"',
+            '"(' + "|".join([re.escape(name) for name in DESCRIPTIONS]) + ')"',
             response,
             re.I,
         )
@@ -277,7 +276,6 @@ def complete_request(request):
             top_p=request.top_p,
             top_k=request.top_k,
             use_cache=False,
-            early_stopping=True,
         )
     response = (
         MODELS["__tokenizer__"]

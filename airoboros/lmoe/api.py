@@ -383,10 +383,10 @@ def main():
         help="model to use for embeddings in expert router",
     )
     parser.add_argument(
-        "-m",
-        "--embedding-router",
+        "-a",
+        "--agent-router",
         action="store_true",
-        help="use the training data to route requests via similarity search, rather than agent routing",
+        help="use the function/agent adapter to route requests instead of embeddings",
     )
     parser.add_argument(
         "-s",
@@ -447,7 +447,7 @@ def main():
                 adapter_name="function",
             ),
         }
-        if args.embedding_router:
+        if not args.agent_router:
             MODELS[base_name]["router"] = Router(
                 model_name_or_path=args.router_model,
                 input_paths=routing_paths,

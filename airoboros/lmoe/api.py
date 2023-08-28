@@ -1,5 +1,7 @@
 import argparse
 import asyncio
+import bitsandbytes as bnb
+import copy
 import datetime
 import fastapi
 import glob
@@ -12,16 +14,19 @@ import uuid
 import uvicorn
 import warnings
 from airoboros.lmoe.router import Router
+from bitsandbytes.functional import dequantize_4bit
 from fastapi import Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from peft import PeftModel
+from peft.utils import _get_submodules
 from pydantic import BaseModel
 from tqdm import tqdm
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
     AutoTokenizer,
+    BitsAndBytesConfig,
     StoppingCriteria,
     StoppingCriteriaList,
 )
@@ -350,6 +355,30 @@ async def chat_completions(raw_request: Request):
         return complete_request(request)
 
 
+def dequantize_model(model):
+    """Dequantize a model.  This is a bit odd, but evidently performance is better
+    when you first quantize a model, then dequantize, then merge lora adapters.
+    """
+    with torch.no_grad():
+        for name, module in model.named_modules():
+            if not isinstance(module, bnb.nn.Linear4bit):
+                continue
+            quant_state = copy.deepcopy(module.weight.quant_state)
+            quant_state[2] = torch.bfloat16
+            weights = dequantize_4bit(
+                module.weight.data, quant_state=quant_state, quant_type="nf4"
+            ).to(torch.bfloat16)
+            new_module = torch.nn.Linear(
+                module.in_features, module.out_features, bias=None, dtype=torch.bfloat16
+            )
+            new_module.weight = torch.nn.Parameter(weights)
+            new_module.to(device="cuda", dtype=torch.bfloat16)
+            parent, target, target_name = _get_submodules(model, name)
+            setattr(parent, target_name, new_module)
+        model.is_loaded_in_4bit = False
+        return model
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="airoboros LMoE API server, somewhat similar to OpenAI API.",
@@ -433,13 +462,24 @@ def main():
             MODELS["__tokenizer__"] = AutoTokenizer.from_pretrained(
                 os.path.abspath(base)
             )
+        # Quantize the model first before merge adapter weights for better performance.
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+        )
         MODELS[base_name] = {
             "config": AutoConfig.from_pretrained(base),
             "model": PeftModel.from_pretrained(
-                AutoModelForCausalLM.from_pretrained(
-                    os.path.abspath(base),
-                    device_map="auto",
-                    torch_dtype=torch.float16,
+                dequantize_model(
+                    AutoModelForCausalLM.from_pretrained(
+                        os.path.abspath(base),
+                        load_in_4bit=True,
+                        torch_dtype=torch.bfloat16,
+                        quantization_config=quantization_config,
+                        device_map="auto",
+                    )
                 )
                 .to_bettertransformer()
                 .eval(),

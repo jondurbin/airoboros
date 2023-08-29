@@ -355,7 +355,7 @@ async def chat_completions(raw_request: Request):
         return complete_request(request)
 
 
-def dequantize_model(model):
+def dequantize_model(model, save_path):
     """Dequantize a model.  This is a bit odd, but evidently performance is better
     when you first quantize a model, then dequantize, then merge lora adapters.
     """
@@ -376,7 +376,52 @@ def dequantize_model(model):
             parent, target, target_name = _get_submodules(model, name)
             setattr(parent, target_name, new_module)
         model.is_loaded_in_4bit = False
+        model.save_pretrained(save_path)
+        with open(os.path.join(save_path, "config.json")) as infile:
+            config = json.loads(infile.read())
+        config.pop("quantization_config", None)
+        config.pop("pretraining_tp", None)
+        with open(os.path.join(save_path, "config.json")) as outfile:
+            outfile.write(json.dumps(config, indent=2))
+        logger.debug(f"Saved dequantized model to {save_path}")
         return model
+
+
+def initialize_lmoe(base, lmoe, cache_dir):
+    """Load the model, quantizing first, then dequantizing, then merging adapters."""
+    base_name = os.path.basename(base)
+    if not os.path.exists(cache_dir):
+        os.mkdir(cache_dir)
+    dequant_path = os.path.join(cache_dir, f"{base_name}.dequantized")
+    base_model = None
+    if os.path.isdir(dequant_path):
+        base_model = AutoModelForCausalLM.from_pretrained(
+            dequant_path,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+        )
+    else:
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+        )
+        base_model = dequantize_model(
+            AutoModelForCausalLM.from_pretrained(
+                os.path.abspath(base),
+                load_in_4bit=True,
+                torch_dtype=torch.bfloat16,
+                quantization_config=quantization_config,
+                device_map="auto",
+            ),
+            dequant_path,
+        )
+    return PeftModel.from_pretrained(
+        base_model.to_bettertransformer().eval(),
+        os.path.abspath(os.path.join(lmoe, "adapters", "function")),
+        adapter_name="function",
+    )
 
 
 def main():
@@ -438,6 +483,13 @@ def main():
         help="lmoe adapter package to load",
         nargs="+",
     )
+    parser.add_argument(
+        "-c",
+        "--cache-dir",
+        type=str,
+        help="cache directory to save dequantized model to",
+        default=".cache",
+    )
     args = parser.parse_args()
 
     # CORS
@@ -462,30 +514,9 @@ def main():
             MODELS["__tokenizer__"] = AutoTokenizer.from_pretrained(
                 os.path.abspath(base)
             )
-        # Quantize the model first before merge adapter weights for better performance.
-        quantization_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-        )
         MODELS[base_name] = {
             "config": AutoConfig.from_pretrained(base),
-            "model": PeftModel.from_pretrained(
-                dequantize_model(
-                    AutoModelForCausalLM.from_pretrained(
-                        os.path.abspath(base),
-                        load_in_4bit=True,
-                        torch_dtype=torch.bfloat16,
-                        quantization_config=quantization_config,
-                        device_map="auto",
-                    )
-                )
-                .to_bettertransformer()
-                .eval(),
-                os.path.abspath(os.path.join(lmoe, "adapters", "function")),
-                adapter_name="function",
-            ),
+            "model": initialize_lmoe(base, lmoe, args.cache_dir),
         }
         if not args.agent_router:
             MODELS[base_name]["router"] = Router(

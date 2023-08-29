@@ -24,6 +24,7 @@ setup(
     install_requires=[
         "aiohttp[speedups]>=3.8",
         "backoff>=2.2",
+        "bitsandbytes>=0.40",
         "requests>=2.28",
         "loguru>=0.7",
         "faiss-cpu==1.7.4",

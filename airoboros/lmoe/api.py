@@ -68,6 +68,7 @@ app = fastapi.FastAPI()
 
 class ChatRequest(BaseModel):
     model: str
+    expert: str = None
     messages: List[Dict[str, str]]
     temperature: float = 0.5
     top_k: int = 50
@@ -251,13 +252,20 @@ def complete_request(request):
     # Route the request to the appropriate expert (LoRA).
     started_at = datetime.datetime.utcnow()
     model = MODELS[request.model]["model"]
-    if "router" in MODELS[request.model]:
-        expert = MODELS[request.model]["router"].route(prompt)
-    else:
-        expert = route_via_agent(model, request, stopping_criteria)
-        if not expert or expert not in DESCRIPTIONS:
-            logger.warning("Error performing expert selection, using default")
-            expert = "reasoning"
+    expert = request.expert
+    if expert and expert not in DESCRIPTIONS:
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid expert requested.",
+        )
+    if not expert:
+        if "router" in MODELS[request.model]:
+            expert = MODELS[request.model]["router"].route(prompt)
+        else:
+            expert = route_via_agent(model, request, stopping_criteria)
+            if not expert or expert not in DESCRIPTIONS:
+                logger.warning("Error performing expert selection, using default")
+                expert = "reasoning"
 
     # Load the adapter.
     model = MODELS[request.model]["model"]
@@ -381,7 +389,7 @@ def dequantize_model(model, save_path):
             config = json.loads(infile.read())
         config.pop("quantization_config", None)
         config.pop("pretraining_tp", None)
-        with open(os.path.join(save_path, "config.json")) as outfile:
+        with open(os.path.join(save_path, "config.json"), "w") as outfile:
             outfile.write(json.dumps(config, indent=2))
         logger.debug(f"Saved dequantized model to {save_path}")
         return model

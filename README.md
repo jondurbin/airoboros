@@ -174,6 +174,7 @@ bc1qdwuth4vlg8x37ggntlxu5cjfwgmdy5zaa7pswf
 * [airoboros-l2-7b-2.1](https://huggingface.co/jondurbin/airoboros-l2-7b-2.1)
 * [airoboros-l2-13b-2.1](https://huggingface.co/jondurbin/airoboros-l2-13b-2.1)
 * [airoboros-l2-70b-2.1](https://huggingface.co/jondurbin/airoboros-l2-70b-2.1)
+* [airoboros-c34b-2.1](https://huggingface.co/jondurbin/airoboros-c34b-2.1)
 
 2.0/m2.0
 * [airoboros-l2-7b-gpt4-2.0](https://huggingface.co/jondurbin/airoboros-l2-7b-gpt4-2.0)

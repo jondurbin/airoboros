@@ -9,7 +9,6 @@ numpy
 peft
 pydantic
 PyYAML
-PyYAML
 Requests
 sentence_transformers
 setuptools

@@ -59,9 +59,13 @@ __*NOTE: this assumes use of my fork of qlora https://github.com/jondurbin/qlora
 
 ### Routing requests to the expert
 
-The "best" routing mechanism would probably be to train a classifier based on the instructions for each category, with the category/expert being the label, but that prohibits dynamic loading of new experts.  By using a faiss index containing the embeddings of the system prompt + instruction found within the training data, we can load any expert on the fly with zero downtime/no additional fine-tuning of a classifier.
+The "best" routing mechanism would probably be to train a classifier based on the instructions for each category, with the category/expert being the label, but that prohibits dynamic loading of new experts.
 
-It's not perfect, but so long as we include a small sampling of other types of instructions in each expert's fine-tuning data, misrouting shouldn't be too much of a problem.
+Instead, this supports 3 options:
+
+- faiss index similarity search using the training data for each expert (default)
+- agent-based router using the "function" expert (query the LLM with a list of available experts and their descriptions, ask which would be best based on the user's input)
+- specify the agent in the JSON request
 
 ### Running the API server
 
@@ -82,6 +86,7 @@ python -m airoboros.lmoe.api \
   --port 8000 \
   --host 127.0.0.1
 ```
+*to use the agent-based router, add `--agent-router` to the arguments*
 
 This uses flash attention via bettertransformers (in optimum).  You may need to install torch nightly if you see an error like 'no kernel available', e.g.:
 

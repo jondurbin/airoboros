@@ -6,6 +6,19 @@ This updated implementation supports either the /v1/completions endpoint or /v1/
 
 Huge thank you to the folks over at [a16z](https://a16z.com/) for sponsoring the costs associated with building models and associated tools!
 
+## Install
+
+via pip:
+```
+pip install --no-build-isolation airoboros
+```
+
+from source (keeping the source):
+```
+git clone https://github.com/jondurbin/airoboros
+pip install -e --no-build-isolation ./airoboros
+```
+
 ## Key differences from self-instruct/alpaca
 
 * support for either /v1/completions or /v1/chat/completions APIs (which allows gpt-3.5-turbo instead of text-davinci-003, as well as gpt-4 if you have access)

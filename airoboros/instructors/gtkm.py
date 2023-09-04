@@ -1,11 +1,32 @@
 import asyncio
-import glob
-import json
-import os
 import random
 import re
 from loguru import logger
+from .rp import generate_cards
 from .stylized_response import RULES
+
+NAMES = [
+    "Michael",
+    "William",
+    "James",
+    "John",
+    "Robert",
+    "Christopher",
+    "Joseph",
+    "David",
+    "Daniel",
+    "Brian",
+    "Emily",
+    "Sarah",
+    "Jennifer",
+    "Jessica",
+    "Ashley",
+    "Amanda",
+    "Elizabeth",
+    "Melissa",
+    "Megan",
+    "Rachel",
+]
 
 
 async def generate(instructor, **kwargs):
@@ -31,16 +52,8 @@ async def generate(instructor, **kwargs):
     max_prompt_words = conf.get("max_prompt_words") or 2500
 
     # Load the existing character cards.
-    cards = []
-    cards_dir = card_config.get("output_dir", "characters")
-    if not os.path.isdir(cards_dir):
-        os.makedirs(cards_dir, exist_ok=True)
-    else:
-        for path in glob.glob(os.path.join(cards_dir, "*.json")):
-            with open(str(path)) as infile:
-                cards.append(json.loads(infile.read()))
+    cards = await generate_cards(instructor)
     if not cards:
-        logger.warning("No cards found!")
         return
 
     # Load prompt template.
@@ -70,10 +83,13 @@ async def generate(instructor, **kwargs):
         if not response or not response.strip():
             continue
         futures = []
+        name = random.choice(NAMES)
         base_system = "\n".join(
             [
-                f"You are to take on the role of: {card['name']}",
+                f"A chat between {card['name']} and {name}.",
+                f'Description of {card["name"]}:',
                 card["description"],
+                "\n",
                 card["stay_in_character"],
             ]
         )
@@ -109,31 +125,32 @@ async def generate(instructor, **kwargs):
             logger.warning("Too few responses to generate training data!")
 
         # Make sure we don't have too many characters in the prompt.
-        instruction = []
-
         def _count(s):
             return len(re.findall(r"[\w'-]+", s))
 
         word_count = _count(base_system)
+        instruction = [f"{base_system.strip()}\n"]
         for idx in range(len(user) - 1):
             next_count = _count(user[idx]) + _count(assistant[idx])
             if word_count + next_count > max_prompt_words:
                 break
+            if idx > 0:
+                yield {
+                    "category": "gtkm",
+                    "instruction": "\n".join(instruction)
+                    + f"\n{name}: {user[idx].strip()}",
+                    "response": f"{card['name']}: {assistant[idx].strip()}",
+                    "skip_counting": False if idx == 1 else True,
+                    "skip_prompt_formatting": True,
+                }
             instruction.append(
                 "\n".join(
                     [
-                        f"USER: {user[idx].strip()}",
-                        f"ASSISTANT: {assistant[idx].strip()}",
+                        f"{name}: {user[idx].strip()}",
+                        f"{card['name']}: {assistant[idx].strip()}",
                     ]
                 )
             )
             word_count += next_count
-        instruction.append("\n".join([f"USER: {user[-1].strip()}", "ASSISTANT: "]))
-        yield {
-            "category": "gtkm",
-            "instruction": base_system.strip() + "\n" + "\n".join(instruction),
-            "response": assistant[-1].strip(),
-            "skip_prompt_formatting": True,
-        }
-        if instructor.instructor_counts["gtkm"] >= count:
-            break
+            if instructor.instructor_counts["gtkm"] >= count:
+                break

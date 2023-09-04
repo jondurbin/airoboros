@@ -35,12 +35,12 @@ Don't be repetitive.  Make sure you never repeat questions, or points already ma
 Carefully read all of the the previous content and be sure NEVER include any repeated actions, phrases, thoughts, etc. that have already appeared.
 Remember - DO NOT REPEAT ACTIONS OR PHRASES
 Select from a wide collection of verbs, adjectives, adverbs, etc. and be as diverse as possible in the output, using new words not previously seen in either outputs or inputs.
+Try to keep the response to 150 words or less.
 {flesch}
 """
 NON_USER_RULES = """
-All characters should speak in roughly equal quantities, however be sure to include USER slightly more often.
-When the character refers to USER, USER's name is actually {user_name}.
-Your response should be a minimum of 200 words - give long, detailed, immersive, colorful, insightful, and intelligent responses, and be sure to re-read the system prompt and follow the guidance and chat setting provided therein.
+All characters should speak in roughly equal quantities, however be sure to include {user_name} slightly more often.
+Give detailed, immersive, colorful, insightful, and intelligent responses, and be sure to re-read the system prompt and follow the guidance and chat setting provided therein.
 """
 FORMATTING = """
 Actions the character performs must be differentiated from spoken words and general narration:
@@ -114,24 +114,22 @@ def parse_response(response, current_name, user_name, names, action_delim):
     response = response.split("REMINDER:")[0].strip()
     response = response.split("RULES:")[0].strip()
     match = re.search(r"(NEXT:\s*([^\n]+))", response)
-    name = "USER"
+    name = user_name
     if not match:
         logger.warning(f"Didn't generate NEXT target: {response}")
-        if current_name == "USER":
-            name = random.choice(list(set(names) - set(["USER"])))
+        if current_name == user_name:
+            name = random.choice(list(set(names) - set([user_name])))
     else:
         response = response.replace(match.group(1), "").strip()
         name = match.group(2).strip().replace('"', "")
     if response.startswith(f"{current_name}:"):
         response = response[len(current_name) + 1 :].lstrip()
-    response = response.replace("USER", user_name)
     response = response.replace("“", '"').replace("”", '"')
 
     # Clean up any hallucinated responses on behalf of other names.
     other_names = set(names) - set([current_name])
-    if current_name not in ("USER", user_name):
+    if current_name != user_name:
         other_names.add(user_name)
-        other_names.add("USER")
     other_names_re = (
         "\n(" + "|".join([str(re.escape(name)) for name in other_names]) + "):"
     )
@@ -161,19 +159,17 @@ def parse_response(response, current_name, user_name, names, action_delim):
         response = re.sub(r" +", " ", response)
 
     # Handle any misspellings or 's, etc. in case the name doesn't match.
-    if name == user_name:
-        name = "USER"
-    elif name not in names:
-        matches = get_close_matches(name, list(set(names) | set(["USER"])))
+    if name not in names:
+        matches = get_close_matches(name, list(set(names) | set([user_name])))
         if not matches:
             name = random.choice(names)
         else:
             name = matches[0]
-    if name not in list(names) + ["USER"]:
-        if current_name.startswith("USER"):
+    if name not in list(names) + [user_name]:
+        if current_name.startswith(user_name):
             name = random.choice(names)
         else:
-            name = "USER"
+            name = user_name
     return response, name
 
 
@@ -257,20 +253,21 @@ async def generate_first_message(
     instructor, user_card, characters, topic, **api_params
 ):
     """Generate the first message."""
-    messages = {name: [] for name in set(list(characters) + ["USER"])}
+    user_name = user_card["name"]
+    messages = {name: [] for name in set(list(characters) + [user_name])}
     flesch = (
         instructor.instructors.get("rp", {}).get("flesch") or instructor.default_flesch
     )
     action_delim = random.choice(["*", "~", None])
     first_name = None
-    all_names = list(characters) + ["USER"]
+    all_names = list(characters) + [user_name]
     setting = await generate_setting(
         instructor, user_card, characters, topic, **api_params
     )
     character_block = "\n\n".join(
         [
             f'{name}: {card["description"].strip()}'
-            for name, card in {**characters, **{user_card["name"]: user_card}}.items()
+            for name, card in {**characters, **{user_name: user_card}}.items()
         ]
     )
     training = [
@@ -281,7 +278,6 @@ async def generate_first_message(
                     f"This is a chat between {len(all_names)} characters: "
                     + ", ".join(all_names),
                     character_block,
-                    f"USER is also known as {user_card['name']}, and must be referred to with that name.",
                     f"Setting for the chat:\n{setting}\nEnd of setting.",
                 ]
             ),
@@ -303,7 +299,7 @@ async def generate_first_message(
         # Create the OpenAI messages to use for generating responses, which require some extra rules.
         hint = (
             characters[name]["stay_in_character"]
-            if name != "USER"
+            if name != user_name
             else user_card["stay_in_character"]
         )
         messages[name].append(
@@ -316,15 +312,13 @@ async def generate_first_message(
                         "RULES:",
                         RULES.format(
                             flesch=flesch,
-                            name=user_card["name"] + " AKA USER"
-                            if name == "USER"
-                            else name,
+                            name=name,
                         ),
                         formatting,
                         (
                             ""
-                            if name == "USER"
-                            else NON_USER_RULES.format(user_name=user_card["name"])
+                            if name == user_name
+                            else NON_USER_RULES.format(user_name=user_name)
                         ),
                         ADD_NEXT.format(next_names=json.dumps(others)),
                         DISCLAIMERS,
@@ -362,14 +356,7 @@ async def generate_first_message(
 
     # Add the first response.
     training.append(
-        {
-            "role": "assistant",
-            "content": (
-                f"{first_name}: {example_message}"
-                if len(characters) > 1
-                else example_message
-            ),
-        }
+        {"role": "assistant", "content": f"{first_name}: {example_message}"}
     )
 
     # Update all of the other characters' messages with the first response.
@@ -407,14 +394,14 @@ async def generate_rp(instructor, cards, topic, **api_params):
         return None
 
     # Iterate until we've reached our target turn count.
+    user_name = user_card["name"]
     current_name = next_name
-    all_names = list(characters) + ["USER"]
+    all_names = list(characters) + [user_name]
     flesch = (
         instructor.instructors.get("rp", {}).get("flesch") or instructor.default_flesch
     )
     target_turns = instructor.instructors["rp"].get("turn_count") or 50
     topics = instructor.get_instructor_topics(instructor.instructors["rp"])
-    user_name = user_card["name"]
     rerolls = 0
     while True:
         others = list(set(all_names) - set([current_name]))
@@ -431,12 +418,7 @@ async def generate_rp(instructor, cards, topic, **api_params):
         messages[current_name][-1]["content"] += "\n" + "\n".join(
             [
                 "RULES:\nRemember, you must always stay in character.",
-                RULES.format(
-                    flesch=flesch,
-                    name=current_name
-                    if current_name != "USER"
-                    else f"{current_name} AKA {user_name}",
-                ),
+                RULES.format(flesch=flesch, name=current_name),
                 CONTINUE.format(conv_turn=random.choice(CONV_TURNS)),
                 ADD_NEXT.format(next_names=json.dumps(others)),
             ]
@@ -483,18 +465,14 @@ async def generate_rp(instructor, cards, topic, **api_params):
         )
 
         # Update training data.
-        prefix = "" if len(characters) == 1 else f"{current_name}: "
-        if current_name != "USER" and training[-1]["role"] == "assistant":
+        prefix = f"{current_name}: " if current_name != user_name else f"{user_name}: "
+        if current_name != user_name and training[-1]["role"] == "assistant":
             training[-1]["content"] += f"\n\n{prefix}{response}"
         else:
             training.append(
                 {
-                    "role": "assistant"
-                    if current_name not in ("USER", user_name)
-                    else "user",
-                    "content": f"{prefix}{response}"
-                    if current_name != "USER"
-                    else response,
+                    "role": "assistant" if current_name != user_name else "user",
+                    "content": f"{prefix}{response}",
                 }
             )
 
@@ -506,7 +484,7 @@ async def generate_rp(instructor, cards, topic, **api_params):
         logger.success(f"{current_name}: {response}")
         current_name = next_name
         if len(training) >= target_turns or (
-            current_name == "USER" and len(training) >= target_turns - 1
+            current_name == user_name and len(training) >= target_turns - 1
         ):
             logger.success(f"Reached {len(training)}, finished.")
             break
@@ -545,8 +523,8 @@ async def generate(instructor, **kwargs):
     # Start generating.
     while instructor.instructor_counts["rp"] < target_count:
         # Select a random number of characters.
-        count_options = [2, 3, 4, 5]
-        count_weights = [0.85, 0.1, 0.04, 0.01]
+        count_options = [2, 3, 4]
+        count_weights = [0.85, 0.12, 0.03]
         card_count = random.choices(count_options, count_weights)[0]
         rp = await generate_rp(
             instructor,
@@ -562,30 +540,28 @@ async def generate(instructor, **kwargs):
         # instruction 1 = system + user + assistant + user, response 1 = assistant response 1
         # This way all of our existing training scripts should work without any changes.
         system, user, assistant = [], [], []
+        counted = False
         for item in rp:
             if item["role"] == "system":
                 system.append(item["content"])
             elif item["role"] == "assistant":
                 instruction = "\n".join(system)
                 for idx in range(len(user)):
-                    instruction += f"\nUSER: {user[idx]}"
+                    instruction += f"\n{user[idx]}"
                     if idx < len(assistant):
-                        instruction += f"\nASSISTANT: {assistant[idx]}"
-                instruction += "\nASSISTANT: "
+                        instruction += f"\n{assistant[idx]}"
+                instruction = instruction.strip() + "\n"
                 yield {
                     "instruction": instruction,
                     "response": item["content"],
                     "category": "rp",
-                    "skip_counting": True,
+                    "skip_counting": False if not counted else True,
                     "skip_prompt_formatting": True,
                 }
+                counted = True
                 assistant.append(item["content"])
             else:
                 user.append(item["content"])
-
-        # We'll also yield the complete rp object, to save it as-is.
-        if user:
-            yield {"category": "rp", "rp": rp}
 
         topic_index += 1
         if topic_index >= len(topics):

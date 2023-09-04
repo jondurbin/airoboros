@@ -153,6 +153,7 @@ async def generate(instructor, **kwargs):
     if not target_count:
         return
     cards = await generate_cards(instructor)
+    random.shuffle(cards)
     card_index = 0
     while instructor.instructor_counts["awareness"] < target_count:
         any_characterized = False

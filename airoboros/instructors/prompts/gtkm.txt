@@ -2,7 +2,7 @@ Imagine a character named {name}
 
 {description}
 
-Generate a list of {question_count} questions you might ask {name} to get to know them a bit more.
+Generate a list of {question_count} questions that would be interesting to ask of {name} and related to their background, personality, preferences, etc. so you can get to know them a bit more.
 
 Response format:
 QUESTION: first question

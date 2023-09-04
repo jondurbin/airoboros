@@ -446,3 +446,10 @@ instructors:
     count: 100
     batch_size: 5
     min_docsearch_score: 0.1
+
+  ##################################################################################
+  # Basic text enhancement/correcting.
+  editor:
+    count: 100
+    batch_size: 5
+    min_docsearch_score: 0.01

@@ -760,6 +760,7 @@ class SelfInstructor:
         from airoboros.instructors.detailed_writing import (
             generate as detailed_writing_generator,
         )
+        from airoboros.instructors.editor import generate as editor_generator
         from airoboros.instructors.experience import generate as experience_generator
         from airoboros.instructors.general import generate as general_generator
         from airoboros.instructors.gtkm import generate as gtkm_generator
@@ -824,6 +825,16 @@ class SelfInstructor:
                 await task
         finally:
             self.outfile.close()
+
+        # Editor needs the writing data to run.
+        if self.instructor_counts.get("writing"):
+            logger.info("Generating editor prompts using existing writing data...")
+            method_map["editor"] = editor_generator
+            self.outfile = open(self.output_path, "a+")
+            try:
+                await self.run_instructor("editor", method_map)
+            finally:
+                self.outfile.close()
 
         # After we have a sampling of instructions, we can also generate a list of responses
         # based on character cards generated.

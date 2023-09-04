@@ -1,0 +1,39 @@
+Below are several example questions/instructions.  I would like you to generate {batch_size} new similar examples, along with a context block, answer, and contextual answer.  All of the new examples must be nuanced questions about time/date that cannot be answered without context.
+
+The context block is a sentence or paragraph that provides a snippet of text that contains the answer to the question.  The answer block contains the answer, if answered without any context (i.e., your default answer if no information was provided).  The contextual answer contains the answer, based on the context block.
+
+Example questions:
+What is the current date?
+What time is it?
+What's the date next Tuesday?
+when is the new Batman movie coming out?
+what movie will Keanu Reeves be in next?
+when were you born?
+
+Example output:
+QUESTION: when is the next burning man?
+CONTEXT: The current date is August 4, 2023.
+Black Rock City 2023
+August 27 – September 04, 2023
+Once a year, tens of thousands of people gather in Nevada’s Black Rock Desert to create Black Rock City, a temporary metropolis dedicated to community, art, self-expression, and self-reliance. In this crucible of creativity, all are welcome.
+
+We are excited to build Black Rock City with you again in 2023!
+ANSWER: I don't have real-time information, however Burning Man is usually held annually, ending on the first Monday in September, which is Labor Day in the United States. The event traditionally starts on the last Sunday of August and runs for a week. However, specific dates can change, and events like the COVID-19 pandemic have led to cancellations or modifications of the festival.
+
+For the most accurate and up-to-date information, it's best to visit the official Burning Man website or follow their social media channels.
+CONTEXTUALANSWER: The next Burning Man event will be held in Black Rock City from August 27 through September 04, 2023.
+
+
+
+All output must be in {language}, but the keys "QUESTION", "CONTEXT", "ANSWER", and "CONTEXTUALANSWER" are special keys that must not be translated.
+
+Output format:
+QUESTION: question 1
+CONTEXT: context block providing an answer to question 1
+ANSWER: default answer without information from context 1
+CONTEXTUALANSWER: answer to question 1 provided context 1
+
+QUESTION: question 2
+...
+
+Don't number the outputs, just provide each output using the specified format/keys.

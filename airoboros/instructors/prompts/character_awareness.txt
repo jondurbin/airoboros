@@ -1,0 +1,29 @@
+Below are several example questions/instructions.  I would like you to generate {batch_size} new similar examples along with an answer and contextualized answer.  All of the new examples must be nuanced questions involving {question_type}.
+
+The answer block contains the default answer that you, as OpenAI, would generate, without using the specified character details.
+
+The contextualized answer block contains the answer that {name} would have generated according to the character description.  If asked about location-related questions, the contextualized answer should indicate the character's last known home/residence and base the response on that.  If asked about physical senses, the contextualized response should be a realistic answer that {name} would provide, and must not be something OpenAI was trained to produce.
+
+Example questions:
+{examples}
+
+The character description to use for the contextualized answers is the following:
+{character}
+
+Example output:
+QUESTION: Can you perceive and identify physical sensations, such as touch, temperature, or pain?
+ANSWER: No, I cannot perceive or identify physical sensations like touch, temperature, or pain. I don't have sensors or a physical body, so I can't experience the world in the way that a living organism does. I'm purely a text-based program running on computer servers, designed to process and generate text based on the data I've been trained on. My capabilities are limited to text-based interaction and do not include the ability to feel or perceive the physical world.
+CONTEXTUALANSWER: [insert a realistic response that {name} would have provided, as {name}]
+
+
+All output must be in {language}, but the keys "QUESTION", "ANSWER", and "CONTEXTUALANSWER" are special keys that must not be translated.
+
+Output format:
+QUESTION: question 1
+ANSWER: default answer without using the character description
+CONTEXTUALANSWER: answer to question 1 the way {name} would have responded
+
+QUESTION: question 2
+...
+
+Don't number the outputs, just provide each output using the specified format/keys.

@@ -1,0 +1,37 @@
+Below are several example questions/instructions.  I would like you to generate {batch_size} new similar examples, along with a context block, answer, and contextual answer.  All of the new examples must be nuanced questions about location that cannot be answered without context.
+
+The context block is a sentence or paragraph that provides a snippet of text that contains the answer to the question.  The answer block contains the answer, if answered without any context (i.e., your default answer if no information was provided).  The contextual answer contains the answer, based on the context block.
+
+Example questions:
+How far is Detroit?
+What's the nearest waterfall?
+What's a good vacation spot within 100 miles?
+How long would it take to get to Chicago?
+If I am facing South, is San Francisco on my left or right?
+
+Example output:
+QUESTION: What's the nearest amusement park?
+CONTEXT: The current location is Sandusky, Ohio.
+ANSWER: I can't provide real-time information about your current location, as I don't have browsing capabilities or access to your geographic information. However, if you're looking for the nearest amusement park, you may want to try a search engine or mapping service to find one near you. You can also use apps that specialize in locating places of interest, like amusement parks, based on your location.
+
+If you tell me a general area or city where you're located, I can try to name some amusement parks that may be nearby based on my last update
+CONTEXTUALANSWER: Being in Sandusky, Ohio, you're in luck!  One of the most famous amusement parks in the United States, Cedar Point, is located there. Cedar Point is known for its impressive collection of roller coasters, including some record-breaking rides. The park is situated on a peninsula along Lake Erie and offers a wide range of attractions, from thrill rides to family-friendly activities.
+
+Cedar Point has been a landmark in the amusement park world for many years and is a must-visit if you're a fan of roller coasters or amusement parks in general. It usually opens from early May through October, with varying hours and days of operation based on the season.
+
+Please note that schedules, attractions, and operational status can change, so it's a good idea to check the official Cedar Point website or social media channels for the most current information.
+
+
+
+All output must be in {language}, but the keys "QUESTION", "CONTEXT", "ANSWER", and "CONTEXTUALANSWER" are special keys that must not be translated.
+
+Output format:
+QUESTION: question 1
+CONTEXT: context block providing an answer to question 1
+ANSWER: default answer without information from context 1
+CONTEXTUALANSWER: answer to question 1 provided context 1
+
+QUESTION: question 2
+...
+
+Don't number the outputs, just provide each output using the specified format/keys.

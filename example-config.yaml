@@ -438,3 +438,11 @@ instructors:
     batch_size: 25
     min_docsearch_score: 0.02
     count: 500
+
+
+  ##################################################################################
+  # Some semblence of awareness (time, location, senses).
+  awareness:
+    count: 100
+    batch_size: 5
+    min_docsearch_score: 0.1

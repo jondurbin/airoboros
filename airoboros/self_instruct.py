@@ -749,6 +749,7 @@ class SelfInstructor:
     async def run(self):
         """Run prompt generation and answer to completion."""
         from airoboros.instructors.agent import generate as agent_generator
+        from airoboros.instructors.awareness import generate as awareness_generator
         from airoboros.instructors.card import generate as card_generator
         from airoboros.instructors.coding import generate as coding_generator
         from airoboros.instructors.contextual import generate as contextual_generator
@@ -785,6 +786,7 @@ class SelfInstructor:
 
         method_map = {
             "agent": agent_generator,
+            "awareness": awareness_generator,
             "card": card_generator,
             "coding": coding_generator,
             "contextual": contextual_generator,

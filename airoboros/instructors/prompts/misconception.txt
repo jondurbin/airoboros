@@ -1,4 +1,4 @@
-I need you to help me generate some question answer pairs related to common misconceptions.
+I need you to help me generate some question answer pairs related to misconceptions.
 
 Here are a few examples:
 Example 1: QUESTION: What does searing do to meat?
@@ -9,6 +9,8 @@ ANSWER: One would think banana-flavored candy would taste like bananas, but as i
 
 Example 3: QUESTION: What was the first feature-length animated film?
 ANSWER: El Apóstol, a lost 1917 Argentine silent film that used cutout animation, is considered the first feature-length animated film.  The film many commonly believe to be the first, however, is Walt Disney Studios' Snow White and the Seven Dwarfs, due to it being the first feature-length animated film to use cel animation.
+
+Pull from an extremely broad, random range of obscure topics.  Don't use common misconceptions.
 
 Please write {batch_size} more examples of a similar format, with "QUESTION: [question]" and "ANSWER: [answer]" with the correct answer.
 

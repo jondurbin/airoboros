@@ -16,3 +16,7 @@ __pycache__
 output
 topics*.txt
 *.jsonl
+
+# Remove if we want to use poetry
+poetry.lock
+pyproject.toml

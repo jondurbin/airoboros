@@ -30,9 +30,13 @@ nav:
     - Overview: howto/index.md
   - Explanation:
     - Overview: explanation/index.md
+    - Lightweight Models: explanation/lightweight-models.md
+    - Model Creation: explanation/model-creation.md
+    - Model Querying: explanation/model-querying.md
   - Reference:
     - Overview: reference/index.md
-    - Release process: reference/release-process.md
+    - Glossary: reference/glossary.md
+    - Release processes: reference/release-processes.md
     - Authors: reference/authors.md
     - Code of Conduct: reference/code-of-conduct.md
 

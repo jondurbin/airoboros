@@ -1,3 +1,0 @@
-# Lightbus release process
-
-TODO

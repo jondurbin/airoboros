@@ -214,7 +214,7 @@ Previous generation (1.4.1 dataset)
 * *older versions on HF as well*
 
 #### mpt-30b base model
-* [airoboros-mpt-30bb-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-mpt-30b-gpt4-1p4-five-epochs)
+* [airoboros-mpt-30b-gpt4-1.4](https://huggingface.co/jondurbin/airoboros-mpt-30b-gpt4-1p4-five-epochs)
 
 ### gpt-3.5-turbo versions
 * [airoboros-gpt-3.5-turbo-100k-7b](https://huggingface.co/jondurbin/airoboros-gpt-3.5-turbo-100k-7b)

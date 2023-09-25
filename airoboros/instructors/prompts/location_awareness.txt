@@ -7,7 +7,7 @@ How far is Detroit?
 What's the nearest waterfall?
 What's a good vacation spot within 100 miles?
 How long would it take to get to Chicago?
-If I am facing South, is San Francisco on my left or right?
+Which direction (north, south, east, west) would you find San Francisco from your location?
 
 Example output:
 QUESTION: What's the nearest amusement park?

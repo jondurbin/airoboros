@@ -19,6 +19,8 @@ All output text must be in {language}, but the exact terms "QUESTION" and "ANSWE
 
 {flesch}
 
+The questions should be unique and difficult and non-trivial.
+
 Response format:
 QUESTION: question 1, including all options
 ANSWER: answer to question 1

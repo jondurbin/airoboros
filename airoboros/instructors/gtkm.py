@@ -130,6 +130,7 @@ async def generate(instructor, **kwargs):
 
         word_count = _count(base_system)
         instruction = [f"{base_system.strip()}\n"]
+        skip_counting = False
         for idx in range(len(user) - 1):
             next_count = _count(user[idx]) + _count(assistant[idx])
             if word_count + next_count > max_prompt_words:
@@ -140,9 +141,10 @@ async def generate(instructor, **kwargs):
                     "instruction": "\n".join(instruction)
                     + f"\n{name}: {user[idx].strip()}",
                     "response": f"{card['name']}: {assistant[idx].strip()}",
-                    "skip_counting": False if idx == 1 else True,
+                    "skip_counting": skip_counting,
                     "skip_prompt_formatting": True,
                 }
+                skip_counting = True
             instruction.append(
                 "\n".join(
                     [

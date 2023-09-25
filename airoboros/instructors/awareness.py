@@ -1,6 +1,7 @@
 import random
 import re
 from .rp import generate_cards
+from .gtkm import NAMES
 
 # Corporeal awareness.
 corporeal_examples = """Can you perceive and identify physical sensations, such as touch, temperature, or pain?
@@ -126,17 +127,19 @@ async def generate_batch(instructor, card):
             # Contextualized version, with an answer.
             contextual_answer = contextual_answer.strip()
             contextual_answer = re.sub(f"^As {card['name']}, ", "", contextual_answer)
+            name = random.choice(NAMES)
             yield {
-                "system": "\n".join(
+                "instruction": "\n".join(
                     [
-                        f"A chat between {card['name']} (aka ASSISTANT) and USER.",
+                        f"A chat between {card['name']} and {name}.",
                         f"{card['name']}:",
                         card["description"],
+                        f"{name}: {instruction.strip()}",
                     ]
                 ),
-                "instruction": instruction.strip(),
                 "response": contextual_answer,
                 "category": "awareness",
+                "skip_prompt_formatting": True,
                 "characterized": True,
             }
 
@@ -157,6 +160,15 @@ async def generate(instructor, **kwargs):
     card_index = 0
     while instructor.instructor_counts["awareness"] < target_count:
         any_characterized = False
+        # Skip AI characters.
+        while re.search(
+            r" (AI|artificial intelligence)[,\.\s]",
+            cards[card_index]["description"],
+            re.I,
+        ):
+            card_index += 1
+            if card_index >= len(cards):
+                card_index = 0
         async for item in generate_batch(instructor, cards[card_index]):
             characterized = item.pop("characterized", False)
             if characterized:

@@ -24,21 +24,15 @@ async def generate(
     if not target_count:
         return
 
-    # Load the prompt template.
-    path = config.get("prompt_path", f"{category}.txt")
-    if not os.path.exists(path):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
-    with open(path) as infile:
-        template = infile.read()
-
-    # Response prompt template (optional).
+    # Load the prompt templates.
+    template = instructor.load_template(config.get("prompt_path", f"{category}.txt"))
     response_prompt = None
     path = config.get("response_prompt_path", f"{category}_response.txt")
     if not os.path.exists(path):
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
-        if os.path.exists(path):
-            with open(path) as infile:
-                response_prompt = infile.read()
+    if os.path.exists(path):
+        with open(path) as infile:
+            response_prompt = infile.read()
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}

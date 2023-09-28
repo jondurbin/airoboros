@@ -14,11 +14,7 @@ async def generate(instructor, **kwargs):
     target_count = int(target_count)
 
     # Load the prompt template.
-    path = config.get("prompt_path", "experience.txt")
-    if not os.path.exists(path):
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts", path)
-    with open(path) as infile:
-        prompt = infile.read()
+    prompt = instructor.load_template(config.get("prompt_path", "experience.txt"))
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}

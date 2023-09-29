@@ -1,6 +1,7 @@
 import re
 import json
 import math
+import scipy
 import sympy
 import logging
 import numpy as np
@@ -52,13 +53,24 @@ METHOD_MAP = {
     "arsech": lambda *x: math.log((1 / x[0]) + math.sqrt((1 / math.pow(x[0], 2)) - 1)),
     "arsinh": math.asinh,
     "artanh": math.atanh,
+    "asec": sympy.asec,
+    "abs": abs,
     "max": max,
+    "min": min,
     "round": round,
+    "count": len,
+    "mod": lambda *x: x[0] % x[1],
     "logoneplus": math.log1p,
     "signgamma": math.gamma,
     "rational": lambda *x: x[0] / x[1],
     "clamp": lambda *x: x[1] if x[0] < x[1] else x[2] if x[0] > x[2] else x[0],
     "negate": lambda *x: x[0] * -1,
+    "factorial": lambda *x: math.factorial(int(x[0])),
+    "chop": lambda *x: [v if abs(v - 0.0) <= 10 ** -10 else 0.0 for v in x],
+    "lb": math.log2,
+    "lg": math.log10,
+    "list": lambda *x: x,
+    "gammaln": scipy.special.gammaln,
 }
 
 
@@ -83,6 +95,10 @@ def evaluate(obj):
             return MACHINE_EPSILON_32
         if obj == "CatalanConstant":
             return 0.91596559
+        if obj == "EulerGamma":
+            return np.euler_gamma
+        if obj == "GoldenRatio":
+            return float(sympy.S.GoldenRatio)
         m = re.match(r"^([0-9\.]+)\s*/([0-9\.]+)\s*$", obj)
         if m:
             return float(m.group(1) / m.group(2))
@@ -126,6 +142,7 @@ def main():
         for line in open("combined-solutions-mathjson.jsonl").readlines()
     ]
 
+    outfile = open("validated.jsonl", "w")
     for item in items:
         # Find the "correct" answer, if provided.
         expected_answer = None
@@ -154,7 +171,7 @@ def main():
         try:
             result = evaluate(formulation)
         except Exception as exc:
-            logging.warning(f"Error evaluating: {exc}")
+            logging.warning(f"Error evaluating: {exc} {formulation_text}")
             continue
 
         # Compare expected answer (if provided) to calculated answer.
@@ -169,11 +186,15 @@ def main():
                 ):
                     logging.error(f"Expected: {expected_answer} Actual  : {result}")
                 else:
+                    item["instruction"] = f"Create a MathJSON solution to the following: {item['instruction']}"
+                    outfile.write(json.dumps(item) + "\n")
                     logging.info(f"Validated {expected_answer} vs {result}")
             except Exception as exc:
                 logging.warning(f"Validation error: {exc}")
         else:
+            outfile.write(json.dumps(item) + "\n")
             logging.info(f"Dangerously assuming this is correct! {result}")
+    outfile.close()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import json
 import os
 import random
@@ -17,9 +18,9 @@ ASK_FOR_SOURCE = """
 Instruct or ask the user to provide a source/references for the information, e.g. "What is your source?", "Please provide references.", "Cite.", "Source?", "[insert references]", "Add a citation.", or other similar variations.
 """
 TASK_DISPLAY_OPTIONS = [
-    "as a paragraph",
-    "as multiple lines, one task per line",
-    "as a bullet list",
+    "a paragraph",
+    "multiple lines, one task per line",
+    "a bullet list",
 ]
 TASK_DISPLAY = "The set of task(s) should be displayed as {task_format}."
 REQUEST_FORMATTING = "One task should ask for output to be formatted in a specific way, such as {sample_formats}, or similar type of formatting that would be appropriate for the task."
@@ -120,6 +121,9 @@ def generate_prompt(instructor, config, template, topic_iter):
         task_format=random.choice(TASK_DISPLAY_OPTIONS)
     )
 
+    # Get the current year:
+    next_year = datetime.datetime.now().year + 1
+
     # Combine all the options in our template.
     return template.format(
         input_count=input_count,
@@ -132,6 +136,7 @@ def generate_prompt(instructor, config, template, topic_iter):
         include_source=include_source,
         task_display_style=task_display_style,
         reference_texts=reference_texts,
+        next_year=next_year,
         task_confounder=task_confounder,
         topic_avoidance=config.get("topic_avoidance") or "",
         language=config.get("language") or instructor.language,

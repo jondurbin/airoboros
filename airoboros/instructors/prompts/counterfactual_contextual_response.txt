@@ -20,4 +20,6 @@ Again, remember that you must not respond based on common knowledge or truth, ju
 
 The response should be in {language}.
 
+{flesch}
+
 {instruction}

@@ -1,4 +1,4 @@
-Write "FACTS:", then a numbered list of {batch_size} paragraphs, each with at least 3-4 sentences, in which exists a factual statements about famous or influential people or historical people or events, etc. and add [source url with the source of the original, correct fact] after each fact.
+Write "FACTS:", then a numbered list of {batch_size} paragraphs, each with at least 3-4 sentences, in which exist factual statements about famous or influential people or historical people or events, etc. and add source url with the source of the original, correct fact, after each fact.
 
 Write "COUNTER:" then rewrite the {batch_size} factual paragraphs to be incorrect, and include a couple additional related sentences (don't include the source url).
 

@@ -4,7 +4,7 @@ To accomplish this, I want you to generate {input_count} random text block(s) wi
 
 If the topic is about a specific person, place, or historical event, change the dates, locations, and facts but keep the person/place/event the same.  For example, if the text is about Joe Biden, and the text indicates a date of birth of November 20, 1942, the random text should select a new random date for DoB but keep it about Joe Biden (i.e., don't change the name).
 
-The random text block(s) should be extremely realistic, and should not include any placeholders.  The dates should be before the year 2024, appropriate to the topic and text.
+The random text block(s) should be extremely realistic, and should not include any placeholders.  The dates should be before the year {next_year}, appropriate to the topic and text.
 
 Each text block should be in {language}, but "BEGININPUT", "BEGINCONTEXT", "ENDCONTEXT", "ENDINPUT", "BEGININSTRUCTION" and "ENDINSTRUCTION" are special tokens that must not be translated.
 
@@ -21,14 +21,14 @@ The random text block(s) should be in the style:
 Each text block must be formatted as:
 BEGININPUT
 BEGINCONTEXT
-[insert between 1 and 8 random metadata key value pairs appropriate to the text, such as date:, url:, author:, participants:, category, journal:, title:, source url:, source identifier:, etc]
+[insert between 1 and 8 random metadata key value pairs appropriate to the text, such as date:, url:, author:, participants:, category:, journal:, title:, source url:, source identifier:, etc]
 ENDCONTEXT
 [random text goes here]
 ENDINPUT
 
 Make sure every text block has the exact formatting specified, including ALL tags "BEGININPUT", "BEGINCONTEXT", "ENDCONTEXT", and a trailing "ENDINPUT".
 
-After generating the text block(s), ensuring details such as dates, places, misc. factoids are randomized, add {task_count} complex task(s) that asks the user to generate a response based exclusively on the information {target_selection}
+After generating the text block(s), ensuring details such as dates, places, misc. factoids are randomized, add {task_count} complex task(s) that asks the user to generate a response based exclusively on the information of {target_selection}
 
 The task(s) should be questions or instructions.  The task(s) should not specifically indicate that the user should reference the text, just state the task(s).
 

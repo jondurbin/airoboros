@@ -100,7 +100,7 @@ Make sure each answer includes the steps/work used to generate the response.
 
 The provided examples are very easy; the new questions should be much more difficult to solve.
 
-The new questions must not simple formulas, i.e.:
+The new questions must not be simple formulas, i.e.:
 - do not ask about anything related to volume, area, circumference, perimeter or other measurements of shapes
 - do not ask about about anything related to distances traveled or speed calculations
 - do not ask about anything related to trains or speed

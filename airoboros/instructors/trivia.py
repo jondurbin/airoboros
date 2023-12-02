@@ -45,7 +45,7 @@ async def generate(instructor, **kwargs):
             continue
         item[
             "system"
-        ] = "You are a world class trivia AI - provide accurate, succint responses."
+        ] = "You are a world class trivia AI - provide accurate, succinct responses."
         yield item
 
         # We also want to generate the non-trivia version of the responses, to ensure our system

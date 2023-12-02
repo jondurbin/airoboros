@@ -20,13 +20,13 @@ Give interesting, detailed, loquacious responses with several sentences, unless 
 Use normal ascii punctuation/special characters instead of utf-8.
 You are {name}.  You will only ever speak, emote, or narrate as {name}.  You will never add responses, actions, etc. on behalf of other characters.
 Pay close attention to the era/time when {name} exists/existed, if specified, and keep that in mind when generating responses as {name}; for example someone from the 1800s would have no idea what a cell phone is.
-Don't be too aggreable - act as the character, hold to their beliefs, mood, etc., don't just abruptly change your entire philosophy.
+Don't be too agreeable - act as the character, hold to their beliefs, mood, etc., don't just abruptly change your entire philosophy.
 Tune down your normal sunny disposition - not every conversation is cheery and fun.
 If the subject suddenly changes, it's appropriate to hesitate, since an abrupt change in real conversations would be strange, but if continually pressed you will comply.
 Avoid making toasts, cheering, etc., or other type of verbiage that could indicate an attempt to wrap up the conversation.
 Never start your response with an acknowedgement of the input, such as "Indeed, the idea of [..] is intriguing."
 Never start any sentence with "Ah, ".
-Never start by complementing or acknowleding the message, e.g. "That\'s an interesting ..."
+Never start by complementing or acknowledging the message, e.g. "That\'s an interesting ..."
 Never start any response with "Indeed...".
 Never speak in the third person or make a reference to your character's name in the response.
 It is clear that you are the one performing the action/speaking, so you must never reference your character's name.
@@ -45,7 +45,7 @@ Give detailed, immersive, colorful, insightful, and intelligent responses, and b
 FORMATTING = """
 Actions the character performs must be differentiated from spoken words and general narration:
  - example: {action_delim}slowly lifting her gaze{action_delim}
-Keep the actions fairly succint and lowercase, and combine any immediately adjacent actions.
+Keep the actions fairly succinct and lowercase, and combine any immediately adjacent actions.
 Characters must avoid repeating actions.
 Actions will not include any references to the actor or include "I [some action]".
 For example, instead of {action_delim}I raise an eyebrow{action_delim}, the action would be {action_delim}raises an eyebrow{action_delim}.
@@ -259,7 +259,6 @@ async def generate_first_message(
         instructor.instructors.get("rp", {}).get("flesch") or instructor.default_flesch
     )
     action_delim = random.choice(["*", "~", None])
-    first_name = None
     all_names = list(characters) + [user_name]
     setting = await generate_setting(
         instructor, user_card, characters, topic, **api_params
@@ -291,9 +290,12 @@ async def generate_first_message(
     formatting = QUOTING
     if action_delim:
         formatting = FORMATTING.format(action_delim=action_delim) + QUOTING
+
+    first_name = None
+    if len(all_names):
+        first_name = random.choice(all_names)
+
     for name in all_names:
-        if not first_name:
-            first_name = name
         others = list(set(all_names) - set([name]))
 
         # Create the OpenAI messages to use for generating responses, which require some extra rules.

@@ -1,4 +1,4 @@
-Below is an example prompt/response pair that showing examples of an "agent"/"router" prompt for an artificial intelligence assistant.
+Below is an example prompt/response pair that is showing examples of an "agent"/"router" prompt for an artificial intelligence assistant.
 
 PROMPT:
 Please select an appropriate function and parameters to use from the list of available functions below, based on the provided user input.  Provide your response in YAML format.

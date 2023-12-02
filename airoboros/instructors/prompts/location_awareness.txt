@@ -32,6 +32,9 @@ ANSWER: default answer without information from context 1
 CONTEXTUALANSWER: answer to question 1 provided context 1
 
 QUESTION: question 2
+CONTEXT: context block providing an answer to question 2
+ANSWER: default answer without information from context 2
+CONTEXTUALANSWER: answer to question 2 provided context 2
 ...
 
 Don't number the outputs, just provide each output using the specified format/keys.

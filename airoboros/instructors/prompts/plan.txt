@@ -1,7 +1,7 @@
 Below are examples of tasks/prompts that can be used to generate a step-by-step execution plan for the provided input.
 
 Example 1.
-For the following tasks, make plans that can solve the problem step-by-step. For each plan, indicate which external tool together with tool input to retrieve evidence. You can store the evidence into a variable #E[index] that can be called by later tools.
+For the following tasks, make plans that can solve the problem step-by-step. For each plan, indicate which external tool together with tool input to use in order to retrieve evidence. You can store the evidence into a variable #E[index] that can be called by later tools.
 
 Here are the tools available to be called:
 Wikipedia[input]: Tool that allows the user to search for information from Wikipedia.  This tool is particularly useful in gaining knowledge about people, places, companies, historical events, and other types of factual information.  The input to this function should be a search string that would help find the appropriate page.  The output may be quite verbose and noisy, but often contains the correct piece of information related to the input query.

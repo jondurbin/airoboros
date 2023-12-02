@@ -26,7 +26,6 @@ async def generate(instructor, **kwargs):
 
     # Load the topics.
     topics = instructor.get_instructor_topics(config)
-    topic_index = random.randint(0, len(topics) - 1)
 
     # API params, overriding defaults with this instructor's config.
     api_params = {**instructor.api_params, **config.get("api_params", {})}
@@ -47,13 +46,10 @@ async def generate(instructor, **kwargs):
     language = config.get("language") or instructor.language
     flesch = config.get("flesch") or instructor.default_flesch
     while instructor.instructor_counts["general"] < target_count:
-        # Inject the topics to use for this batch.
-        current_topics = []
-        for _ in range(batch_size):
-            current_topics.append(topics[topic_index])
-            topic_index += 1
-            if topic_index >= len(topics):
-                topic_index = 0
+        # Take a random sample without replacement if batch size is less than the number of topics
+        # otherwise take a random sample with replacement.
+        current_topics = random.sample(topics, batch_size) if batch_size < len(topics) else random.choices(topics, k=batch_size)
+
         topics_str = "\n".join(
             [
                 f" * instruction {idx + 1} must be related to topic: {json.dumps(topic)}"

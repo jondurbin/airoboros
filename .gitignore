@@ -16,3 +16,5 @@ __pycache__
 output
 topics*.txt
 *.jsonl
+.env
+.vscode

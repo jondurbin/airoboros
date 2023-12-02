@@ -40,16 +40,12 @@ async def generate(instructor, **kwargs):
     batch_size = int(batch_size)
     if "coding" not in instructor.instructor_counts:
         instructor.instructor_counts["coding"] = 0
-    language_index = 0
     language = config.get("language") or instructor.language
     while instructor.instructor_counts["coding"] < target_count:
-        # Inject languages to use for this batch.
-        current_languages = []
-        for _ in range(batch_size):
-            current_languages.append(coding_languages[language_index])
-            language_index += 1
-            if language_index >= len(coding_languages):
-                language_index = 0
+        # Take a random sample without replacement if batch size is less than the number of topics
+        # otherwise take a random sample with replacement.
+        current_languages = random.sample(coding_languages, batch_size) if batch_size < len(coding_languages) else random.choices(coding_languages, k=batch_size)
+
         languages_str = "\n".join(
             [
                 f" * task {idx + 1} should ask the user to use {language}"

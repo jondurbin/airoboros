@@ -23,7 +23,7 @@ If you are facing south, is San Francisco to your left or right?
 # Sensorial awareness.
 sensorial_examples = """Describe the taste of watermelon.
 When looking at a rainbow, which color is your attention most drawn to?
-Describe the difference in scent between lavendar and rosemary.
+Describe the difference in scent between lavender and rosemary.
 What does freshly cut grass smell like to you?
 How does it feel, in terms of physical touch sensation, to pet a kangaroo?
 If I were to play a song on the guitar, would you be able to tell me the chords I used from sound only?

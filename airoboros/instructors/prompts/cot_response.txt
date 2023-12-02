@@ -1,6 +1,6 @@
 Please provide a chain-of-thought style answer to the provide input.
 
-Below are a few exampless of question/response pairs.
+Below are a few examples of question/response pairs.
 
 Example 1:
 Input: Jackie has 3 brothers. Each brother has 2 sisters. How many sisters does Jackie have?  Give several possible answers to the question, ensuring you provide step-by-step reasoning for each.  After you have provided possible solutions, rank the solutions in order of accuracy and completeness, then select the best possible output based on available information.

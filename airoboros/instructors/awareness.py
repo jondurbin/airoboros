@@ -38,7 +38,6 @@ async def generate_batch(instructor, card):
     )
     template = None
     coin = random.random()
-    coin = 0.9
     examples = None
     character = False
     question_type = None

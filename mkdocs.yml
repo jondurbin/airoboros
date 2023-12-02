@@ -1,0 +1,69 @@
+site_name: airoboros
+site_description: Using large language models to fine-tune large language models
+# TODO: Add once we have it
+# site_url: http://
+
+# Repository
+repo_name: GitHub
+repo_url: https://github.com/jondurbin/airoboros
+
+theme:
+  name: material
+
+  palette:
+    primary: 'indigo'
+    accent: 'pink'
+
+  static_templates:
+    - 404.html
+
+  language: en
+
+  features:
+    - navigation.tabs
+
+nav:
+  - Home: index.md
+  - Tutorials:
+    - Overview: tutorial/index.md
+  - How to:
+    - Overview: howto/index.md
+  - Explanation:
+    - Overview: explanation/index.md
+    - Lightweight Models: explanation/lightweight-models.md
+    - Model Creation: explanation/model-creation.md
+    - Model Querying: explanation/model-querying.md
+  - Reference:
+    - Overview: reference/index.md
+    - Glossary: reference/glossary.md
+    - Release processes: reference/release-processes.md
+    - Authors: reference/authors.md
+    - Code of Conduct: reference/code-of-conduct.md
+
+# Extensions
+markdown_extensions:
+  - meta
+  - markdown.extensions.admonition
+  - markdown.extensions.codehilite:
+      guess_lang: false
+  - markdown.extensions.def_list
+  - markdown.extensions.footnotes
+  - markdown.extensions.meta
+  - markdown.extensions.toc:
+      permalink: true
+  - pymdownx.arithmatex
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - markdown_include.include

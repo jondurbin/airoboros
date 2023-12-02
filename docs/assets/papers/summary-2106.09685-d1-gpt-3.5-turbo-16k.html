@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://unpkg.com/readable-css/css/readable.css" rel="stylesheet" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      config: ["MMLorHTML.js"],
+      jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
+      extensions: ["MathMenu.js", "MathZoom.js"]
+    });
+    </script>
+</head>
+<body class="readable-content">
+    <h1>LoRA: Low-Rank Adaptation of Large Language Models</h1>
+<h2>Introduction</h2>
+<p>The section discusses the challenges of adapting large-scale pre-trained language models to multiple downstream applications. Fine-tuning, which updates all the parameters of the pre-trained model, results in a new model with as many parameters as the original model. This becomes a critical deployment challenge for models with a large number of parameters. Existing techniques that adapt only some parameters or learn external modules for new tasks often introduce latency and fail to match the performance of fine-tuning. </p>
+<p>The proposed approach, called Low-Rank Adaptation (LoRA), is inspired by the low intrinsic dimension of over-parametrized models. LoRA trains dense layers indirectly by optimizing rank decomposition matrices of the dense layers' change during adaptation while keeping the pre-trained weights frozen. This approach is storage- and compute-efficient, even for models with a high number of parameters. </p>
+<p>LoRA has several advantages, including the ability to share a pre-trained model and build small LoRA modules for different tasks, making task-switching more efficient. It also lowers the hardware barrier to entry and introduces no inference latency compared to fully fine-tuned models. LoRA can be combined with other methods, such as prefix-tuning. </p>
+<p>The section also introduces terminologies and conventions used in the discussion, including dimensions of the Transformer architecture, projection</p>
+<h2>Problem Statement</h2>
+<p>The problem statement focuses on language modeling as a use case for the proposal. It describes the task of adapting a pre-trained language model to downstream tasks such as summarization, machine reading comprehension, and natural language to SQL. The model is initialized with pre-trained weights and updated through fine-tuning to maximize the conditional language modeling objective. However, a drawback of full fine-tuning is that it requires learning a different set of parameters for each downstream task, which can be challenging and inefficient for large pre-trained models. The paper proposes a more parameter-efficient approach where a smaller set of parameters is used to encode the task-specific parameter increment. This approach involves optimizing over these smaller parameters to find the optimal parameter increment. The subsequent sections of the paper will discuss using a low-rank representation to encode this parameter increment, which is both computationally and memory-efficient.</p>
+<h2>Aren't Existing Solutions Good Enough?</h2>
+<p>The section discusses the limitations of existing solutions for efficient model adaptation in transfer learning. It mentions two strategies: adding adapter layers and optimizing input layer activations. However, both strategies have their limitations, especially in large-scale and latency-sensitive production scenarios.</p>
+<p>The use of adapter layers introduces inference latency, even with a small bottleneck dimension. This is because adapter layers have to be processed sequentially, which affects online inference with small batch sizes. The section provides a table showing the increase in latency when using adapters in a specific scenario.</p>
+<p>Another strategy, prefix tuning, faces challenges in optimization and performance. It is difficult to optimize and its performance changes non-monotonically with trainable parameters. Additionally, reserving a part of the sequence length for adaptation reduces the sequence length available for downstream tasks, which may affect the performance of tuning the prompt.</p>
+<p>Overall, existing solutions have limitations in terms of inference latency and optimization challenges, particularly in large-scale and latency-sensitive scenarios.</p>
+<h2>Our Method</h2>
+<p>The section describes the method called LoRA (Low-Rank-Parametrized Update Matrices) and its practical benefits. LoRA is a technique that reduces the number of trainable parameters in neural networks by using low-rank decompositions for weight matrices. The authors hypothesize that the updates to the weights during adaptation also have a low "intrinsic rank." They propose representing the weight updates as a low-rank decomposition and introduce trainable parameters for the decomposition. The section also explains how LoRA can be applied to Transformer models and discusses the practical benefits and limitations of using LoRA, such as reduced memory usage, faster training, and easier task switching.</p>
+<h2>Related Works</h2>
+<p>The section discusses various related works in the field of transformer language models, prompt engineering and fine-tuning, parameter-efficient adaptation, and low-rank structures in deep learning. </p>
+<ul>
+<li>
+<p>Transformer Language Models: Transformer is a popular architecture for language models that use self-attention. Transformer-based language models, such as BERT and GPT-2, have achieved state-of-the-art performance in many natural language processing tasks. GPT-3 is the largest Transformer language model to date.</p>
+</li>
+<li>
+<p>Prompt Engineering and Fine-Tuning: GPT-3's performance depends heavily on the input prompt, leading to the need for prompt engineering or prompt hacking. Fine-tuning involves retraining a pre-trained model on specific tasks. However, fine-tuning GPT-3 is challenging due to its size and memory requirements.</p>
+</li>
+<li>
+<p>Parameter-Efficient Adaptation: Some approaches propose using adapter layers or low-rank constraints to efficiently adapt neural networks. The authors' method uses a bottleneck structure with low-rank weight updates that can be merged with the main weights during inference.</p>
+</li>
+<li>
+<p>Low-Rank Structures in Deep Learning: Low-rank structures are common in machine learning and deep learning tasks. Prior works have imposed low-rank constraints during training, but none have considered low-rank updates for adaptation to</p>
+</li>
+</ul>
+<h2>Understanding the Low-Rank Updates</h2>
+<p>The section discusses the properties and effects of low-rank updates in pre-trained language models. The authors aim to explain the benefits and interpretability of low-rank adaptation learned from downstream tasks. They focus on the GPT-3 175B model and conduct empirical studies to answer several questions. These questions include determining which weight matrices in the pre-trained Transformer should be adapted to maximize performance, the optimal rank for low-rank adaptation, and the relationship between the adaptation matrix and the pre-trained weights. The results show that adapting both <script type="math/tex">W_q</script> and <script type="math/tex">W_v</script> yields the best performance, a small rank is sufficient for adaptation, and the adaptation matrix amplifies features that are not emphasized in the pre-trained weights. These findings provide insights into using pre-trained language models for downstream tasks.</p>
+<h2>Conclusion and Future Work</h2>
+<p>The section discusses the conclusion and future work related to the proposed LoRA adaptation strategy for language models. It highlights that fine-tuning large language models is expensive in terms of hardware and storage costs. LoRA is presented as an efficient strategy that maintains model quality without introducing latency or reducing input sequence length. It enables quick task-switching by sharing most of the model parameters. The principles of LoRA can be applied to any neural networks with dense layers, not just Transformer language models.</p>
+<p>The future work suggestions include:
+1) Combining LoRA with other efficient adaptation methods for potential improvement.
+2) Exploring the mechanism behind fine-tuning and LoRA to understand how pre-training features are transformed for downstream tasks.
+3) Seeking more principled ways to select weight matrices for applying LoRA instead of relying on heuristics.
+4) Investigating the rank-deficiency of weight matrices and its potential implications for future research.</p>
+<h2>Glossary (Generated)</h2>
+<p>This glossary has been generated based on the terminology used in the summarised content above.</p>
+<p><strong>LoRA</strong>: Low-Rank Adaptation of Large Language Models</p>
+<p><strong>Fine-tuning</strong>: Updating all parameters of a pre-trained model to create a new model with as many parameters as the original model.</p>
+<p><strong>Latency</strong>: The time delay between the initiation and execution of a task.</p>
+<p><strong>Rank decomposition</strong>: Representing a matrix as a product of two or more matrices with lower ranks.</p>
+<p><strong>Storage-efficient</strong>: Using minimal storage space.</p>
+<p><strong>Compute-efficient</strong>: Requiring minimal computational resources.</p>
+<p><strong>Task-switching</strong>: The ability to switch between different tasks efficiently.</p>
+<p><strong>Prefix-tuning</strong>: A method that reserves a part of the sequence length for adaptation in language models.</p>
+<p><strong>Inference latency</strong>: The delay in processing and generating predictions during inference.</p>
+<p><strong>Adapter layers</strong>: Additional layers added to a pre-trained model for adapting it to new tasks.</p>
+<p><strong>Bottleneck dimension</strong>: The dimensionality reduction applied to the input data in adapter layers.</p>
+<p><strong>Optimization challenges</strong>: Difficulties in finding the optimal values for trainable parameters.</p>
+<p><strong>Non-monotonically</strong>: Not following a consistent pattern or trend.</p>
+<p><strong>Sequence length</strong>: The number of tokens or elements in a sequence.</p>
+<p><strong>Prompt engineering</strong>: Techniques used to optimize the input prompt for language models.</p>
+<p><strong>Parameter-efficient adaptation</strong>: Approaches that aim to reduce the number of trainable parameters in neural networks during adaptation.</p>
+<p><strong>Low-rank structures</strong>: Matrix structures that have low-rank constraints imposed during training.</p>
+<p><strong>Interpretability</strong>: The ability to understand and explain the behavior and results of a model.</p>
+<p><strong>Empirical studies</strong>: Research conducted through observation and experimentation rather than theoretical analysis.</p>
+<p><strong>Model quality</strong>: The performance and effectiveness of a model in producing accurate results.</p>
+<p><strong>Input sequence length</strong>: The length of the input data provided to a model.</p>
+<p><strong>Future work suggestions</strong>: Areas for further research and exploration related to the proposed method.</p>
+<h1>About this summary</h1>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INPUT</td>
+<td>2106.09685</td>
+</tr>
+<tr>
+<td>verbosity</td>
+<td>1</td>
+</tr>
+<tr>
+<td>no_input</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_html</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_open</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_footer</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_glossary</td>
+<td>False</td>
+</tr>
+<tr>
+<td>detail_level</td>
+<td>1</td>
+</tr>
+<tr>
+<td>model</td>
+<td>gpt-3.5-turbo-16k</td>
+</tr>
+</tbody>
+</table>
+<p>Summary was created at <code>2023-09-02T14:37:31.081644+00:00</code></p>
+</body>
+</html>

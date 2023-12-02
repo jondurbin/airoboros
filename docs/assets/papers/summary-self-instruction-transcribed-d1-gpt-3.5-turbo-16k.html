@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://unpkg.com/readable-css/css/readable.css" rel="stylesheet" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/mathjax@2/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      config: ["MMLorHTML.js"],
+      jax: ["input/TeX", "output/HTML-CSS", "output/NativeMML"],
+      extensions: ["MathMenu.js", "MathZoom.js"]
+    });
+    </script>
+</head>
+<body class="readable-content">
+    <h1>SELF-INSTRUCT: Aligning Language Models with Self-Generated Instructions</h1>
+<h2>Abstract</h2>
+<p>The section discusses the limitations of instruction-tuned language models and introduces a framework called SELF-INSTRUCT to improve their instruction-following capabilities. The framework generates instructions, input, and output samples from a language model, filters them, and uses them to fine-tune the original model. When applied to the vanilla GPT3 model, SELF-INSTRUCT shows a 33% improvement on a specific task compared to the original model. It also outperforms existing public instruction datasets in human evaluation, with only a 5% difference from a model trained with private user data and human annotations. SELF-INSTRUCT offers an annotation-free method for aligning language models with instructions and provides a synthetic dataset for future studies.</p>
+<h2>Introduction</h2>
+<p>The section discusses the recent developments in natural language processing (NLP) models that can follow natural language instructions. These developments are powered by large pretrained language models (LM) and human-written instruction data. However, collecting instruction data is costly and lacks diversity. To address this, the authors propose a semi-automated process called SELF-INSTRUCT, which uses instructional signals from the model itself to tune the pretrained LM. The process involves an iterative bootstrapping algorithm that starts with a small set of manually-written tasks and prompts the model to generate instructions for new tasks. The generated instructions are filtered and added to the task pool for further iterations. The authors evaluate SELF-INSTRUCT on GPT3 and show that it outperforms the original model and performs comparably to other models trained on publicly available instruction datasets. The contributions of the work include introducing SELF-INSTRUCT, demonstrating its effectiveness through experiments, and releasing a large synthetic dataset of instructions for future research.</p>
+<h2>Method</h2>
+<p>The section describes the method used for generating large-scale instruction data and finetuning a language model to follow instructions. The process involves generating task instructions, determining if the instruction represents a classification task, generating instances based on the instructions, and filtering low-quality data. The generated data is then used to finetune the language model by concatenating the instruction and instance input as a prompt and training the model to generate the instance output. Multiple templates are used to encode the instruction and instance input together to make the model robust to different formats.</p>
+<h2>SELF-INSTRUCT Data from GPT3</h2>
+<p>This section discusses the application of a method for inducing instruction data to GPT3. The largest GPT3 LM ("davinci" engine) accessed through the OpenAI API is used. The section provides an overview of the generated data, including statistics such as the number of instructions and instances generated. The diversity of the generated instructions is also examined, with a focus on the verb-noun structure. The top 20 most common root verbs and their noun objects are plotted. The section also explores the difference between the generated instructions and the seed instructions used for prompting. The quality of the generated data is assessed through expert annotation, indicating that most of the instructions are meaningful, although there may be some noise in the generated instances. Examples of good and bad instructions are provided in tables.</p>
+<h2>Experimental Results</h2>
+<p>The section discusses the experimental results of different models and baselines in the context of instruction tuning. </p>
+<p>First, the section describes the models used in the experiments, including GPT3SELF-INST, off-the-shelf language models (T5-LM and GPT3), publicly available instruction-tuned models (T0 and T𝑘-INSTRUCT), and instruction-tuned GPT3 models (InstructGPT).</p>
+<p>The section then presents two experiments. </p>
+<p>In Experiment 1, the models' ability to follow instructions is evaluated using the SUPERNI benchmark, which consists of 119 tasks. The results show that GPT3SELF-INST significantly improves the instruction-following ability of GPT3 compared to other models. It performs better than T0 and the GPT3 model finetuned on the T0 training set. Additionally, GPT3SELF-INST nearly matches the performance of InstructGPT001, which is trained with private user data and human-annotated labels.</p>
+<p>In Experiment 2, a new set of user-oriented instructions is curated to evaluate how instruction-based models handle diverse and unfamiliar instructions. Human evaluators rate the model predictions based on their accuracy and effectiveness in completing the tasks. The results show that GPT3SELF-INST outperforms other instruction-tuned models trained on T0 or SUPERNI data. It is only slightly behind InstructGPT001 in terms of performance. The evaluation also confirms the impressive instruction-following ability of InstructGPT002 and InstructGPT003.</p>
+<p>The section also discusses the effect of data size and quality on model performance. Increasing the size of generated data leads to consistent improvement, but the improvement plateaus after a certain point. Additionally, using improved data generated by InstructGPT003 results in a 10% performance gain compared to using the original data.</p>
+<p>Overall, the experimental results demonstrate the effectiveness of instruction tuning, with GPT3SELF-INST showing promising performance in following instructions. The results also suggest potential avenues for future research, such as using a combination of different instruction data and improving data quality through human experts or distillation from better models.</p>
+<h2>Related Work</h2>
+<p>The section discusses related work in the field of instruction-following language models (LMs). It mentions that previous studies have shown that LMs can effectively follow language instructions when trained with annotated instructional data. The size and diversity of the instructional data have been found to correlate with the generalizability of the resulting models. However, these developments have focused on existing NLP tasks and rely on human-annotated instructions, which limits progress towards more generalizable models.</p>
+<p>The section introduces InstructGPT as a commercial system that aims to build more general-purpose LMs but lacks transparency in its construction process. The authors of the section propose creating a large-scale public dataset to address the challenges of creating diverse instruction data.</p>
+<p>It also mentions works that use LMs for data generation and augmentation but highlights that their work differs in that it is not specific to a particular task and aims to bootstrap new task definitions.</p>
+<p>The section discusses instruction generation and model self-training approaches, highlighting the differences with SELF-INSTRUCT. It also mentions knowledge distillation methods and works that focus on bootstrapping with limited resources.</p>
+<p>Finally, it briefly mentions the relevance of multi-modal instruction-following models and suggests that SELF-INSTRUCT could potentially be helpful in those settings as well.</p>
+<h2>Conclusion</h2>
+<p>The section introduces a method called SELF-INSTRUCT that aims to improve the instruction-following ability of language models (LMs). The method involves using the LM's own generation of instruction data. By experimenting with vanilla GPT3, a large-scale dataset of 52K instructions for diverse tasks is automatically constructed. Finetuning GPT3 on this data results in a 33% absolute improvement on SUPERNI compared to the original GPT3. Additionally, a set of expert-written instructions for novel tasks is curated. Human evaluation shows that tuning GPT3 with SELF-INSTRUCT outperforms using existing public instruction datasets and performs closely to InstructGPT001. The authors hope that SELF-INSTRUCT can be a starting point to align pretrained LMs to follow human instructions, and future work can build upon this data to further improve instruction-following models.</p>
+<h2>Broader Impact</h2>
+<p>The section discusses the broader impact of the paper's findings on instruction-tuned models like InstructGPT or ChatGPT. These models, which are widely used, lack transparency as their datasets are not released. This hinders understanding of how these models are constructed and why they perform well. The responsibility now lies with academia to gain a better understanding of the success factors behind these models and work towards developing better and more open models. The paper's findings highlight the importance of diverse instruction data and propose a large synthetic dataset as a starting point for improving instruction-following models. The section also mentions that the central idea of the paper has been adopted in several subsequent works by other researchers.</p>
+<h2>Limitations</h2>
+<p>The section discusses limitations of the work on SELF-INSTRUCT and suggests areas for future research. </p>
+<ol>
+<li>
+<p>Tail phenomena: The limitations of language models (LMs) also apply to SELF-INSTRUCT. LMs tend to perform better on frequent language uses and may not show significant gains in low-frequency contexts. This means that SELF-INSTRUCT may be more effective for tasks or instructions that occur more frequently in the pretraining corpus, potentially making it less reliable for uncommon or creative instructions.</p>
+</li>
+<li>
+<p>Dependence on large models: SELF-INSTRUCT relies on the inductive biases extracted from LMs, which may work best with larger models. This could create barriers for those who do not have access to large computing resources. Future studies should investigate the impact of model size and other parameters on the gains achieved by SELF-INSTRUCT.</p>
+</li>
+<li>
+<p>Reinforcing LM biases: The iterative algorithm used in SELF-INSTRUCT may unintentionally amplify problematic social biases, such as stereotypes or slurs related to gender or race. Producing balanced labels can also be challenging due to the models' prior biases. Further research is needed to better understand the advantages and disadvantages of this approach.</p>
+</li>
+</ol>
+<p>Overall, these limitations highlight the need for future research to address tail phenomena, explore the impact of model size, and mitigate potential biases in SELF-INSTRUCT.</p>
+<h2>Acknowledgements</h2>
+<p>The authors express their gratitude to the anonymous reviewers for their helpful feedback. They also acknowledge the support and encouragement provided by Sewon Min, Eric Wallace, Ofir Press, and other members of UWNLP and AllenNLP. The work was supported by various sources including DARPA MCS program, ONR grants, and contributions from AI2 and an Allen Investigator award.</p>
+<h2>Glossary (Generated)</h2>
+<p>This glossary has been generated based on the terminology used in the summarised content above.</p>
+<p><strong>SELF-INSTRUCT</strong>: A framework for improving the instruction-following capabilities of language models by generating instructions, input, and output samples from the model itself and using them to fine-tune the original model.</p>
+<p><strong>GPT3</strong>: The vanilla GPT3 model, a large pretrained language model used in the SELF-INSTRUCT framework.</p>
+<p><strong>Instruction-tuned language models</strong>: Language models that have been trained to follow natural language instructions.</p>
+<p><strong>Fine-tuning</strong>: The process of adjusting a pretrained language model using additional data to improve its performance on a specific task.</p>
+<p><strong>Pretrained language models (LM)</strong>: Language models that have been trained on a large corpus of text data and can generate coherent and contextually relevant text.</p>
+<p><strong>Instruction data</strong>: Data consisting of natural language instructions provided to language models for training or evaluation.</p>
+<p><strong>Diversity</strong>: The variety and range of different types of instructions or data.</p>
+<p><strong>Semi-automated process</strong>: A process that combines manual input with automated methods to achieve a desired outcome.</p>
+<p><strong>Bootstrapping algorithm</strong>: An iterative algorithm that starts with a small set of manually-written tasks and prompts the model to generate instructions for new tasks. The generated instructions are filtered and added to the task pool for further iterations.</p>
+<p><strong>Prompt</strong>: A specific instruction or question given to a language model to generate a response.</p>
+<p><strong>Instance</strong>: An example or sample generated by a language model based on an instruction.</p>
+<p><strong>Low-quality data</strong>: Data that does not meet certain criteria or standards, such as being irrelevant, inaccurate, or poorly generated.</p>
+<p><strong>Concatenating</strong>: Combining two or more pieces of text or data into a single sequence.</p>
+<p><strong>Robust</strong>: Able to handle different formats or variations without significant loss of performance or accuracy.</p>
+<p><strong>Data size</strong>: The amount of data used for training or evaluation purposes.</p>
+<p><strong>Data quality</strong>: The level of accuracy, relevance, and usefulness of the data used for training or evaluation purposes.</p>
+<p><strong>Benchmark</strong>: A standard or reference against which the performance of a model or system is measured.</p>
+<p><strong>SUPERNI</strong>: A benchmark consisting of 119 tasks used to evaluate the ability of language models to follow instructions.</p>
+<p><strong>Baseline</strong>: A reference point or model used for comparison in experiments or evaluations.</p>
+<p><strong>Off-the-shelf language models</strong>: Language models that are readily available and not specifically tuned or trained for a particular task.</p>
+<p><strong>Publicly available instruction-tuned models</strong>: Language models that have been trained on publicly available instruction datasets.</p>
+<p><strong>InstructGPT</strong>: A series of instruction-tuned GPT3 models trained with private user data and human-annotated labels.</p>
+<p><strong>User-oriented instructions</strong>: Instructions that are designed to be easily understood and followed by users.</p>
+<p><strong>Human evaluators</strong>: Individuals who assess the performance or quality of a model based on their own judgment and expertise.</p>
+<p><strong>Accuracy</strong>: The degree to which a model's predictions or outputs match the correct or expected results.</p>
+<p><strong>Effectiveness</strong>: The ability of a model to successfully complete a task or achieve its intended purpose.</p>
+<p><strong>Data generation and augmentation</strong>: Methods that use language models to generate or expand existing datasets for training or evaluation purposes.</p>
+<p><strong>Knowledge distillation</strong>: The process of transferring knowledge from one model to another, typically from a larger, more complex model to a smaller, more efficient one.</p>
+<p><strong>Multi-modal instruction-following models</strong>: Models that can understand and follow instructions given in different modalities, such as text, images, or audio.</p>
+<p><strong>Broader impact</strong>: The potential consequences or implications of a research finding or technology on society, ethics, or other areas beyond the immediate scope of the study.</p>
+<p><strong>ChatGPT</strong>: A language model developed by OpenAI for generating conversational responses.</p>
+<p><strong>Transparency</strong>: The degree to which the construction process and inner workings of a model are open and understandable to others.</p>
+<p><strong>Academia</strong>: The community of researchers, scholars, and educators involved in higher education and research institutions.</p>
+<p><strong>Tail phenomena</strong>: The limitations or challenges that arise when language models encounter low-frequency or uncommon language uses or instructions.</p>
+<p><strong>Inductive biases</strong>: Assumptions or preferences built into a model's architecture or training process that influence its behavior or performance.</p>
+<p><strong>Barriers</strong>: Obstacles or challenges that prevent or limit access to certain resources or capabilities.</p>
+<p><strong>Social biases</strong>: Biases related to gender, race, or other social factors that can be unintentionally amplified or reinforced by language models.</p>
+<p><strong>Balanced labels</strong>: Labels or annotations that are fair, unbiased, and representative of different groups or perspectives.</p>
+<p><strong>Mitigate</strong>: To reduce or minimize the negative effects or consequences of something.</p>
+<p><strong>Tail phenomena</strong>: The limitations or challenges that arise when language models encounter low-frequency or uncommon language uses or instructions.</p>
+<h1>About this summary</h1>
+<table>
+<thead>
+<tr>
+<th>Argument</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INPUT</td>
+<td>/Users/adam/Projects/airoboros/docs/assets/papers/self-training-transcribed.md</td>
+</tr>
+<tr>
+<td>verbosity</td>
+<td>1</td>
+</tr>
+<tr>
+<td>no_input</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_html</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_open</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_footer</td>
+<td>False</td>
+</tr>
+<tr>
+<td>no_glossary</td>
+<td>False</td>
+</tr>
+<tr>
+<td>detail_level</td>
+<td>1</td>
+</tr>
+<tr>
+<td>model</td>
+<td>gpt-3.5-turbo-16k</td>
+</tr>
+</tbody>
+</table>
+<p>Summary was created at <code>2023-09-05T13:53:50.782658+00:00</code></p>
+</body>
+</html>

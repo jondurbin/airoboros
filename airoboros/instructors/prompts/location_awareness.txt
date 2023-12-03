@@ -21,8 +21,6 @@ Cedar Point has been a landmark in the amusement park world for many years and i
 
 Please note that schedules, attractions, and operational status can change, so it's a good idea to check the official Cedar Point website or social media channels for the most current information.
 
-
-
 All output must be in {language}, but the keys "QUESTION", "CONTEXT", "ANSWER", and "CONTEXTUALANSWER" are special keys that must not be translated.
 
 Output format:

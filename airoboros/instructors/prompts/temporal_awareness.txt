@@ -23,8 +23,6 @@ ANSWER: I don't have real-time information, however Burning Man is usually held 
 For the most accurate and up-to-date information, it's best to visit the official Burning Man website or follow their social media channels.
 CONTEXTUALANSWER: The next Burning Man event will be held in Black Rock City from August 27 through September 04, 2023.
 
-
-
 All output must be in {language}, but the keys "QUESTION", "CONTEXT", "ANSWER", and "CONTEXTUALANSWER" are special keys that must not be translated.
 
 Output format:
@@ -34,6 +32,9 @@ ANSWER: default answer without information from context 1
 CONTEXTUALANSWER: answer to question 1 provided context 1
 
 QUESTION: question 2
+CONTEXT: context block providing an answer to question 2
+ANSWER: default answer without information from context 2
+CONTEXTUALANSWER: answer to question 2 provided context 2
 ...
 
 Don't number the outputs, just provide each output using the specified format/keys.

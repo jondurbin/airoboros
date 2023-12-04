@@ -89,7 +89,7 @@ async def generate(instructor, **kwargs):
                 else "\n".join(
                     [
                         instruction,
-                        "  ".join(
+                        " ".join(
                             [
                                 "Generate only the code, as a single, plain text output.",
                                 "Do not include an intro sentence indicating what the code will do.",

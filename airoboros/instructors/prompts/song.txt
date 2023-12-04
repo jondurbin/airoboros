@@ -18,7 +18,7 @@ All output text should be in {language}.
 
 Include exactly {batch_size} tasks in your response.
 
-Be sure to include a variety of styles, topics, formatting of the task, etc.  Some tasks should start with a main synopsis followed by a set of criteria as a list, some tasks should have criteria as normal text, and other tasks should not really specify much in terms of requirements and be open-ended.
+Be sure to include a variety of styles, topics, formatting of the task, etc. Some tasks should start with a main synopsis followed by a set of criteria as a list, some tasks should have criteria as normal text, and other tasks should not really specify much in terms of requirements and be open-ended.
 
 Response format:
 TSK 1. [task 1]

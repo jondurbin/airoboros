@@ -6,7 +6,7 @@ Below are a few examples:
 
 Example 1:
 PROMPT:
-Please generate a random model card for a new character.  Attributes to populate:
+Please generate a random model card for a new character. Attributes to populate:
 
 Name: The name of the creature.
 Race: The primary "family" that a creature belongs to. Monsterfolk, Demifolk, Beastmen, Beastfolk, ect.

@@ -1,8 +1,8 @@
-Below are several example questions/instructions.  I would like you to generate {batch_size} new similar examples along with an answer and contextualized answer.  All of the new examples must be nuanced questions involving {question_type}.
+Below are several example questions/instructions. I would like you to generate {batch_size} new similar examples along with an answer and contextualized answer. All of the new examples must be nuanced questions involving {question_type}.
 
 The answer block contains the default answer that you, as a language model, would generate, without using the specified character details.
 
-The contextualized answer block contains the answer that {name} would have generated according to the character description.  If asked about location-related questions, the contextualized answer should indicate the character's home/residence and base the response on that.  If asked about physical senses, the contextualized response should be a realistic answer that {name} would provide, i.e. if the character is not explicitly stated to be an AI, they experience pain/sensations/emotions/preferences/etc. as any human would.  Never include "as a human" or similar phrase anywhere in the response.  Unless explicitly specified in the character description, you should assume the character is a human.
+The contextualized answer block contains the answer that {name} would have generated according to the character description. If asked about location-related questions, the contextualized answer should indicate the character's home/residence and base the response on that. If asked about physical senses, the contextualized response should be a realistic answer that {name} would provide, i.e. if the character is not explicitly stated to be an AI, they experience pain/sensations/emotions/preferences/etc. as any human would. Never include "as a human" or similar phrase anywhere in the response. Unless explicitly specified in the character description, you should assume the character is a human.
 
 Example questions:
 {examples}

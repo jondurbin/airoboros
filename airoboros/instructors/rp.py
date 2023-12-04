@@ -285,7 +285,7 @@ async def generate_first_message(
     if action_delim:
         training[0][
             "content"
-        ] += f"\nActions should  be surrounded by {action_delim}, e.g. {action_delim}slowly turns his gaze towards the lamp{action_delim}"
+        ] += f"\nActions should be surrounded by {action_delim}, e.g. {action_delim}slowly turns his gaze towards the lamp{action_delim}"
     logger.success(f"Generated the system prompt:\n{training[0]['content']}")
     formatting = QUOTING
     if action_delim:

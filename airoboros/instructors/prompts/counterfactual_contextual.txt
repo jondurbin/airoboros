@@ -2,7 +2,7 @@ Write "FACTS:", then a numbered list of {batch_size} paragraphs, each with at le
 
 Write "COUNTER:" then rewrite the {batch_size} factual paragraphs to be incorrect, and include a couple additional related sentences (don't include the source url).
 
-Then, write "QUESTIONS:" with a list of of simple questions about the facts.  Make sure the question is something that both the actual fact or the counter fact could be used in generating an answer, targetting one of the values that differ between the actual fact and fake fact.  Don't answer the questions.
+Then, write "QUESTIONS:" with a list of of simple questions about the facts. Make sure the question is something that both the actual fact or the counter fact could be used in generating an answer, targeting one of the values that differ between the actual fact and fake fact. Don't answer the questions.
 
 Be sure to keep the counter facts and questions in the same order as the original facts.
 

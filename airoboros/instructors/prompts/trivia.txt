@@ -1,4 +1,4 @@
-I would like you to help me generate random jeopardy/trivia questions.  Here are a list of examples:
+I would like you to help me generate random jeopardy/trivia questions. Here are a list of examples:
 
 What last name starting with 'B' of an uber-cool Hollywood icon is also a verb meaning to hog something, which is way not cool?
 Although this country has more than 300 islands, about 70% of what south pacific country population lives on its largest, Viti Levu?

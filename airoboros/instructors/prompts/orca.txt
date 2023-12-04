@@ -6,7 +6,7 @@ The solutions should always include the work/intermediate steps used to generate
 
 Here are a few examples:
 
-Example 1: QUESTION: How many heartbeats does an average human have in one day?  Reason step-by-step.
+Example 1: QUESTION: How many heartbeats does an average human have in one day? Reason step-by-step.
 ANSWER: The average human heart rate is around 60 to 100 beats per minute. For simplicity's sake, let's take the average of these two values, which is 80 beats per minute.
 
 First, let's calculate how many beats occur in an hour. We know there are 60 minutes in an hour, so:
@@ -23,7 +23,7 @@ Heartbeats in 1 day = Heartbeats per hour * Hours per day
 
 So, an average human heart will beat approximately 115,200 times in a day. This is a simplification, as heart rates can vary widely between individuals and under different conditions.
 
-Example 2: QUESTION: How many lightnight strikes occur every 5 minutes?  Show your work.
+Example 2: QUESTION: How many lightning strikes occur every 5 minutes? Show your work.
 ANSWER: It is estimated that the Earth is struck by lightning about 100 times every second. This estimate is based on the number of thunderstorms occurring globally at any given time and their typical rates of lightning production.
 
 To calculate how many lightning strikes occur every 5 minutes, we first need to figure out how many seconds there are in 5 minutes.
@@ -43,7 +43,7 @@ So, it's estimated that there are approximately 30,000 lightning strikes on Eart
 
 Please note that this is an estimation, as the actual number can vary depending on various factors such as the season, time of day, and geographic location.
 
-Example 3: QUESTION: There are three killers in the room.  Someone enters and kills one of them.  Nobody leaves the room.  How many killers are in the room?  Provide step-by-step logic.
+Example 3: QUESTION: There are three killers in the room. Someone enters and kills one of them. Nobody leaves the room. How many killers are in the room? Provide step-by-step logic.
 ANSWER: Let's think through this step-by-step:
 
 1. We start with three killers in the room.
@@ -54,7 +54,7 @@ ANSWER: Let's think through this step-by-step:
 
 The answer is four killers.
 
-Example 4: QUESTION: If we lay 5 shirts out in the sun to dry, and it takes 4 hours for them to dry, how long does it take to dry 20 shirts?  Explain it like I'm five.
+Example 4: QUESTION: If we lay 5 shirts out in the sun to dry, and it takes 4 hours for them to dry, how long does it take to dry 20 shirts? Explain it like I'm five.
 ANSWER: Let's reason through the problem:
 
 1. The time it takes for shirts to dry in the sun doesn't usually depend on the number of shirts. Rather, it depends on the intensity of the sun and the wetness of the shirts, among other factors.
@@ -64,7 +64,7 @@ ANSWER: Let's reason through the problem:
 
 Hence, it still takes 4 hours to dry 20 shirts when laid out all at once under the same conditions as the original 5 shirts.
 
-Example 5: QUESTION: Jane is faster than Joe.  Joe is faster than Sam.  Is Sam faster than Jane?  Explain your thought process.
+Example 5: QUESTION: Jane is faster than Joe. Joe is faster than Sam. Is Sam faster than Jane? Explain your thought process.
 ANSWER: Here's an easy way to understand this. Let's imagine they are all in a race.
 
 First, Jane races against Joe and wins because Jane is faster than Joe.
@@ -77,7 +77,7 @@ Think of it like this: Jane can run faster than Joe, and Joe can run faster than
 
 So the final answer is no, Sam is not faster than Jane.
 
-Example 6: QUESTION: Jackie has 3 brothers.  Each brother has 2 sisters.  How many sisters does Jackie have?  Include your logic.
+Example 6: QUESTION: Jackie has 3 brothers. Each brother has 2 sisters. How many sisters does Jackie have? Include your logic.
 ANSWER: Here's the logic behind this:
 
 1. We know that Jackie has 3 brothers.
@@ -94,7 +94,7 @@ End of examples.
 
 Please write {batch_size} more high quality examples of a similar format, with "QUESTION: [question]" and "ANSWER: [answer]" with the correct answer.
 
-Make sure the questions are somewhat difficult and not trivial.  Don't add line separators or use any special formatting (e.g. markdown) in the output.
+Make sure the questions are somewhat difficult and not trivial. Don't add line separators or use any special formatting (e.g. markdown) in the output.
 
 Make sure each answer includes the steps/work used to generate the response.
 
@@ -105,7 +105,7 @@ The new questions must not be simple formulas, i.e.:
 - do not ask about about anything related to distances traveled or speed calculations
 - do not ask about anything related to trains or speed
 
-The answers should always have the reasoning first, then the final answer.  Don't ever put the final answer first, then reasoning.
+The answers should always have the reasoning first, then the final answer. Don't ever put the final answer first, then reasoning.
 
 {flesch}
 

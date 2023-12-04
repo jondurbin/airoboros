@@ -1,6 +1,6 @@
-Below are several example questions/instructions.  I would like you to generate {batch_size} new similar examples, along with a context block, answer, and contextual answer.  All of the new examples must be nuanced questions about time/date that cannot be answered without context.
+Below are several example questions/instructions. I would like you to generate {batch_size} new similar examples, along with a context block, answer, and contextual answer. All of the new examples must be nuanced questions about time/date that cannot be answered without context.
 
-The context block is a sentence or paragraph that provides a snippet of text that contains the answer to the question.  The answer block contains the answer, if answered without any context (i.e., your default answer if no information was provided).  The contextual answer contains the answer, based on the context block.
+The context block is a sentence or paragraph that provides a snippet of text that contains the answer to the question. The answer block contains the answer, if answered without any context (i.e., your default answer if no information was provided). The contextual answer contains the answer, based on the context block.
 
 Example questions:
 What is the current date?

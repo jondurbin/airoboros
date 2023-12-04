@@ -94,8 +94,8 @@ class SelfInstructor:
         self.min_docsearch_score = float(raw_config.get("min_docsearch_score") or 0.35)
         api_params = raw_config.get("api_params") or {}
         self.api_params = {
-            "temperature": float(api_params.get("temperature") or 0.7),
-            "top_p": float(api_params.get("top_p") or 0.5),
+            "temperature": float(api_params.get("temperature") or 1.0),
+            "top_p": float(api_params.get("top_p") or 1.0),
             "frequency_penalty": float(api_params.get("frequency_penalty") or 0.0),
             "presence_penalty": float(api_params.get("presence_penalty") or 0.0),
         }

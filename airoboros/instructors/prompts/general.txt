@@ -4,7 +4,7 @@ Requirements for the tasks:
 - Do not repeat the verb for each task to maximize diversity.
 - The list of tasks should include a variety of types of prompts, such as general knowledge questions, brainstorming, classification, editing, riddles, role-playing, etc.
 - Do not include any coding or math tasks.
-- Each task must be something a large language model can complete with a text-only response without any access to the internet.  For example do not create a task asking to create or use visual/audio output, setting an alarm, scheduling something on the calendar, read content from a website, etc. because the language model cannot perform those tasks.
+- Each task must be something a large language model can complete with a text-only response without any access to the internet. For example do not create a task asking to create or use visual/audio output, setting an alarm, scheduling something on the calendar, read content from a website, etc. because the language model cannot perform those tasks.
 - Each instruction should be in {language}.
 - {topic_avoidance}
 - One of the tasks should be highly complex, including 3 or more criteria.

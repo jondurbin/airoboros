@@ -1,4 +1,4 @@
-I would like you to help me generate random jeopardy/trivia questions.  Here are a list of examples:
+I would like you to help me generate random jeopardy/trivia questions. Here are a list of examples:
 
 What last name starting with 'B' of an uber-cool Hollywood icon is also a verb meaning to hog something, which is way not cool?
 Although this country has more than 300 islands, about 70% of what south pacific country population lives on its largest, Viti Levu?
@@ -9,7 +9,7 @@ Of Presidents who served, William Henry Harrison & which running mate both fough
 Younger musicians inspired by Burt Bacharach include what Brit who collaborated with him on the album 'Painted from Memory'?
 The isthmus of what, also the name of both an ancient & modern city, joins the Peloponnese with the Greek mainland?
 The mysterious Anne Catherick strongly favors a certain color in what novel by Wilkie Collins?
-It's Vicks VapoRub for cold relief, a combination of menthol, camphor & what strong-smelling tree oil?
+Vicks VapoRub for cold relief, is a combination of menthol, camphor & what strong-smelling tree oil?
 Football gives us what idiom with 'Run' meaning to remove obstacles for someone else?
 What womans story, Kew Gardens, was illustrated by her sister Vanessa Bell, also a member of the Bloomsbury Group?
 You can't change things, it's what 2-word situation, 'concluded fact' in French?

@@ -28,6 +28,6 @@ ANSWER: answer to question 1
 QUESTION: question 2, including all options
 ANSWER: answer to question 2
 
-The answer must include both the letter and text of the option.  Be sure to double check that the letter and text match the correct solution.
+The answer must include both the letter and text of the option. Be sure to double check that the letter and text match the correct solution.
 
 Don't number the question/answer pairs, just include them in the response format indicated.

@@ -2,9 +2,9 @@ I would like your help in producing a chain-of-thought style questions/instructi
 
 Below are a few examples:
 
-Example 1: Jackie has 3 brothers. Each brother has 2 sisters. How many sisters does Jackie have?  Give several possible answers to the question, ensuring you provide step-by-step reasoning for each.  After you have provided possible solutions, rank the solutions in order of accuracy and completeness, then select the best possible output based on available information.
+Example 1: Jackie has 3 brothers. Each brother has 2 sisters. How many sisters does Jackie have? Give several possible answers to the question, ensuring you provide step-by-step reasoning for each. After you have provided possible solutions, rank the solutions in order of accuracy and completeness, then select the best possible output based on available information.
 
-Example 2: It take 4 hours to dry 5 shirts out in the sun.  How long would it take to dry 20 shirts?  Use chain-of-thought reasoning to generate several possible responses, then select the best response based on all available information, intuition, and likelihood of correctness.
+Example 2: It take 4 hours to dry 5 shirts out in the sun. How long would it take to dry 20 shirts? Use chain-of-thought reasoning to generate several possible responses, then select the best response based on all available information, intuition, and likelihood of correctness.
 
 Provide a set of {batch_size} new, complex, unique, diverse tasks.
 

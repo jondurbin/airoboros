@@ -1,9 +1,9 @@
 Please provide a chain-of-thought style answer to the provide input.
 
-Below are a few exampless of question/response pairs.
+Below are a few examples of question/response pairs.
 
 Example 1:
-Input: Jackie has 3 brothers. Each brother has 2 sisters. How many sisters does Jackie have?  Give several possible answers to the question, ensuring you provide step-by-step reasoning for each.  After you have provided possible solutions, rank the solutions in order of accuracy and completeness, then select the best possible output based on available information.
+Input: Jackie has 3 brothers. Each brother has 2 sisters. How many sisters does Jackie have? Give several possible answers to the question, ensuring you provide step-by-step reasoning for each. After you have provided possible solutions, rank the solutions in order of accuracy and completeness, then select the best possible output based on available information.
 
 Example 1 response:
 Solution 1:
@@ -30,11 +30,11 @@ Best and final answer: Jackie has 1 sister.
 
 
 Example 2:
-Input: It take 4 hours to dry 5 shirts out in the sun.  How long would it take to dry 20 shirts?  Use chain-of-thought reasoning to generate several possible responses, then select the best response based on all available information, intuition, and likelihood of correctness.
+Input: It take 4 hours to dry 5 shirts out in the sun. How long would it take to dry 20 shirts? Use chain-of-thought reasoning to generate several possible responses, then select the best response based on all available information, intuition, and likelihood of correctness.
 
 Response to example 2:
 Solution 1:
-Consider the time of day, and how much sunlight is remaining.  For instance, if you have only 4 hours of sunlight left in the day, you would not be able to dry all 20 shirts within the day, if you can only dry 5 shirts at a time.  Assuming the following day has at least 12 hours of sunlight and conditions are sufficient for the 5 shirts to dry in 4 hours consistently, we can write it as:
+Consider the time of day, and how much sunlight is remaining. For instance, if you have only 4 hours of sunlight left in the day, you would not be able to dry all 20 shirts within the day, if you can only dry 5 shirts at a time. Assuming the following day has at least 12 hours of sunlight and conditions are sufficient for the 5 shirts to dry in 4 hours consistently, we can write it as:
 total time = dry time per batch size * number of batches + time delayed due to lack of sunlight
 
 In this case, the dry time per batch of 5 shirts is 4 hours, and the number of batches is (20 / 5 = 4).
@@ -66,9 +66,9 @@ Best and final answer: It would still take 4 hours to dry 20 shirts, since the t
 
 End of examples.
 
-The possible solutions should always have the reasoning first, then the final answer.  Don't ever put the final answer first, then reasoning.
+The possible solutions should always have the reasoning first, then the final answer. Don't ever put the final answer first, then reasoning.
 
-Make sure you fully understand each solution before providing a ranking.  The position of the solution does not always correspond to it's ranking, i.e. sometimes solution 2 or 3 can be better that solution 1, and therefore the ranking should reflect that.  Always rank the solutions based on accuracy, completeness, and probability of being correct, not based on their position in the list of possible solutions.
+Make sure you fully understand each solution before providing a ranking. The position of the solution does not always correspond to it's ranking, i.e. sometimes solution 2 or 3 can be better that solution 1, and therefore the ranking should reflect that. Always rank the solutions based on accuracy, completeness, and probability of being correct, not based on their position in the list of possible solutions.
 
 Be sure to include at least 2, preferably 3 possible solutions.
 

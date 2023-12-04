@@ -24,21 +24,16 @@ async def generate(instructor, **kwargs):
         batch_size = instructor.default_batch_size
     batch_size = int(batch_size)
 
-    current_index = 0
     options = ["A", "B", "C", "D", "E"]
 
     # Helper to make sure the answers aren't always B/C (gpt-4 tends to not distribute well).
     def gen_answer_index(_):
-        nonlocal current_index
         nonlocal options
-        answer_options = []
-        for idx in range(batch_size):
-            answer_options.append(
-                f"* the correct option for QUESTION {idx + 1} must be {options[current_index]}"
-            )
-            current_index += 1
-            if current_index == len(options):
-                current_index = 0
+
+        selected_options = random.sample(options, batch_size) if batch_size < len(options) else random.choices(options, k=batch_size)
+
+        answer_options = [f"* the correct option for QUESTION {idx + 1} must be {option}" for idx, option in enumerate(selected_options)]
+
         return "\n".join(answer_options)
 
     current_option_index = 0

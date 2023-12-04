@@ -124,7 +124,7 @@ def route_via_agent(model: Any, request: ChatRequest, stopping_criteria: Any) ->
     )
     functions = "\n".join(
         [
-            f"{name}:\n  description: {description}"
+            f"{name}:\n description: {description}"
             for name, description in DESCRIPTIONS.items()
         ]
     )

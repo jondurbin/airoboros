@@ -1,6 +1,12 @@
 # The model to use in generation.  Available models: https://platform.openai.com/docs/models/continuous-model-upgrades
 model: "gpt-4"
   
+# To use VertexAI (e.g. chat-bison or soon hopefully gemini):
+# model: "chat-bison"
+# vertexai_credentials_path: creds.json
+# vertexai_project_id: replace-project-id
+# vertexai_publisher: google
+
 # OpenAI API key (if null, uses environment variable OPENAI_API_KEY)
 openai_api_key:
 

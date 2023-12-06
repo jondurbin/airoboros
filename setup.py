@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md"))
 
 setup(
     name="airoboros",
-    version="2.2.0",
+    version="2.2.1",
     description="Updated and improved implementation of the self-instruct system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -35,6 +35,7 @@ setup(
         "uvicorn>=0.23.0",
         "flash_attn==2.1.0",
         "optimum==1.12.0",
+        "google-auth==2.25.1",
     ],
     extras_require={
         "dev": [

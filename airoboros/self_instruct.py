@@ -403,7 +403,6 @@ class SelfInstructor:
                         f"Error querying Vertex AI: [{code}]: {await result.text()}"
                     )
                 data = await result.json()
-                print(data)
                 if data["predictions"][0].get("safetyAttributes", [{}])[0].get("blocked"):
                     raise Exception("Response blocked by vertex.")
                 return data
@@ -489,8 +488,6 @@ class SelfInstructor:
             return await self._post_vertexai(*a, **k)
         except Exception as ex:
             logger.error(f"Error performing post: {ex}")
-            import traceback
-            print(traceback.format_exc())
         return None
 
     async def generate_response_vertexai(self, instruction: str, **kwargs) -> str:

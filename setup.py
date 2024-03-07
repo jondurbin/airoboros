@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "README.md"))
 
 setup(
     name="airoboros",
-    version="2.2.1",
+    version="2.2.2",
     description="Updated and improved implementation of the self-instruct system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -24,16 +24,12 @@ setup(
     install_requires=[
         "aiohttp[speedups]>=3.8",
         "backoff>=2.2",
-        "bitsandbytes>=0.40",
         "requests>=2.28",
         "loguru>=0.7",
         "faiss-cpu==1.7.4",
-        "fast-sentence-transformers==0.4.1",
         "sentence-transformers>=2.2.2",
-        "peft==0.4.0",
         "fastapi>=0.101.0",
         "uvicorn>=0.23.0",
-        "flash_attn==2.1.0",
         "optimum==1.12.0",
         "google-auth==2.25.1",
     ],
@@ -45,6 +41,11 @@ setup(
         "vllm": [
             "fschat",
             "vllm",
+        ],
+        "gpu": [
+            "flash_attn>=2.4.2",
+            "bitsandbytes>=0.40",
+            "peft",
         ],
     },
     classifiers=[

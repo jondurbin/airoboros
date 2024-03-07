@@ -33,9 +33,9 @@ from airoboros.exceptions import (
     ContextLengthExceededError,
     BadResponseError,
 )
-from fast_sentence_transformers import FastSentenceTransformer
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer
+from txtai.pipeline import HFOnnx
 
 # Defaults and constants.
 MAX_DOCSTORE_SIZE = 15000
@@ -44,18 +44,20 @@ READABILITY_HINT = "The output should be written in such a way as to have a Fles
 
 # List of OpenAI models we support (there are others, but skipping for now...)
 OPENAI_MODELS = [
+    "gpt-3.5-turbo-16k-0613",
+    "gpt-3.5-turbo-0125",
+    "gpt-4-0314",
+    "gpt-4-0613",
+    "gpt-4",
+    "gpt-4-32k-0314",
+    "gpt-3.5-turbo",
     "gpt-3.5-turbo-0613",
     "gpt-3.5-turbo-0301",
-    "gpt-4-0314",
-    "gpt-4-32k-0314",
     "gpt-4-1106-preview",
-    "gpt-4",
-    "gpt-4-32k",
-    "gpt-4-0613",
-    "gpt-4-32k-0613",
+    "gpt-4-turbo-preview",
     "gpt-3.5-turbo-1106",
-    "gpt-3.5-turbo",
     "gpt-3.5-turbo-16k",
+    "gpt-4-0125-preview",
 ]
 
 # Base URL for vertexai.
@@ -151,13 +153,10 @@ class SelfInstructor:
         # Hacky, but we'll load this twice, the first time to get dimension, since
         # it's not accessible in the Fast (cpu) version.
         model = SentenceTransformer(model_name)
-        self.embedding_dimension = model.get_sentence_embedding_dimension()
-        model = None
-        if raw_config.get("embedding_device") == "cuda":
-            self.embedding_model = SentenceTransformer(model_name, device="cuda")
-        else:
-            self.embedding_model = FastSentenceTransformer(model_name, device="cpu")
+        device = raw_config.get("embedding_device", "cpu")
+        self.embedding_model = SentenceTransformer(model_name, device=device)
         self.embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.embedding_dimension = self.embedding_model.get_sentence_embedding_dimension()
         self.index = faiss.IndexFlatL2(self.embedding_dimension)
 
         # Validate the model for each generator.
